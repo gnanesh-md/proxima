@@ -1,0 +1,691 @@
+@model ProximaLMS.Controllers.SkillLevelListViewModel
+@{
+    ViewData["Title"] = "Skill Levels";
+    Layout = "_Layout";
+}
+
+<style>
+    :root {
+        --md-p1: #4C1864;
+        --md-p2: #7B2CBF;
+        --md-bg: #f4f6fb;
+        --md-ink: #1A0F2E;
+        --md-muted: #6B7280;
+        --md-border: #eef0f5;
+    }
+
+    .md-wrap {
+        padding: 10px;
+        background: var(--md-bg);
+    }
+
+    .md-header {
+        background: #fff;
+        padding: 20px 25px;
+        border-radius: 14px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.05);
+        margin-bottom: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .md-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--md-p1);
+        margin: 0;
+    }
+
+    .md-sub {
+        font-size: 13px;
+        color: var(--md-muted);
+        margin-top: 3px;
+    }
+
+    .btn-grad {
+        background: linear-gradient(90deg, var(--md-p1), var(--md-p2));
+        color: #fff !important;
+        border: none;
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+    }
+
+    .md-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    @@media (max-width: 900px) {
+        .md-stats {
+            grid-template-columns: repeat(2,1fr);
+        }
+    }
+
+    .md-stat {
+        background: #fff;
+        border-radius: 14px;
+        padding: 16px 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        border-left: 4px solid var(--md-p2);
+    }
+
+        .md-stat .num {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--md-ink);
+        }
+
+        .md-stat .lbl {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: var(--md-muted);
+            margin-top: 2px;
+        }
+
+        .md-stat.inactive {
+            border-left-color: #6b7280;
+        }
+
+            .md-stat.inactive .num {
+                color: #6b7280;
+            }
+
+    .md-toolbar {
+        background: #fff;
+        border-radius: 14px 14px 0 0;
+        padding: 14px 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        border-bottom: 1px solid var(--md-border);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+        .md-toolbar input[type=text] {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 11px;
+            border: 1px solid #dde1ea;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+    .md-table-card {
+        background: #fff;
+        border-radius: 0 0 14px 14px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .md-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .md-table thead th {
+            background: #faf6fd;
+            color: var(--md-p1);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 2px solid var(--md-border);
+        }
+
+        .md-table tbody td {
+            padding: 13px 16px;
+            font-size: 14px;
+            color: var(--md-ink);
+            border-bottom: 1px solid var(--md-border);
+            vertical-align: middle;
+        }
+
+        .md-table tbody tr:hover {
+            background: #faf8fc;
+        }
+
+    .level-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 700;
+        color: #fff;
+    }
+
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .pill-a {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .pill-i {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .tgl {
+        position: relative;
+        width: 38px;
+        height: 20px;
+        display: inline-block;
+        cursor: pointer;
+    }
+
+        .tgl input {
+            display: none;
+        }
+
+    .tgl-track {
+        position: absolute;
+        inset: 0;
+        background: #d1d5db;
+        border-radius: 12px;
+        transition: background .2s;
+    }
+
+        .tgl-track::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .2s;
+        }
+
+    .tgl input:checked + .tgl-track {
+        background: var(--md-p2);
+    }
+
+        .tgl input:checked + .tgl-track::after {
+            transform: translateX(18px);
+        }
+
+    .row-actions {
+        display: inline-flex;
+        gap: 6px;
+    }
+
+    .row-btn {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .row-btn:hover {
+            background: #f1eaf6;
+        }
+
+        .row-btn.edit {
+            color: #1565c0;
+        }
+
+        .row-btn.delete {
+            color: #c62828;
+        }
+
+    .md-empty {
+        padding: 60px 20px;
+        text-align: center;
+        color: var(--md-muted);
+    }
+
+        .md-empty .ic {
+            font-size: 40px;
+            color: #c4b5d4;
+            margin-bottom: 10px;
+        }
+
+    .md-modal-content {
+        border-radius: 16px;
+        border: 0;
+    }
+
+    .md-modal-header {
+        background: linear-gradient(90deg, var(--md-p1), var(--md-p2));
+        color: #fff;
+        border-radius: 16px 16px 0 0;
+        padding: 16px 22px;
+    }
+
+        .md-modal-header .btn-close {
+            filter: invert(1) brightness(2);
+        }
+
+    .md-modal-body {
+        padding: 22px;
+    }
+
+    .md-modal-footer {
+        background: #faf8fc;
+        border-radius: 0 0 16px 16px;
+        padding: 14px 22px;
+    }
+
+    .color-swatch {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 1px #dde1ea;
+        cursor: pointer;
+    }
+
+    .swatch-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 6px;
+    }
+</style>
+
+<div class="md-wrap">
+
+    <div class="md-header">
+        <div>
+            <h4 class="md-title"><i class="fa-solid fa-signal me-2"></i>Skill Levels</h4>
+            <div class="md-sub">Difficulty / experience levels shown on each course (e.g. Beginner, Intermediate, Advanced).</div>
+        </div>
+        <button class="btn-grad" onclick="openLevelModal()">
+            <i class="fa-solid fa-plus"></i> New Skill Level
+        </button>
+    </div>
+
+    @{
+        int totalCount = Model.Levels.Count;
+        int activeCount = Model.Levels.Count(l => l.IsActive);
+        int inactiveCount = totalCount - activeCount;
+        int totalUsage = Model.Levels.Sum(l => l.UsageCount);
+    }
+    <div class="md-stats">
+        <div class="md-stat"><div class="num">@totalCount</div><div class="lbl">Total Levels</div></div>
+        <div class="md-stat"><div class="num">@activeCount</div><div class="lbl">Active</div></div>
+        <div class="md-stat inactive"><div class="num">@inactiveCount</div><div class="lbl">Inactive</div></div>
+        <div class="md-stat"><div class="num">@totalUsage</div><div class="lbl">Total Usage</div></div>
+    </div>
+
+    <div class="md-toolbar">
+        <input type="text" id="lvlSearch" placeholder="Search by name or description..." />
+        <span style="font-size:12px; color: var(--md-muted);">
+            Showing <span id="visibleCount">@totalCount</span> of @totalCount
+        </span>
+    </div>
+
+    <div class="md-table-card">
+        @if (Model.Levels.Any())
+        {
+            <table class="md-table">
+                <thead>
+                    <tr>
+                        <th style="width:60px;">ID</th>
+                        <th>Level</th>
+                        <th>Description</th>
+                        <th style="width:90px; text-align:center;">Usage</th>
+                        <th style="width:90px; text-align:center;">Order</th>
+                        <th style="width:130px;">Status</th>
+                        <th style="width:110px; text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="lvlTbody">
+                    @foreach (var l in Model.Levels.OrderBy(x => x.SortOrder).ThenBy(x => x.LevelName))
+                    {
+                        var color = string.IsNullOrWhiteSpace(l.ColorHex) ? "#7B2CBF" : l.ColorHex;
+                        <tr class="lvl-row"
+                            data-id="@l.LevelID"
+                            data-name="@l.LevelName.ToLower()"
+                            data-desc="@((l.Description ?? "").ToLower())">
+                            <td>#@l.LevelID</td>
+                            <td>
+                                <span class="level-chip" style="background:@color;">
+                                    <i class="fa-solid fa-signal"></i> @l.LevelName
+                                </span>
+                            </td>
+                            <td style="color: var(--md-muted); font-size:13px;">
+                                @(string.IsNullOrWhiteSpace(l.Description) ? "—" : l.Description)
+                            </td>
+                            <td style="text-align:center;">@l.UsageCount</td>
+                            <td style="text-align:center;">@l.SortOrder</td>
+                            <td>
+                                <label class="tgl">
+                                    <input type="checkbox" class="status-toggle"
+                                           data-id="@l.LevelID"
+                                    @(l.IsActive ? "checked" : "") />
+                                    <span class="tgl-track"></span>
+                                </label>
+                                <span class="pill @(l.IsActive ? "pill-a" : "pill-i")" style="margin-left:6px;">
+                                    @(l.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                            <td style="text-align:center;">
+                                <div class="row-actions">
+                                    <button class="row-btn edit" title="Edit"
+                                            onclick="openLevelModal(@l.LevelID)">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button class="row-btn delete" title="Delete"
+                                            onclick="deleteLevel(@l.LevelID, '@Html.Raw(l.LevelName.Replace("'","\\'"))')">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="md-empty">
+                <div class="ic"><i class="fa-solid fa-signal"></i></div>
+                <h5>No Skill Levels Yet</h5>
+                <p>Create the first skill level (e.g. Beginner).</p>
+                <button class="btn-grad" onclick="openLevelModal()">
+                    <i class="fa-solid fa-plus"></i> Create First Level
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     LEVEL MODAL
+═══════════════════════════════════════════ -->
+<div class="modal fade" id="levelModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content md-modal-content">
+
+            <div class="modal-header md-modal-header">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-signal me-2"></i>
+                    <span id="lvlModalTitle">New Skill Level</span>
+                </h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body md-modal-body">
+                <input type="hidden" id="lvlId" value="0" />
+
+                <div class="mb-3">
+                    <label class="form-label">Level Name <span class="text-danger">*</span></label>
+                    <input type="text" id="lvlName" class="form-control"
+                           maxlength="50" placeholder="e.g. Beginner" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Description <span class="text-muted">(optional)</span></label>
+                    <textarea id="lvlDescription" class="form-control" rows="2"
+                              maxlength="300" placeholder="Short description shown on the course card"></textarea>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Colour</label>
+                        <input type="color" id="lvlColor" class="form-control form-control-color"
+                               value="#7B2CBF" style="width:100%; height:42px;" />
+                        <div class="swatch-row">
+                            <div class="color-swatch" style="background:#10b981;" data-color="#10b981"></div>
+                            <div class="color-swatch" style="background:#f59e0b;" data-color="#f59e0b"></div>
+                            <div class="color-swatch" style="background:#dc2626;" data-color="#dc2626"></div>
+                            <div class="color-swatch" style="background:#4C1864;" data-color="#4C1864"></div>
+                            <div class="color-swatch" style="background:#7B2CBF;" data-color="#7B2CBF"></div>
+                            <div class="color-swatch" style="background:#1565c0;" data-color="#1565c0"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Sort Order</label>
+                        <input type="number" id="lvlSortOrder" class="form-control"
+                               value="0" min="0" max="9999" />
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="lvlActive" checked />
+                            <label class="form-check-label" for="lvlActive">Active</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 p-3" style="background:#faf8fc; border-radius:8px;">
+                    <small class="text-muted">Preview:</small><br />
+                    <span id="lvlPreview" class="level-chip" style="background:#7B2CBF; margin-top:6px;">
+                        <i class="fa-solid fa-signal"></i> <span id="lvlPreviewLabel">Level name</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="modal-footer md-modal-footer">
+                <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn-grad" id="lvlSaveBtn" onclick="saveLevel()">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Level
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    const tempError = "@(TempData["Error"] ?? "")";
+    const tempSuccess = "@(TempData["Success"] ?? "")";
+
+    document.addEventListener("DOMContentLoaded", function () {
+        if (tempError) Swal.fire({ icon: "error", title: "Error", text: tempError, confirmButtonColor: "#4C1864" });
+        if (tempSuccess) Swal.fire({ icon: "success", title: "Success", text: tempSuccess, confirmButtonColor: "#4C1864" });
+
+        document.getElementById("lvlSearch")?.addEventListener("input", function () {
+            const q = this.value.toLowerCase().trim();
+            let visible = 0;
+            document.querySelectorAll(".lvl-row").forEach(row => {
+                const show = !q || row.dataset.name.includes(q) || row.dataset.desc.includes(q);
+                row.style.display = show ? "" : "none";
+                if (show) visible++;
+            });
+            document.getElementById("visibleCount").textContent = visible;
+        });
+
+        document.querySelectorAll(".status-toggle").forEach(chk => {
+            chk.addEventListener("change", function () {
+                toggleStatus(this.dataset.id, this.checked, this);
+            });
+        });
+
+        document.getElementById("lvlName")?.addEventListener("input", updatePreview);
+        document.getElementById("lvlColor")?.addEventListener("input", updatePreview);
+
+        document.querySelectorAll(".color-swatch").forEach(s => {
+            s.addEventListener("click", function () {
+                document.getElementById("lvlColor").value = this.dataset.color;
+                updatePreview();
+            });
+        });
+    });
+
+    function updatePreview() {
+        const name = document.getElementById("lvlName").value.trim() || "Level name";
+        const color = document.getElementById("lvlColor").value || "#7B2CBF";
+        const chip = document.getElementById("lvlPreview");
+        chip.style.background = color;
+        document.getElementById("lvlPreviewLabel").textContent = name;
+    }
+
+    async function openLevelModal(id) {
+        clearForm();
+        const modal = new bootstrap.Modal(document.getElementById("levelModal"));
+
+        if (!id || id <= 0) {
+            document.getElementById("lvlModalTitle").textContent = "New Skill Level";
+            modal.show();
+            return;
+        }
+
+        try {
+            const resp = await fetch("/SkillLevel/GetOne?id=" + id);
+            const data = await resp.json();
+            if (!data.success) {
+                Swal.fire({ icon: "error", title: "Error", text: data.message || "Not found", confirmButtonColor: "#4C1864" });
+                return;
+            }
+            const l = data.level || data.skillLevel || data.skilllevel || {};
+            document.getElementById("lvlModalTitle").textContent = "Edit Skill Level";
+            document.getElementById("lvlId").value = l.levelID ?? l.LevelID ?? 0;
+            document.getElementById("lvlName").value = l.levelName ?? l.LevelName ?? "";
+            document.getElementById("lvlDescription").value = l.description ?? l.Description ?? "";
+            document.getElementById("lvlColor").value = l.colorHex ?? l.ColorHex ?? "#7B2CBF";
+            document.getElementById("lvlSortOrder").value = l.sortOrder ?? l.SortOrder ?? 0;
+            document.getElementById("lvlActive").checked = l.isActive ?? l.IsActive ?? true;
+            updatePreview();
+            modal.show();
+        } catch (e) {
+            Swal.fire({ icon: "error", title: "Error", text: e.message, confirmButtonColor: "#4C1864" });
+        }
+    }
+
+    function clearForm() {
+        document.getElementById("lvlId").value = 0;
+        document.getElementById("lvlName").value = "";
+        document.getElementById("lvlDescription").value = "";
+        document.getElementById("lvlColor").value = "#7B2CBF";
+        document.getElementById("lvlSortOrder").value = 0;
+        document.getElementById("lvlActive").checked = true;
+        updatePreview();
+    }
+
+    async function saveLevel() {
+        const name = document.getElementById("lvlName").value.trim();
+        if (!name) {
+            Swal.fire({ icon: "warning", title: "Required", text: "Level name is required.", confirmButtonColor: "#4C1864" });
+            return;
+        }
+
+        const btn = document.getElementById("lvlSaveBtn");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        const payload = {
+            LevelID: parseInt(document.getElementById("lvlId").value) || 0,
+            LevelName: name,
+            Description: document.getElementById("lvlDescription").value.trim(),
+            ColorHex: document.getElementById("lvlColor").value,
+            SortOrder: parseInt(document.getElementById("lvlSortOrder").value) || 0,
+            IsActive: document.getElementById("lvlActive").checked
+        };
+
+        try {
+            const resp = await fetch("/SkillLevel/Save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            const ok = data.success || data.Success;
+            const msg = data.message || data.Message || (ok ? "Saved." : "Save failed.");
+            if (ok) {
+                Swal.fire({ icon: "success", title: "Saved", text: msg, timer: 1400, showConfirmButton: false })
+                    .then(() => location.reload());
+            } else {
+                Swal.fire({ icon: "error", title: "Error", text: msg, confirmButtonColor: "#4C1864" });
+            }
+        } catch (e) {
+            Swal.fire({ icon: "error", title: "Error", text: e.message, confirmButtonColor: "#4C1864" });
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Level';
+        }
+    }
+
+    async function toggleStatus(id, isActive, chk) {
+        try {
+            const resp = await fetch("/SkillLevel/ToggleStatus", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ Id: parseInt(id) })
+            });
+            const data = await resp.json();
+            const ok = data.success || data.Success;
+            if (!ok) {
+                chk.checked = !isActive;
+                Swal.fire({ icon: "error", title: "Failed", text: data.message || "Toggle failed.", confirmButtonColor: "#4C1864" });
+                return;
+            }
+            const row = chk.closest("tr");
+            const pill = row.querySelector(".pill");
+            const on = chk.checked;
+            pill.className = "pill " + (on ? "pill-a" : "pill-i");
+            pill.style.marginLeft = "6px";
+            pill.textContent = on ? "Active" : "Inactive";
+        } catch (e) {
+            chk.checked = !isActive;
+            Swal.fire({ icon: "error", title: "Error", text: e.message, confirmButtonColor: "#4C1864" });
+        }
+    }
+
+    async function deleteLevel(id, name) {
+        const result = await Swal.fire({
+            title: `Delete "${name}"?`,
+            html: `<p style="color:#6b7280;font-size:14px;">
+                          This action <strong style="color:#dc2626;">cannot be undone</strong>.<br>
+                          Delete is blocked if the level is in use by any course.
+                       </p>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, delete it',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            const resp = await fetch("/SkillLevel/Delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ Id: parseInt(id) })
+            });
+            const data = await resp.json();
+            const ok = data.success || data.Success;
+            const msg = data.message || data.Message || (ok ? "Deleted." : "Delete failed.");
+            if (ok) {
+                Swal.fire({ icon: "success", title: "Deleted", text: msg, timer: 1400, showConfirmButton: false })
+                    .then(() => location.reload());
+            } else {
+                Swal.fire({ icon: "error", title: "Cannot delete", text: msg, confirmButtonColor: "#4C1864" });
+            }
+        } catch (e) {
+            Swal.fire({ icon: "error", title: "Error", text: e.message, confirmButtonColor: "#4C1864" });
+        }
+    }
+</script>

@@ -1,0 +1,1031 @@
+﻿@*
+    ProximaLMS/Views/Courses/Preview.cshtml
+    -------------------------------------------------------------
+    Single-course preview for students who haven't enrolled yet.
+      • Promo video plays
+      • Every content item is locked — lock icon + blurred thumb
+      • CTA:
+          Price == 0  →  "Enroll for Free"   (instant, no Razorpay)
+          Price  > 0  →  "Purchase Now ₹X"   (checkout modal → Razorpay)
+      • Module 06: coupon / referral discount stacking in checkout
+    -------------------------------------------------------------
+*@
+@model ProximaLMS.Models.BrowsePreviewViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = $"Preview · {Model.CourseTitle}";
+    bool isFree = Model.Price <= 0;
+
+    // ── SEO slug + social share URLs ──
+    string Slugify(string text)
+    {
+        if (string.IsNullOrWhiteSpace(text)) return "course";
+        var sb = new System.Text.StringBuilder();
+        foreach (var ch in text.ToLowerInvariant().Trim())
+        {
+            if (char.IsLetterOrDigit(ch)) sb.Append(ch);
+            else if (ch == ' ' || ch == '-' || ch == '_') sb.Append('-');
+        }
+        var s = System.Text.RegularExpressions.Regex.Replace(sb.ToString(), "-{2,}", "-").Trim('-');
+        return string.IsNullOrEmpty(s) ? "course" : s;
+    }
+
+    var req = Context.Request;
+    var baseUrl = $"{req.Scheme}://{req.Host}";
+    var courseSlug = Slugify(Model.CourseTitle);
+    var shareUrl = $"{baseUrl}/Courses/Preview/{Model.CourseID}/{courseSlug}";
+    var ogDesc = string.IsNullOrWhiteSpace(Model.OneLineDescription)
+        ? $"Learn {Model.CourseTitle} on ProximaLMS."
+        : Model.OneLineDescription;
+    var ogImage = string.IsNullOrWhiteSpace(Model.CoverImage)
+        ? ""
+        : (Model.CoverImage.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+            ? Model.CoverImage
+            : $"{baseUrl}/{Model.CoverImage.TrimStart('/')}");
+}
+
+@section Head {
+    <meta name="description" content="@ogDesc" />
+    <link rel="canonical" href="@shareUrl" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="ProximaLMS" />
+    <meta property="og:title" content="@Model.CourseTitle" />
+    <meta property="og:description" content="@ogDesc" />
+    <meta property="og:url" content="@shareUrl" />
+    @if (!string.IsNullOrEmpty(ogImage))
+    {
+        <meta property="og:image" content="@ogImage" />
+    }
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="@(string.IsNullOrEmpty(ogImage) ? "summary" : "summary_large_image")" />
+    <meta name="twitter:title" content="@Model.CourseTitle" />
+    <meta name="twitter:description" content="@ogDesc" />
+    @if (!string.IsNullOrEmpty(ogImage))
+    {
+        <meta name="twitter:image" content="@ogImage" />
+    }
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --pp1: #4C1864;
+        --pp2: #7B2CBF;
+        --pp3: #9D4EDD;
+        --pgold: #FFB300;
+        --pink: #1A0F2E;
+        --pmuted: #6B7280;
+        --pcard: #fff;
+        --pborder: #EFE6F4;
+        --pshadow: 0 6px 20px rgba(76,24,100,0.10);
+    }
+
+    .pv-shell {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        padding: 6px 24px 80px;
+    }
+
+    .pv-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--pp1);
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        margin-bottom: 14px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: #F5EBFB;
+        transition: background .15s;
+    }
+
+        .pv-back:hover {
+            background: #EAD4F7;
+            color: var(--pp1);
+        }
+
+    /* ─────── HEADER CARD ─────── */
+    .pv-head {
+        display: grid;
+        grid-template-columns: 1.4fr 1fr;
+        gap: 24px;
+        background: var(--pcard);
+        border-radius: 22px;
+        border: 1px solid var(--pborder);
+        padding: 24px;
+        box-shadow: var(--pshadow);
+        margin-bottom: 26px;
+    }
+
+    @@media (max-width: 900px) {
+        .pv-head {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* ─ promo video ─ */
+    .pv-promo {
+        position: relative;
+        aspect-ratio: 16/9;
+        background: linear-gradient(135deg, var(--pp1), var(--pp3));
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+        .pv-promo video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            background: #000;
+        }
+
+    .pv-promo-cover {
+        position: absolute;
+        inset: 0;
+        background: rgba(76,24,100,0.85);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        color: #fff;
+        gap: 8px;
+    }
+
+        .pv-promo-cover i {
+            font-size: 38px;
+            color: #FFD27A;
+        }
+
+        .pv-promo-cover p {
+            margin: 0;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+    .pv-promo-tag {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background: rgba(255,255,255,0.16);
+        backdrop-filter: blur(6px);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 800;
+        padding: 5px 11px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        z-index: 2;
+    }
+
+    /* ─ right column info ─ */
+    .pv-info h1 {
+        font-size: 24px;
+        font-weight: 800;
+        color: var(--pink);
+        margin: 0 0 10px;
+        letter-spacing: -0.3px;
+        line-height: 1.25;
+    }
+
+    .pv-meta {
+        color: var(--pmuted);
+        font-size: 14px;
+        line-height: 1.7;
+        margin-bottom: 14px;
+    }
+
+        .pv-meta strong {
+            color: var(--pink);
+        }
+
+    .pv-chips {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 16px;
+    }
+
+    .pv-chip {
+        font-size: 11px;
+        font-weight: 800;
+        padding: 5px 10px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+        .pv-chip.lvl {
+            background: #F5EBFB;
+            color: var(--pp1);
+        }
+
+        .pv-chip.lang {
+            background: #FFF7E6;
+            color: #B45309;
+        }
+
+        .pv-chip.dur {
+            background: #E0F2FE;
+            color: #075985;
+        }
+
+    .pv-desc {
+        background: #FAF6FD;
+        border-left: 3px solid var(--pp3);
+        padding: 12px 14px;
+        border-radius: 0 12px 12px 0;
+        font-size: 13.5px;
+        color: #44324F;
+        line-height: 1.55;
+        margin-bottom: 16px;
+    }
+
+    /* ─ price + cta ─ */
+    .pv-price-row {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+
+    .pv-price-label {
+        font-size: 12px;
+        color: var(--pmuted);
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .pv-price {
+        font-size: 30px;
+        font-weight: 800;
+        color: var(--pink);
+    }
+
+        .pv-price small {
+            font-size: 15px;
+            color: var(--pmuted);
+            font-weight: 600;
+        }
+
+        .pv-price.free {
+            color: #16A34A;
+        }
+
+    .pv-cta {
+        width: 100%;
+        border: 0;
+        padding: 14px 22px;
+        border-radius: 14px;
+        font-family: inherit;
+        font-size: 15px;
+        font-weight: 800;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: transform .15s, box-shadow .15s;
+    }
+
+        .pv-cta:hover {
+            transform: translateY(-2px);
+        }
+
+        .pv-cta[disabled] {
+            opacity: .6;
+            cursor: wait;
+            transform: none;
+        }
+
+        .pv-cta.buy {
+            background: linear-gradient(135deg, var(--pp1), var(--pp2));
+            color: #fff;
+            box-shadow: 0 10px 28px rgba(76,24,100,0.32);
+        }
+
+            .pv-cta.buy:hover {
+                box-shadow: 0 16px 38px rgba(76,24,100,0.42);
+            }
+
+        .pv-cta.free {
+            background: linear-gradient(135deg, #16A34A, #22C55E);
+            color: #fff;
+            box-shadow: 0 10px 28px rgba(22,163,74,0.30);
+        }
+
+            .pv-cta.free:hover {
+                box-shadow: 0 16px 38px rgba(22,163,74,0.42);
+            }
+
+    .pv-secure {
+        margin-top: 10px;
+        font-size: 11.5px;
+        color: var(--pmuted);
+        text-align: center;
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+    }
+
+        .pv-secure i {
+            color: #16A34A;
+        }
+
+    /* ─────── SECTION TITLE ─────── */
+    .pv-sec-title {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--pink);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+    }
+
+        .pv-sec-title::before {
+            content: "";
+            width: 4px;
+            height: 22px;
+            background: linear-gradient(180deg, var(--pp1), var(--pp3));
+            border-radius: 4px;
+        }
+
+    .pv-sec-sub {
+        font-size: 12px;
+        margin-left: auto;
+        font-weight: 600;
+        background: #FFF7E6;
+        color: #B45309;
+        padding: 4px 10px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    /* ─────── LOCKED CONTENT GRID ─────── */
+    .pv-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+        gap: 18px;
+    }
+
+    .pv-lock-card {
+        background: var(--pcard);
+        border: 1px solid var(--pborder);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: var(--pshadow);
+        transition: transform .2s;
+    }
+
+        .pv-lock-card:hover {
+            transform: translateY(-3px);
+        }
+
+    .pv-lock-thumb {
+        position: relative;
+        aspect-ratio: 16/9;
+        background: linear-gradient(135deg, var(--pp1), var(--pp3));
+        overflow: hidden;
+    }
+
+        .pv-lock-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: blur(6px) brightness(.55);
+            transform: scale(1.1);
+        }
+
+    .pv-lock-veil {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 6px;
+        color: #fff;
+    }
+
+        .pv-lock-veil .ring {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(6px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #FFD27A;
+            border: 2px solid rgba(255,255,255,0.3);
+            box-shadow: 0 6px 24px rgba(0,0,0,0.30);
+        }
+
+        .pv-lock-veil span {
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            background: rgba(0,0,0,0.45);
+            padding: 3px 8px;
+            border-radius: 999px;
+        }
+
+    .pv-lock-body {
+        padding: 14px 16px 16px;
+    }
+
+    .pv-lock-title {
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--pink);
+        line-height: 1.35;
+        margin-bottom: 4px;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .pv-lock-desc {
+        font-size: 12.5px;
+        color: var(--pmuted);
+        line-height: 1.45;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .pv-empty {
+        background: var(--pcard);
+        border: 1px dashed #D9C2EC;
+        border-radius: 16px;
+        padding: 26px;
+        text-align: center;
+        color: var(--pmuted);
+    }
+
+    /* ─────── CHECKOUT MODAL ─────── */
+    .prx-co-wrap {
+        text-align: left;
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+    }
+
+    .prx-co-course {
+        font-size: 15px;
+        font-weight: 700;
+        color: #1A0F2E;
+        margin-bottom: 16px;
+        line-height: 1.4;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #EFE6F4;
+    }
+
+    .prx-co-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 14px;
+        color: #5b5f6a;
+        padding: 8px 0;
+        border-bottom: 1px solid #f5f0fa;
+    }
+
+        .prx-co-row:last-of-type {
+            border-bottom: none;
+        }
+
+        .prx-co-row.final {
+            font-weight: 700;
+            color: #1A0F2E;
+            font-size: 16px;
+            padding-top: 12px;
+            margin-top: 4px;
+            border-top: 2px solid #EFE6F4;
+            border-bottom: none;
+        }
+
+    .prx-co-discount {
+        color: #16A34A;
+        font-weight: 700;
+    }
+
+    .prx-co-coupon-wrap {
+        margin: 14px 0 6px;
+    }
+
+    .prx-co-coupon-label {
+        font-size: 12px;
+        font-weight: 700;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        margin-bottom: 6px;
+    }
+
+    .prx-co-coupon {
+        display: flex;
+        gap: 8px;
+    }
+
+        .prx-co-coupon input {
+            flex: 1;
+            padding: 10px 13px;
+            border: 1px solid #dde1ea;
+            border-radius: 9px;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+            .prx-co-coupon input:focus {
+                border-color: #7B2CBF;
+                box-shadow: 0 0 0 3px rgba(123,44,191,.12);
+            }
+
+    .prx-co-apply {
+        padding: 10px 16px;
+        background: linear-gradient(90deg, #4C1864, #7B2CBF);
+        color: #fff;
+        border: none;
+        border-radius: 9px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        white-space: nowrap;
+        font-family: inherit;
+        transition: opacity .15s;
+    }
+
+        .prx-co-apply:hover {
+            opacity: .9;
+        }
+
+        .prx-co-apply:disabled {
+            opacity: .6;
+            cursor: wait;
+        }
+
+    .prx-co-msg {
+        font-size: 12px;
+        margin-top: 6px;
+        min-height: 18px;
+        font-weight: 600;
+    }
+</style>
+
+
+<div class="pv-shell">
+
+    <a href="@Url.Action("Browse", "Courses")" class="pv-back">
+        <i class="fas fa-arrow-left"></i> Back to Browse
+    </a>
+
+    <!-- ╔══════════ HEADER ══════════╗ -->
+    <div class="pv-head">
+
+        <!-- ── PROMO VIDEO ── -->
+        <div>
+            <div class="pv-promo">
+                <span class="pv-promo-tag"><i class="fas fa-circle-play"></i> Free preview</span>
+
+                @if (!string.IsNullOrEmpty(Model.PromoVideo))
+                {
+                    <video controls
+                           controlsList="nodownload"
+                           disablePictureInPicture
+                           poster="@(string.IsNullOrEmpty(Model.CoverImage) ? "/assets/images/noimage.png" : Url.Content("~/uploads/" + Model.CoverImage))"
+                           oncontextmenu="return false;">
+                        <source src="@Url.Content("~/uploads/" + Model.PromoVideo)" type="video/mp4">
+                        Your browser does not support HTML5 video.
+                    </video>
+                }
+                else
+                {
+                    <div class="pv-promo-cover">
+                        <i class="fas fa-video-slash"></i>
+                        <p>No promo video uploaded yet</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- ── INFO + CTA ── -->
+        <div class="pv-info">
+            <h1>@Model.CourseTitle</h1>
+
+            <div class="pv-meta">
+                <strong>Instructor:</strong> @(string.IsNullOrEmpty(Model.TutorName) ? "—" : Model.TutorName)
+            </div>
+
+            <div class="pv-chips">
+                <span class="pv-chip lvl"><i class="fas fa-layer-group" style="font-size:9px;"></i>@Model.CourseLevelName</span>
+                <span class="pv-chip lang"><i class="fas fa-globe" style="font-size:9px;"></i>@Model.Language</span>
+                @if (Model.DurationHrs > 0)
+                {
+                    <span class="pv-chip dur"><i class="far fa-clock" style="font-size:9px;"></i>@Model.DurationHrs.ToString("0.##") hrs</span>
+                }
+            </div>
+
+            @if (!string.IsNullOrWhiteSpace(Model.OneLineDescription))
+            {
+                <div class="pv-desc">@Model.OneLineDescription</div>
+            }
+
+            <div class="pv-price-row">
+                <span class="pv-price-label">Price</span>
+                @if (isFree)
+                {
+                    <span class="pv-price free">FREE</span>
+                    <small>instant access, no payment needed</small>
+                }
+                else
+                {
+                    <span class="pv-price">&#8377;@Model.Price.ToString("0.##")</span>
+                    <small>one-time, lifetime access</small>
+                }
+            </div>
+
+            @if (isFree)
+            {
+                <button type="button"
+                        class="pv-cta free"
+                        id="btnEnroll"
+                        data-id="@Model.CourseID"
+                        data-title="@Model.CourseTitle">
+                    <i class="fas fa-gift"></i> Enroll for Free
+                </button>
+
+                <div class="pv-secure">
+                    <i class="fas fa-bolt"></i>
+                    Instant access — added straight to "My Courses"
+                </div>
+            }
+            else
+            {
+                <button type="button"
+                        class="pv-cta buy"
+                        id="btnBuy"
+                        data-id="@Model.CourseID"
+                        data-price="@Model.Price"
+                        data-title="@Model.CourseTitle">
+                    <i class="fas fa-bolt"></i> Purchase Now &#8377;@Model.Price.ToString("0.##")
+                </button>
+
+                <div class="pv-secure">
+                    <i class="fas fa-shield-check"></i>
+                    Secured by Razorpay · 256-bit encryption
+                </div>
+            }
+        </div>
+    </div>
+
+
+    <!-- ╔══════════ LOCKED CONTENT ══════════╗ -->
+    <div class="pv-sec-title">
+        Course Contents
+        <span class="pv-sec-sub"><i class="fas fa-lock"></i> Unlock all on enrollment</span>
+    </div>
+
+    @if (Model.Contents != null && Model.Contents.Any())
+    {
+        <div class="pv-grid">
+            @foreach (var item in Model.Contents)
+            {
+                <div class="pv-lock-card">
+                    <div class="pv-lock-thumb">
+                        <img src="@(string.IsNullOrEmpty(item.VideoThumbnail)
+                                    ? "/assets/images/noimage.png"
+                                    : Url.Content($"~/Coursecontent/Course_{Model.CourseID}/{item.VideoThumbnail}"))"
+                             alt="@item.ContentTitle"
+                             onerror="this.src='/assets/images/noimage.png';" />
+                        <div class="pv-lock-veil">
+                            <div class="ring"><i class="fas fa-lock"></i></div>
+                            <span>Locked</span>
+                        </div>
+                    </div>
+                    <div class="pv-lock-body">
+                        <div class="pv-lock-title">@item.ContentTitle</div>
+                        <div class="pv-lock-desc">@(string.IsNullOrEmpty(item.Description) ? "Available after enrollment." : item.Description)</div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <div class="pv-empty">
+            <i class="fas fa-folder-open" style="font-size:30px; color:#9D4EDD; margin-bottom:10px;"></i>
+            <p style="margin:0; font-size:14px;">No content has been added to this course yet.</p>
+        </div>
+    }
+
+</div>
+
+
+@* ────────── SweetAlert + Razorpay ────────── *@
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+
+<script>
+    (function () {
+
+        // ─── Razor-rendered URLs ──────────────────────────────────────────────
+        var URL_ENROLL = '@Url.Action("EnrollFree", "Courses")';
+        var URL_ORDER = '@Url.Action("CreatePaymentOrder", "Courses")';
+        var URL_VERIFY = '@Url.Action("VerifyPayment", "Courses")';
+        var URL_DETAILS = '@Url.Action("Details", "Courses")';
+        var URL_COUPON = '@Url.Action("Validate", "Coupon")';
+
+        // Course data (rendered once by Razor)
+        var COURSE_ID = @Model.CourseID;
+        var COURSE_TITLE = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.CourseTitle));
+        var COURSE_PRICE = @Model.Price;
+
+        // ─── Checkout state ───────────────────────────────────────────────────
+        var _ck = {};
+
+        // ─── Helpers ──────────────────────────────────────────────────────────
+        function busy(btn, label) {
+            btn.disabled = true;
+            btn.dataset.oldHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + label;
+        }
+        function unbusy(btn) {
+            btn.disabled = false;
+            if (btn.dataset.oldHtml) btn.innerHTML = btn.dataset.oldHtml;
+        }
+
+        function fmtPrice(n) {
+            return '\u20B9' + parseFloat(n).toFixed(2);
+        }
+
+        function escHtml(s) {
+            var d = document.createElement('div');
+            d.textContent = s;
+            return d.innerHTML;
+        }
+
+        // ─── Checkout modal HTML ───────────────────────────────────────────────
+        function buildCheckoutHtml(title, price) {
+            return '<div class="prx-co-wrap">' +
+                '<div class="prx-co-course">' + escHtml(title) + '</div>' +
+                '<div class="prx-co-row"><span>Course price</span><span>' + fmtPrice(price) + '</span></div>' +
+                '<div class="prx-co-row" id="prxDiscRow" style="display:none;">' +
+                '<span>Discount applied</span>' +
+                '<span class="prx-co-discount" id="prxDisc"></span>' +
+                '</div>' +
+                '<div class="prx-co-row final">' +
+                '<span>Total payable</span>' +
+                '<span id="prxTotal">' + fmtPrice(price) + '</span>' +
+                '</div>' +
+                '<div class="prx-co-coupon-wrap">' +
+                '<div class="prx-co-coupon-label">Have a coupon or referral code?</div>' +
+                '<div class="prx-co-coupon">' +
+                '<input type="text" id="prxCode" placeholder="e.g. SAVE20 or PRX0042AB9" autocomplete="off" />' +
+                '<button type="button" class="prx-co-apply" id="prxApply">Apply</button>' +
+                '</div>' +
+                '<div class="prx-co-msg" id="prxMsg"></div>' +
+                '</div>' +
+                '</div>';
+        }
+
+        // ─── Apply coupon (runs inside the open Swal modal) ───────────────────
+        async function applyCoupon(price) {
+            var code = (document.getElementById('prxCode').value || '').trim().toUpperCase();
+            var msgEl = document.getElementById('prxMsg');
+
+            if (!code) {
+                msgEl.style.color = '#dc2626';
+                msgEl.textContent = 'Please enter a coupon or referral code.';
+                return;
+            }
+
+            var applyBtn = document.getElementById('prxApply');
+            applyBtn.disabled = true;
+            msgEl.style.color = '#6B7280';
+            msgEl.textContent = 'Checking\u2026';
+
+            try {
+                var r = await fetch(URL_COUPON, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ Code: code, CourseID: COURSE_ID, OrderAmount: price })
+                });
+                var d = await r.json();
+
+                if (d.success) {
+                    _ck.couponCode = code;
+                    _ck.couponId = d.couponId || 0;
+                    _ck.discountAmount = d.discountAmount || 0;
+                    _ck.finalAmount = d.finalAmount || price;
+
+                    document.getElementById('prxDiscRow').style.display = '';
+                    document.getElementById('prxDisc').textContent = '-' + fmtPrice(_ck.discountAmount);
+                    document.getElementById('prxTotal').textContent = fmtPrice(_ck.finalAmount);
+                    Swal.getConfirmButton().textContent = 'Pay ' + fmtPrice(_ck.finalAmount);
+
+                    msgEl.style.color = '#16A34A';
+                    msgEl.textContent = '\u2713 ' + (d.message || 'Coupon applied successfully!');
+                } else {
+                    // Reset to original price
+                    _ck.couponCode = ''; _ck.couponId = 0;
+                    _ck.discountAmount = 0; _ck.finalAmount = price;
+
+                    document.getElementById('prxDiscRow').style.display = 'none';
+                    document.getElementById('prxTotal').textContent = fmtPrice(price);
+                    Swal.getConfirmButton().textContent = 'Pay ' + fmtPrice(price);
+
+                    msgEl.style.color = '#dc2626';
+                    msgEl.textContent = d.message || 'Invalid or expired coupon.';
+                }
+            } catch (e) {
+                msgEl.style.color = '#dc2626';
+                msgEl.textContent = 'Could not validate code. Try again.';
+            } finally {
+                applyBtn.disabled = false;
+            }
+        }
+
+        // ───── FREE COURSE ─────────────────────────────────────────────────────
+        var btnEnroll = document.getElementById('btnEnroll');
+        if (btnEnroll) {
+            btnEnroll.addEventListener('click', async function () {
+                var thisBtn = this;
+                busy(thisBtn, 'Enrolling\u2026');
+
+                try {
+                    var r = await fetch(URL_ENROLL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ CourseID: COURSE_ID })
+                    });
+                    var d = await r.json();
+
+                    if (d.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '\uD83C\uDF89 Enrolled!',
+                            text: d.message || 'Redirecting to your course\u2026',
+                            confirmButtonColor: '#4C1864',
+                            confirmButtonText: 'Open Course'
+                        }).then(function () {
+                            window.location.href = URL_DETAILS + '/' + COURSE_ID;
+                        });
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Could not enroll', text: d.message || 'Please try again.', confirmButtonColor: '#4C1864' });
+                        unbusy(thisBtn);
+                    }
+                } catch (err) {
+                    Swal.fire({ icon: 'error', title: 'Network error', text: err.message, confirmButtonColor: '#4C1864' });
+                    unbusy(thisBtn);
+                }
+            });
+        }
+
+        // ───── PAID COURSE → checkout modal → Razorpay ────────────────────────
+        var btnBuy = document.getElementById('btnBuy');
+        if (btnBuy) {
+            btnBuy.addEventListener('click', async function () {
+                var thisBtn = this;
+                busy(thisBtn, 'Loading\u2026');
+
+                // Reset checkout state
+                _ck = {
+                    couponCode: '', couponId: 0,
+                    discountAmount: 0, finalAmount: COURSE_PRICE
+                };
+
+                // ── Step 1: show checkout modal ───────────────────────────────
+                var result = await Swal.fire({
+                    title: 'Complete your purchase',
+                    width: 460,
+                    html: buildCheckoutHtml(COURSE_TITLE, COURSE_PRICE),
+                    confirmButtonText: 'Pay ' + fmtPrice(COURSE_PRICE),
+                    confirmButtonColor: '#4C1864',
+                    showCancelButton: true,
+                    cancelButtonText: 'Cancel',
+                    focusConfirm: false,
+                    didOpen: function () {
+                        var applyBtn = document.getElementById('prxApply');
+                        var codeInput = document.getElementById('prxCode');
+                        if (applyBtn) applyBtn.addEventListener('click', function () { applyCoupon(COURSE_PRICE); });
+                        if (codeInput) codeInput.addEventListener('keydown', function (e) {
+                            if (e.key === 'Enter') { e.preventDefault(); applyCoupon(COURSE_PRICE); }
+                        });
+                    },
+                    preConfirm: function () { return { ..._ck }; }
+                });
+
+                if (!result.isConfirmed || !result.value) {
+                    unbusy(thisBtn);
+                    return;
+                }
+
+                var ck = result.value;
+                busy(thisBtn, 'Preparing payment\u2026');
+
+                // ── Step 2: create Razorpay order (server re-validates coupon) ─
+                try {
+                    var r1 = await fetch(URL_ORDER, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            CourseID: COURSE_ID,
+                            CouponCode: ck.couponCode || null
+                        })
+                    });
+                    var d1 = await r1.json();
+
+                    if (!d1.success) {
+                        Swal.fire({ icon: 'error', title: 'Cannot start payment', text: d1.message || 'Please try again.', confirmButtonColor: '#4C1864' });
+                        unbusy(thisBtn);
+                        return;
+                    }
+
+                    // Use authoritative values from the API
+                    var apiCouponId = d1.couponId || 0;
+                    var apiDiscount = d1.discountAmount || 0;
+                    var apiOriginal = d1.originalAmount || COURSE_PRICE;
+
+                    // ── Step 3: open Razorpay for the discounted amount ────────
+                    var rzp = new Razorpay({
+                        key: d1.keyId,
+                        amount: d1.amount,         // paise — already discounted
+                        currency: d1.currency || 'INR',
+                        name: 'ProximaLMS',
+                        description: d1.courseName || COURSE_TITLE,
+                        order_id: d1.orderId,
+                        theme: { color: '#4C1864' },
+
+                        // ── Step 4: verify payment + enroll ───────────────────
+                        handler: async function (resp) {
+                            var r2 = await fetch(URL_VERIFY, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    CourseID: COURSE_ID,
+                                    RazorpayOrderId: resp.razorpay_order_id,
+                                    RazorpayPaymentId: resp.razorpay_payment_id,
+                                    RazorpaySignature: resp.razorpay_signature,
+                                    CouponID: apiCouponId,
+                                    DiscountAmount: apiDiscount,
+                                    OriginalAmount: apiOriginal
+                                })
+                            });
+                            var d2 = await r2.json();
+
+                            if (d2.success) {
+                                var successText = 'Redirecting to your course\u2026';
+                                if (apiDiscount > 0)
+                                    successText = 'You saved ' + fmtPrice(apiDiscount) + '! ' + successText;
+
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: '\uD83C\uDF89 Course unlocked!',
+                                    text: successText,
+                                    confirmButtonColor: '#4C1864',
+                                    confirmButtonText: 'Open Course'
+                                }).then(function () {
+                                    window.location.href = URL_DETAILS + '/' + COURSE_ID;
+                                });
+                            } else {
+                                Swal.fire({ icon: 'error', title: 'Verification failed', text: d2.message || 'Could not verify payment.', confirmButtonColor: '#4C1864' });
+                                unbusy(thisBtn);
+                            }
+                        },
+
+                        modal: { ondismiss: function () { unbusy(thisBtn); } }
+                    });
+
+                    rzp.on('payment.failed', function (resp) {
+                        Swal.fire({ icon: 'error', title: 'Payment failed', text: resp?.error?.description || 'Please try again.', confirmButtonColor: '#4C1864' });
+                        unbusy(thisBtn);
+                    });
+
+                    rzp.open();
+                }
+                catch (err) {
+                    Swal.fire({ icon: 'error', title: 'Network error', text: err.message, confirmButtonColor: '#4C1864' });
+                    unbusy(thisBtn);
+                }
+            });
+        }
+
+    })();
+</script>

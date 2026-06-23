@@ -1,0 +1,190 @@
+@*  /Views/Settings/Languages.cshtml
+    FIX: Delete payload changed from { LanguageID: id } to { ID: id }
+         to match LanguageController's IdRequest DTO. *@
+@model ProximaLMS.Models.SettingsPageVM
+@{ Layout = "_Layout"; ViewData["Title"] = Model.Title; }
+
+<div class="as-wrap">
+    <div class="as-head">
+        <h1><span class="ico"><i class="fa-solid fa-language"></i></span> Languages</h1>
+        <div class="as-crumb">
+            <a asp-action="Index">Settings</a> &rsaquo; Languages
+        </div>
+    </div>
+
+    <div class="as-card">
+        <div class="as-card-head">
+            <div class="as-card-title">Supported languages</div>
+            <button class="as-btn" id="btnAdd">
+                <i class="fa-solid fa-plus"></i> Add language
+            </button>
+        </div>
+        <div class="as-card-body">
+            <table class="as-table">
+                <thead>
+                    <tr>
+                        <th style="width:40%">Name</th>
+                        <th>Native name</th>
+                        <th style="width:110px">Code</th>
+                        <th style="width:80px">Order</th>
+                        <th style="width:110px">Status</th>
+                        <th style="width:120px;text-align:right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tblBody">
+                    <tr><td colspan="6" class="as-empty">Loading…</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ── ADD / EDIT MODAL ── -->
+<div class="as-overlay d-none" id="modal">
+    <div class="as-dialog">
+        <div class="as-dialog-head">
+            <h3 id="dlgTitle">Add language</h3>
+            <button class="as-x" onclick="closeDlg()">&times;</button>
+        </div>
+        <div class="as-dialog-body">
+            <input type="hidden" id="fId" value="0" />
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <label class="as-label">Language name <span class="req">*</span></label>
+                    <input id="fName" class="as-input" placeholder="e.g. English" />
+                </div>
+                <div class="col-md-5">
+                    <label class="as-label">ISO code <span class="req">*</span></label>
+                    <input id="fCode" class="as-input" maxlength="10" placeholder="e.g. en" />
+                </div>
+                <div class="col-md-7">
+                    <label class="as-label">Native name</label>
+                    <input id="fNative" class="as-input" placeholder="e.g. हिन्दी" />
+                </div>
+                <div class="col-md-5">
+                    <label class="as-label">Sort order</label>
+                    <input id="fSort" type="number" class="as-input" value="0" />
+                </div>
+                <div class="col-12">
+                    <label class="as-switch">
+                        <input id="fActive" type="checkbox" checked />
+                        <span></span> Active
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="as-dialog-foot">
+            <button class="as-btn-ghost" onclick="closeDlg()">Cancel</button>
+            <button class="as-btn" id="btnSave">
+                <i class="fa-solid fa-floppy-disk"></i> Save
+            </button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function () {
+    const tbl = document.getElementById('tblBody');
+    let rows = [];
+
+    async function load() {
+        tbl.innerHTML = '<tr><td colspan="6" class="as-empty">Loading…</td></tr>';
+        try {
+            const r = await fetch('@Url.Action("LanguagesList","Settings")');
+            const d = await r.json();
+            // API returns { success, data: [...] }
+            rows = (d.data || []);
+            render();
+        } catch (e) {
+            tbl.innerHTML = '<tr><td colspan="6" class="as-empty">Could not load.</td></tr>';
+        }
+    }
+
+    function render() {
+        if (!rows.length) {
+            tbl.innerHTML = '<tr><td colspan="6" class="as-empty">No languages yet. Add one to get started.</td></tr>';
+            return;
+        }
+        tbl.innerHTML = rows.map(r => `
+            <tr>
+                <td><strong>${esc(r.LanguageName ?? '')}</strong></td>
+                <td>${esc(r.NativeName ?? '—')}</td>
+                <td><code class="as-code">${esc(r.LanguageCode ?? '')}</code></td>
+                <td>${r.SortOrder ?? 0}</td>
+                <td>${r.IsActive ? '<span class="as-pill ok">Active</span>' : '<span class="as-pill off">Inactive</span>'}</td>
+                <td class="as-actions">
+                    <button class="as-icon-btn" title="Edit" onclick="editRow(${r.LanguageID})"><i class="fa-solid fa-pen"></i></button>
+                    <button class="as-icon-btn danger" title="Delete" onclick="delRow(${r.LanguageID}, '${esc(r.LanguageName).replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>`).join('');
+    }
+
+    function esc(s) { return (s ?? '').toString().replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c])); }
+
+    window.editRow = id => openDlg(rows.find(x => x.LanguageID === id));
+
+    window.delRow  = async (id, name) => {
+        const res = await Swal.fire({
+            icon: 'warning', title: 'Delete language?',
+            text: `This will remove "${name}". Courses using it must be reassigned first.`,
+            showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#dc2626'
+        });
+        if (!res.isConfirmed) return;
+        // API IdRequest expects { ID } not { LanguageID }
+        const r = await fetch('@Url.Action("LanguageDelete","Settings")', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ID: id })
+        });
+        const d = await r.json();
+        if (d.success) { Swal.fire({ icon: 'success', title: 'Deleted', timer: 1200, showConfirmButton: false }); load(); }
+        else Swal.fire({ icon: 'error', title: 'Failed', text: d.message || 'Could not delete.' });
+    };
+
+    function openDlg(row) {
+        document.getElementById('dlgTitle').textContent = row ? 'Edit language' : 'Add language';
+        document.getElementById('fId').value     = row?.LanguageID || 0;
+        document.getElementById('fName').value   = row?.LanguageName || '';
+        document.getElementById('fCode').value   = row?.LanguageCode || '';
+        document.getElementById('fNative').value = row?.NativeName   || '';
+        document.getElementById('fSort').value   = row?.SortOrder    ?? 0;
+        document.getElementById('fActive').checked = row ? !!row.IsActive : true;
+        document.getElementById('modal').classList.remove('d-none');
+    }
+    window.closeDlg = () => document.getElementById('modal').classList.add('d-none');
+
+    document.getElementById('btnAdd').addEventListener('click', () => openDlg(null));
+    document.getElementById('btnSave').addEventListener('click', async function () {
+        const name = document.getElementById('fName').value.trim();
+        const code = document.getElementById('fCode').value.trim();
+        if (!name) return Swal.fire({ icon: 'warning', title: 'Name required' });
+        if (!code) return Swal.fire({ icon: 'warning', title: 'ISO code required' });
+
+        const body = {
+            LanguageID:   +document.getElementById('fId').value,
+            LanguageName: name,
+            LanguageCode: code,
+            NativeName:   document.getElementById('fNative').value.trim(),
+            SortOrder:    +document.getElementById('fSort').value || 0,
+            IsActive:     document.getElementById('fActive').checked
+        };
+
+        this.disabled = true;
+        const r = await fetch('@Url.Action("LanguageSave","Settings")', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        this.disabled = false;
+
+        if (d.success) {
+            closeDlg();
+            Swal.fire({ icon: 'success', title: 'Saved', timer: 1200, showConfirmButton: false });
+            load();
+        } else {
+            Swal.fire({ icon: 'error', title: 'Failed', text: d.message || 'Could not save.' });
+        }
+    });
+
+    load();
+})();
+</script>

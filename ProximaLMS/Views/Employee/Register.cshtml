@@ -1,0 +1,202 @@
+﻿@*
+    /Views/Employee/Register.cshtml
+    ─────────────────────────────────────────────────────────────────
+    Refactored to use Proxima Design System v1.0
+    Pattern: HERO (with breadcrumb) + multi-section FIELDSETS + FORM ACTIONS
+    Template for: any create/edit form (Tutor, Course, Coupon, Email…)
+    ─────────────────────────────────────────────────────────────────
+*@
+@model EmployeeRequest
+@using Microsoft.AspNetCore.Mvc.Rendering
+@{
+    var isEdit = Model.EmployeeID.HasValue;
+    var roleItems = ViewBag.Roles as List<SelectListItem> ?? new List<SelectListItem>();
+    ViewData["Title"] = isEdit ? "Edit Employee" : "Add Employee";
+    Layout = "_Layout";
+}
+
+<div class="px-page">
+
+    <header class="px-hero">
+        <div class="px-hero__inner">
+            <div>
+                <div class="px-crumb" style="color: rgba(255,255,255,.6);">
+                    <a asp-action="List" style="color: rgba(255,255,255,.7);">Employees</a>
+                    <span class="px-crumb__sep">›</span>
+                    <span style="color:#fff; font-weight: 600;">@(isEdit ? "Edit" : "New")</span>
+                </div>
+                <h1 class="px-hero__title">@(isEdit ? $"Edit {Model.FullName}" : "Add a new employee")</h1>
+                <p class="px-hero__sub">
+                    @(isEdit
+                        ? "Update profile details, contact information, and access settings."
+                        : "Create an internal user account with the right role and permissions.")
+                </p>
+            </div>
+            <div class="px-hero__actions">
+                <a asp-action="List" class="px-hero__btn px-hero__btn--ghost">
+                    <i class="fa-solid fa-arrow-left"></i> Back to list
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="px-body">
+        <form asp-action="@(isEdit ? "Update" : "Register")" method="post" class="px-form">
+            @Html.AntiForgeryToken()
+            @if (isEdit)
+            {
+                <input type="hidden" asp-for="EmployeeID" />
+            }
+
+            @* ── SECTION 1: PROFILE ──────────────────────────────────── *@
+            <fieldset class="px-fieldset">
+                <legend class="px-fieldset__legend">
+                    <i class="fa-solid fa-user-circle"></i> Profile
+                </legend>
+
+                <div class="px-grid">
+                    <div class="px-col-6">
+                        <div class="px-field">
+                            <label class="px-label">Full name <span class="px-req">*</span></label>
+                            <input asp-for="FullName" class="px-input" placeholder="e.g. Priya Sharma" />
+                            <span asp-validation-for="FullName" class="px-help" style="color: var(--px-danger);"></span>
+                        </div>
+                    </div>
+
+                    <div class="px-col-6">
+                        <div class="px-field">
+                            <label class="px-label">Gender</label>
+                            <select asp-for="Gender" class="px-select">
+                                <option value="">— Select —</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="px-col-6">
+                        <div class="px-field">
+                            <label class="px-label">Role <span class="px-req">*</span></label>
+                            <select asp-for="RoleID" class="px-select" asp-items="roleItems">
+                                <option value="">— Choose role —</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="px-col-6">
+                        <div class="px-field">
+                            <label class="px-label">Account status</label>
+                            <label class="px-switch" style="margin-top: 10px;">
+                                <input asp-for="IsActive" type="checkbox" />
+                                <span class="px-switch__track"></span>
+                                <span>Active — can sign in</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            @* ── SECTION 2: CONTACT ──────────────────────────────────── *@
+            <fieldset class="px-fieldset">
+                <legend class="px-fieldset__legend">
+                    <i class="fa-solid fa-address-book"></i> Contact
+                </legend>
+
+                <div class="px-grid">
+                    <div class="px-col-6">
+                        <div class="px-field">
+                            <label class="px-label">Email address <span class="px-req">*</span></label>
+                            <div class="px-input-group">
+                                <i class="fa-solid fa-envelope px-input-group__icon"></i>
+                                <input asp-for="Email" type="email" class="px-input"
+                                       placeholder="name@company.com" />
+                            </div>
+                            <span asp-validation-for="Email" class="px-help" style="color: var(--px-danger);"></span>
+                        </div>
+                    </div>
+
+                    <div class="px-col-6">
+                        <div class="px-field">
+                            <label class="px-label">Mobile number</label>
+                            <div class="px-input-group">
+                                <i class="fa-solid fa-phone px-input-group__icon"></i>
+                                <input asp-for="PhoneNumber" class="px-input" placeholder="+91 9XXXXXXXXX" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            @* ── SECTION 3: ACCESS (only for new) ────────────────────── *@
+            @if (!isEdit)
+            {
+                <fieldset class="px-fieldset">
+                    <legend class="px-fieldset__legend">
+                        <i class="fa-solid fa-key"></i> Access
+                    </legend>
+
+                    <div class="px-grid">
+                        <div class="px-col-6">
+                            <div class="px-field">
+                                <label class="px-label">Password <span class="px-req">*</span></label>
+                                <div class="px-input-group">
+                                    <i class="fa-solid fa-lock px-input-group__icon"></i>
+                                    <input asp-for="Password" type="password"
+                                           id="pwd" class="px-input"
+                                           placeholder="Min 8 characters" />
+                                    <button type="button" class="px-input-group__suffix"
+                                            onclick="togglePwd('pwd', this)">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                </div>
+                                <span class="px-help">Use 8+ characters with letters, numbers and one symbol.</span>
+                            </div>
+                        </div>
+
+                        <div class="px-col-6">
+                            <div class="px-field">
+                                <label class="px-label">Confirm password <span class="px-req">*</span></label>
+                                <div class="px-input-group">
+                                    <i class="fa-solid fa-lock px-input-group__icon"></i>
+                                    <input type="password" id="pwd2" class="px-input"
+                                           placeholder="Repeat password" />
+                                    <button type="button" class="px-input-group__suffix"
+                                            onclick="togglePwd('pwd2', this)">
+                                        <i class="fa-solid fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            }
+
+            @* ── ACTION ROW ──────────────────────────────────────────── *@
+            <div class="px-form__actions">
+                <a asp-action="List" class="px-btn px-btn--ghost">Cancel</a>
+                <button type="submit" class="px-btn px-btn--primary px-btn--lg">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    @(isEdit ? "Update employee" : "Create employee")
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function togglePwd(id, btn) {
+            const el = document.getElementById(id);
+            const ic = btn.querySelector('i');
+            if (el.type === 'password') {
+                el.type = 'text';
+                ic.className = 'fa-solid fa-eye-slash';
+            } else {
+                el.type = 'password';
+                ic.className = 'fa-solid fa-eye';
+            }
+        }
+    </script>
+}

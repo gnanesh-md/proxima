@@ -1,0 +1,846 @@
+@model ProximaLMS.Models.ExamBuilderPageViewModel
+@{
+    ViewData["Title"] = "Take Exam · " + Model.CourseTitle;
+    Layout = "_Layout";
+}
+
+<style>
+    :root {
+        --grape: #4C1864;
+        --grape-2: #7B2CBF;
+        --ink: #1f1d2b;
+        --muted: #6b7280;
+        --border: #e7e5ee;
+        --ok: #16a34a;
+        --amber: #d97706;
+        --red: #dc2626;
+    }
+
+    .tk-wrap {
+        max-width: 980px;
+        margin: 0 auto;
+    }
+
+    .tk-head {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 16px;
+        background: linear-gradient(120deg,var(--grape),var(--grape-2));
+        color: #fff;
+        border-radius: 14px;
+        padding: 14px 22px;
+        box-shadow: 0 12px 30px rgba(76,24,100,.25);
+    }
+
+    .tk-title {
+        font-size: 1.05rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .tk-sub {
+        opacity: .85;
+        font-size: .78rem;
+        margin-top: 2px;
+    }
+
+    .tk-timer {
+        margin-left: auto;
+        background: rgba(255,255,255,.15);
+        padding: 9px 16px;
+        border-radius: 10px;
+        font-weight: 800;
+        font-size: 1.05rem;
+        min-width: 120px;
+        text-align: center;
+        border: 1px solid rgba(255,255,255,.25);
+        font-variant-numeric: tabular-nums;
+    }
+
+        .tk-timer.warn {
+            background: #fef3c7;
+            color: #92400e;
+            border-color: #fde9c8;
+        }
+
+        .tk-timer.danger {
+            background: #fee2e2;
+            color: #b91c1c;
+            border-color: #fecaca;
+            animation: pulse 1s infinite;
+        }
+
+    @@keyframes pulse {
+        50% {
+            opacity: .6
+        }
+    }
+
+    .tk-grid {
+        display: grid;
+        grid-template-columns: 1fr 240px;
+        gap: 16px;
+    }
+
+    @@media (max-width:850px) {
+        .tk-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .tk-card {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 6px 18px rgba(10,20,40,.05);
+        padding: 22px 26px;
+    }
+
+    .tk-progress {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 14px;
+        font-size: .78rem;
+        color: var(--muted);
+        font-weight: 600;
+    }
+
+        .tk-progress .bar {
+            flex: 1;
+            height: 6px;
+            background: #eee7f5;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .tk-progress .fill {
+            height: 100%;
+            background: linear-gradient(90deg,var(--grape),var(--grape-2));
+            border-radius: 999px;
+            transition: width .2s;
+        }
+
+    .badge {
+        font-size: .68rem;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 999px;
+    }
+
+    .b-easy {
+        background: #d1fae5;
+        color: #15803d;
+    }
+
+    .b-medium {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .b-hard {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .b-marks {
+        background: #f4f1fa;
+        color: var(--grape);
+        margin-left: 6px;
+    }
+
+    .q-text {
+        font-size: 1.05rem;
+        font-weight: 700;
+        color: var(--ink);
+        margin: 10px 0 18px;
+        line-height: 1.55;
+    }
+
+    .opt {
+        display: flex;
+        align-items: flex-start;
+        gap: 11px;
+        padding: 11px 14px;
+        border: 1.5px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 9px;
+        cursor: pointer;
+        transition: .15s;
+        font-size: .95rem;
+        color: var(--ink);
+    }
+
+        .opt:hover {
+            border-color: var(--grape-2);
+            background: #faf9fc;
+        }
+
+        .opt.selected {
+            border-color: var(--grape-2);
+            background: #f4f1fa;
+        }
+
+        .opt input {
+            margin-top: 3px;
+            accent-color: var(--grape-2);
+        }
+
+        .opt .lt {
+            min-width: 24px;
+            font-weight: 700;
+            color: var(--grape);
+            font-size: .85rem;
+        }
+
+    .text-input {
+        width: 100%;
+        padding: 11px 13px;
+        border: 1.5px solid var(--border);
+        border-radius: 10px;
+        font-size: .95rem;
+        color: var(--ink);
+        transition: .15s;
+    }
+
+        .text-input:focus {
+            outline: none;
+            border-color: var(--grape-2);
+            box-shadow: 0 0 0 3px rgba(123,44,191,.12);
+        }
+
+    textarea.text-input {
+        resize: vertical;
+        min-height: 90px;
+    }
+
+    .tk-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 22px;
+        align-items: center;
+    }
+
+    .btn-g {
+        background: linear-gradient(90deg,var(--grape),var(--grape-2));
+        color: #fff;
+        border: none;
+        padding: 10px 22px;
+        border-radius: 9px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: .9rem;
+    }
+
+    .btn-o {
+        background: #fff;
+        border: 1.5px solid var(--border);
+        color: var(--ink);
+        padding: 10px 18px;
+        border-radius: 9px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: .9rem;
+    }
+
+        .btn-o:hover {
+            border-color: var(--grape-2);
+            color: var(--grape);
+        }
+
+        .btn-g:disabled, .btn-o:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+    .save-state {
+        margin-left: auto;
+        font-size: .78rem;
+        color: var(--muted);
+    }
+
+        .save-state.saving {
+            color: var(--amber);
+        }
+
+        .save-state.saved {
+            color: var(--ok);
+        }
+
+    /* sidebar nav grid */
+    .tk-side {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 14px;
+        box-shadow: 0 6px 18px rgba(10,20,40,.05);
+    }
+
+        .tk-side h4 {
+            font-size: .78rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin: 0 0 10px;
+        }
+
+    .tk-grid-nav {
+        display: grid;
+        grid-template-columns: repeat(5,1fr);
+        gap: 6px;
+    }
+
+    .tk-pill {
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: .78rem;
+        font-weight: 700;
+        cursor: pointer;
+        user-select: none;
+        background: #faf9fc;
+        color: var(--ink);
+        border: 1.5px solid var(--border);
+        border-radius: 7px;
+    }
+
+        .tk-pill.answered {
+            background: #d1fae5;
+            color: #15803d;
+            border-color: transparent;
+        }
+
+        .tk-pill.current {
+            outline: 2px solid var(--grape-2);
+            outline-offset: 1px;
+        }
+
+    .tk-legend {
+        margin-top: 12px;
+        font-size: .72rem;
+        color: var(--muted);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+        .tk-legend span {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tk-legend .sw {
+            width: 11px;
+            height: 11px;
+            border-radius: 3px;
+            display: inline-block;
+            border: 1.5px solid var(--border);
+        }
+
+            .tk-legend .sw.an {
+                background: #d1fae5;
+                border-color: transparent;
+            }
+
+    .overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(31,29,43,.55);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1500;
+    }
+
+        .overlay.show {
+            display: flex;
+        }
+
+    .overlay-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 30px 36px;
+        max-width: 420px;
+        text-align: center;
+        box-shadow: 0 25px 70px rgba(0,0,0,.3);
+    }
+
+        .overlay-card .ic {
+            font-size: 42px;
+            margin-bottom: 10px;
+        }
+
+        .overlay-card h3 {
+            margin: 0 0 8px;
+            color: var(--ink);
+            font-weight: 800;
+        }
+
+        .overlay-card p {
+            margin: 0;
+            color: var(--muted);
+            font-size: .92rem;
+        }
+</style>
+
+
+<div id="bootingState" style="text-align:center; padding:60px; color:var(--muted);">
+    <i class="fa-solid fa-spinner fa-spin" style="font-size:32px; color:var(--grape);"></i>
+    <p style="margin-top:14px; font-weight:600;">Loading exam…</p>
+</div>
+
+
+<div class="tk-wrap" id="examRoot" style="display:none;">
+    <div class="tk-head">
+        <div>
+            <h1 class="tk-title" id="examTitle">Exam</h1>
+            <div class="tk-sub" id="examMeta"></div>
+        </div>
+        <div class="tk-timer" id="timer">--:--</div>
+    </div>
+
+    <div class="tk-grid">
+        <!-- main question card -->
+        <div class="tk-card">
+            <div class="tk-progress">
+                <span id="progLbl">Question 1 of 1</span>
+                <div class="bar"><div class="fill" id="progFill" style="width:0%;"></div></div>
+                <span id="answeredLbl">0 answered</span>
+            </div>
+
+            <div id="qBadges"></div>
+            <div class="q-text" id="qText">—</div>
+            <div id="qBody">—</div>
+
+            <div class="tk-actions">
+                <button class="btn-o" id="btnPrev" onclick="goPrev()"><i class="fa-solid fa-arrow-left"></i> Previous</button>
+                <button class="btn-o" id="btnNext" onclick="goNext()">Next <i class="fa-solid fa-arrow-right"></i></button>
+                <span class="save-state" id="saveLbl"></span>
+                <button class="btn-g" id="btnSubmit" onclick="submitNow()" style="margin-left:auto;">
+                    <i class="fa-solid fa-paper-plane"></i> Submit
+                </button>
+            </div>
+        </div>
+
+        <!-- nav grid -->
+        <div class="tk-side">
+            <h4><i class="fa-solid fa-list-ol"></i> Questions</h4>
+            <div class="tk-grid-nav" id="navGrid"></div>
+            <div class="tk-legend">
+                <span><span class="sw an"></span> Answered</span>
+                <span><span class="sw"></span> Not yet</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- post-submit overlay (also used for auto-submit) -->
+<div class="overlay" id="finalOverlay">
+    <div class="overlay-card">
+        <div class="ic" id="finalIcon">⏱️</div>
+        <h3 id="finalTitle">Time's up</h3>
+        <p id="finalText">Submitting your answers…</p>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const EXAM_ID = @Model.CourseID;
+        const U = {
+            start: '@Url.Action("StartTake", "Exam")',
+            save: '@Url.Action("SaveAnswer", "Exam")',
+            submit: '@Url.Action("SubmitAttempt", "Exam")'
+        };
+
+        const esc = s => (s || '').toString().replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+        // Robust POST: reads the body as text first so a non-JSON response
+        // (e.g. an ASP.NET exception page, which is plain text for fetch
+        // requests) surfaces the REAL server message instead of a confusing
+        // "Unexpected token" JSON-parse crash.
+        const postJson = async (u, b) => {
+            const r = await fetch(u, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(b)
+            });
+            const raw = await r.text();
+            try {
+                return raw ? JSON.parse(raw) : {};
+            } catch (_) {
+                // Non-JSON (ASP.NET exception page). Surface the message plus the
+                // first stack frame so the failing file:line is visible on-screen.
+                const compact = (raw || 'empty response')
+                    .replace(/\s+/g, ' ')
+                    .slice(0, 600);
+                throw new Error('Server error ' + r.status + ': ' + compact);
+            }
+        };
+
+        // ── state ─────────────────────────────────────────────────
+        let STATE = {
+            attemptId: 0,
+            expiresAt: null,           // server-anchored Date
+            questions: [],             // [{ source, questionRefID, questionType, options:[{optionID, optionText}], ... }]
+            answers: {},             // key "src:ref" → { selected:[ids], text:"" }
+            idx: 0,
+            submitted: false,
+            autoSubmitted: false
+        };
+        let timerInterval = null;
+        let saveTimers = {};
+        let periodicSaveInterval = null;   // auto-save all answers every 30s
+
+        // ── boot ──────────────────────────────────────────────────
+        async function boot() {
+            try {
+                const data = await postJson(U.start, { ExamID: EXAM_ID });
+                if (!data.success && !data.Success) {
+                    const msg = data.message || data.Message
+                        || data.status || data.Status
+                        || data.title || data.Title
+                        || 'Could not start exam.';
+                    document.getElementById('bootingState').innerHTML =
+                        '<div style="color:var(--red);font-weight:600;padding:20px;">'
+                        + esc(msg) + '<br><small style="color:#888;font-size:.75rem;font-weight:400;">'
+                        + 'Server response: ' + esc(JSON.stringify(data).slice(0, 300))
+                        + '</small></div>';
+                    return;
+                }
+
+                STATE.attemptId = data.attemptID;
+                STATE.questions = data.questions || [];
+
+                // hydrate any saved answers (resume)
+                // SP_ExamAttempt_GetAnswers returns Source + QuestionRefID (→ source, questionRefID in camelCase)
+                (data.answers || []).forEach(a => {
+                    const src = a.source || a.Source;
+                    const ref = a.questionRefID ?? a.QuestionRefID;
+                    if (!src || ref == null) return;
+                    const key = src + ':' + ref;
+                    STATE.answers[key] = {
+                        selected: (a.selectedOptionIDs || a.SelectedOptionIDs)
+                            ? (a.selectedOptionIDs || a.SelectedOptionIDs).split(',').filter(x => x).map(x => parseInt(x, 10))
+                            : [],
+                        text: a.textAnswer || a.TextAnswer || ''
+                    };
+                });
+
+                // header / timer
+                document.getElementById('examTitle').textContent = data.header.examTitle || data.header.ExamTitle || 'Exam';
+                const dur = data.header.durationMinutes || data.header.DurationMinutes || 0;
+                const pass = data.header.passPercentage || data.header.PassPercentage || 0;
+                document.getElementById('examMeta').textContent =
+                    STATE.questions.length + ' questions · '
+                    + (dur > 0 ? dur + ' min · ' : 'No time limit · ')
+                    + 'Pass at ' + pass + '%';
+
+                // Use server-computed RemainingSeconds anchored to client's Date.now().
+                // This avoids timezone ambiguity: MySQL datetimes have no timezone marker
+                // and JS would parse them as local time (IST), making a UTC ExpiresAt
+                // appear 5.5 hours in the past → immediate auto-submit on load.
+                const remSecs = data.remainingSeconds ?? data.RemainingSeconds ?? 0;
+                if (remSecs > 0) {
+                    STATE.expiresAt = new Date(Date.now() + remSecs * 1000);
+                } else if (dur > 0) {
+                    STATE.expiresAt = new Date(Date.now() + dur * 60 * 1000);
+                } else {
+                    STATE.expiresAt = null;
+                }
+
+                document.getElementById('bootingState').style.display = 'none';
+                document.getElementById('examRoot').style.display = '';
+
+                renderNav();
+                renderQuestion();
+                if (STATE.expiresAt) {
+                    startTimer();
+                } else {
+                    document.getElementById('timer').textContent = '∞';
+                    document.getElementById('timer').classList.remove('warn', 'danger');
+                }
+                // periodic auto-save every 30 seconds
+                periodicSaveInterval = setInterval(saveAllAnsweredNow, 30000);
+            } catch (e) {
+                document.getElementById('bootingState').innerHTML =
+                    '<div style="color:var(--red);">Boot error: ' + esc(e.message) + '</div>';
+            }
+        }
+
+
+        // ── render ────────────────────────────────────────────────
+        function currentKey() {
+            const q = STATE.questions[STATE.idx];
+            return q.source + ':' + q.questionRefID;
+        }
+        function isAnswered(key) {
+            const a = STATE.answers[key];
+            if (!a) return false;
+            return (a.selected && a.selected.length > 0) || (a.text && a.text.trim() !== '');
+        }
+
+        function renderQuestion() {
+            const q = STATE.questions[STATE.idx];
+            const total = STATE.questions.length;
+            document.getElementById('progLbl').textContent = `Question ${STATE.idx + 1} of ${total}`;
+            document.getElementById('progFill').style.width = (((STATE.idx + 1) / total) * 100) + '%';
+
+            // badges
+            const diffCls = q.difficulty === 'Easy' ? 'b-easy' : q.difficulty === 'Hard' ? 'b-hard' : 'b-medium';
+            document.getElementById('qBadges').innerHTML =
+                `<span class="badge ${diffCls}">${esc(q.difficulty)}</span>`
+                + `<span class="badge b-marks">${q.marks} mark${q.marks > 1 ? 's' : ''}</span>`;
+
+            document.getElementById('qText').textContent = q.questionText;
+
+            const key = currentKey();
+            const saved = STATE.answers[key] || { selected: [], text: '' };
+            const choiceTypes = ['Single', 'Multiple', 'TrueFalse'];
+
+            let html = '';
+            if (choiceTypes.includes(q.questionType)) {
+                const inputType = q.questionType === 'Multiple' ? 'checkbox' : 'radio';
+                html = q.options.map((o, i) => {
+                    const isOn = saved.selected.includes(o.optionID);
+                    const letter = String.fromCharCode(65 + i); // A, B, C...
+                    return `<label class="opt ${isOn ? 'selected' : ''}">
+                                <input type="${inputType}" name="opt_${q.questionRefID}" value="${o.optionID}" ${isOn ? 'checked' : ''}
+                                       ${STATE.submitted ? 'disabled' : ''} onchange="onOptionChange(this)">
+                                <span class="lt">${letter}.</span>
+                                <span>${esc(o.optionText)}</span>
+                            </label>`;
+                }).join('');
+            } else if (q.questionType === 'FillBlank') {
+                html = `<input class="text-input" id="textAns" type="text" maxlength="200"
+                                      placeholder="Type your answer…"
+                                      value="${esc(saved.text)}"
+                                      ${STATE.submitted ? 'disabled' : ''}
+                                      oninput="onTextInput(this.value)" />`;
+            } else { // ShortAnswer
+                html = `<textarea class="text-input" id="textAns" rows="5"
+                                          placeholder="Write your answer here…"
+                                          ${STATE.submitted ? 'disabled' : ''}
+                                          oninput="onTextInput(this.value)">${esc(saved.text)}</textarea>
+                                <p style="font-size:.78rem; color:var(--muted); margin-top:6px;">
+                                    <i class="fa-solid fa-circle-info"></i>
+                                    This question will be graded manually by the tutor.
+                                </p>`;
+            }
+            document.getElementById('qBody').innerHTML = html;
+
+            document.getElementById('btnPrev').disabled = STATE.idx === 0;
+            document.getElementById('btnNext').disabled = STATE.idx === total - 1;
+            renderNav();
+            updateAnsweredCount();
+        }
+
+        function renderNav() {
+            const grid = document.getElementById('navGrid');
+            grid.innerHTML = STATE.questions.map((q, i) => {
+                const key = q.source + ':' + q.questionRefID;
+                const ans = isAnswered(key);
+                const cur = i === STATE.idx;
+                return `<div class="tk-pill ${ans ? 'answered' : ''} ${cur ? 'current' : ''}" onclick="goTo(${i})">${i + 1}</div>`;
+            }).join('');
+        }
+
+        function updateAnsweredCount() {
+            const n = STATE.questions.filter(q => isAnswered(q.source + ':' + q.questionRefID)).length;
+            document.getElementById('answeredLbl').textContent = n + ' answered';
+        }
+
+
+        // ── option / text input → debounced save ─────────────────
+        function onOptionChange(input) {
+            const q = STATE.questions[STATE.idx];
+            const key = currentKey();
+            let selected = STATE.answers[key]?.selected || [];
+
+            if (q.questionType === 'Multiple') {
+                const id = parseInt(input.value, 10);
+                if (input.checked) {
+                    if (!selected.includes(id)) selected.push(id);
+                } else {
+                    selected = selected.filter(x => x !== id);
+                }
+            } else {
+                selected = [parseInt(input.value, 10)];
+            }
+            STATE.answers[key] = { selected, text: '' };
+
+            // visual: toggle .selected on the row
+            document.querySelectorAll('.opt').forEach(el => {
+                const inp = el.querySelector('input');
+                el.classList.toggle('selected', inp.checked);
+            });
+            updateAnsweredCount();
+            renderNav();
+            scheduleSave(key);
+        }
+
+        function onTextInput(val) {
+            const key = currentKey();
+            STATE.answers[key] = { selected: [], text: val };
+            updateAnsweredCount();
+            renderNav();
+            scheduleSave(key);
+        }
+
+        function scheduleSave(key) {
+            if (STATE.submitted) return;
+            // debounce per-key
+            if (saveTimers[key]) clearTimeout(saveTimers[key]);
+            setSaving();
+            saveTimers[key] = setTimeout(() => doSave(key), 600);
+        }
+
+        async function doSave(key) {
+            const a = STATE.answers[key];
+            const [src, ref] = key.split(':');
+            try {
+                const res = await postJson(U.save, {
+                    AttemptID: STATE.attemptId,
+                    Source: src,
+                    QuestionRefID: parseInt(ref, 10),
+                    SelectedOptionIDs: a.selected && a.selected.length ? a.selected.join(',') : null,
+                    TextAnswer: a.text || null
+                });
+                if (res.status === 'Success' || res.Status === 'Success') setSaved();
+                else setSaveError();
+            } catch (e) {
+                setSaveError();
+            }
+        }
+        function setSaving() { const el = document.getElementById('saveLbl'); el.className = 'save-state saving'; el.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…'; }
+        function setSaved() { const el = document.getElementById('saveLbl'); el.className = 'save-state saved'; el.innerHTML = '<i class="fa-solid fa-check"></i> Saved'; }
+        function setSaveError() { const el = document.getElementById('saveLbl'); el.className = 'save-state'; el.style.color = 'var(--red)'; el.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Save failed — retrying…'; }
+
+
+        // ── periodic auto-save ────────────────────────────────────
+        async function saveAllAnsweredNow() {
+            if (STATE.submitted) return;
+            const keys = Object.keys(STATE.answers);
+            for (const key of keys) {
+                const a = STATE.answers[key];
+                if (!a) continue;
+                const hasAnswer = (a.selected && a.selected.length > 0) || (a.text && a.text.trim() !== '');
+                if (!hasAnswer) continue;
+                if (saveTimers[key]) { clearTimeout(saveTimers[key]); delete saveTimers[key]; }
+                await doSave(key);
+            }
+        }
+
+        function goPrev() { if (STATE.idx > 0) { STATE.idx--; renderQuestion(); } }
+        function goNext() { if (STATE.idx < STATE.questions.length - 1) { STATE.idx++; renderQuestion(); } }
+        function goTo(i) { if (i >= 0 && i < STATE.questions.length) { STATE.idx = i; renderQuestion(); } }
+
+
+        // ── timer ────────────────────────────────────────────────
+        function startTimer() {
+            const tick = () => {
+                if (STATE.submitted) return;
+                const remainMs = STATE.expiresAt - new Date();
+                if (remainMs <= 0) {
+                    document.getElementById('timer').textContent = '00:00';
+                    document.getElementById('timer').classList.add('danger');
+                    autoSubmit();
+                    return;
+                }
+                const totalSec = Math.floor(remainMs / 1000);
+                const h = Math.floor(totalSec / 3600);
+                const m = Math.floor((totalSec % 3600) / 60);
+                const s = totalSec % 60;
+                const txt = h > 0
+                    ? `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+                    : `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+                const el = document.getElementById('timer');
+                el.textContent = txt;
+                el.classList.toggle('warn', totalSec <= 300 && totalSec > 60);
+                el.classList.toggle('danger', totalSec <= 60);
+            };
+            tick();
+            timerInterval = setInterval(tick, 1000);
+        }
+
+
+        // ── submit ───────────────────────────────────────────────
+        async function submitNow() {
+            const unanswered = STATE.questions.length - STATE.questions.filter(q => isAnswered(q.source + ':' + q.questionRefID)).length;
+            const c = await Swal.fire({
+                title: 'Submit exam?',
+                html: unanswered > 0
+                    ? `<p style="color:#475467;font-size:14px;"><b>${unanswered}</b> question${unanswered > 1 ? 's are' : ' is'} unanswered. You won't be able to change your answers after submitting.</p>`
+                    : `<p style="color:#475467;font-size:14px;">All ${STATE.questions.length} questions answered. Ready to submit?</p>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#4C1864',
+                confirmButtonText: 'Submit'
+            });
+            if (!c.isConfirmed) return;
+            await doSubmit(false);
+        }
+
+        async function autoSubmit() {
+            if (STATE.submitted) return;
+            STATE.autoSubmitted = true;
+            document.getElementById('finalIcon').textContent = '⏱️';
+            document.getElementById('finalTitle').textContent = "Time's up!";
+            document.getElementById('finalText').textContent = 'Submitting your answers automatically…';
+            document.getElementById('finalOverlay').classList.add('show');
+            await doSubmit(true);
+        }
+
+        async function doSubmit(autoFlag) {
+            if (STATE.submitted) return;
+            STATE.submitted = true;
+
+            // flush any pending debounced save before submitting
+            const pending = Object.keys(saveTimers);
+            for (const key of pending) {
+                clearTimeout(saveTimers[key]);
+                await doSave(key);
+            }
+
+            // disable everything
+            document.getElementById('btnSubmit').disabled = true;
+            document.getElementById('btnPrev').disabled = true;
+            document.getElementById('btnNext').disabled = true;
+            if (timerInterval) clearInterval(timerInterval);
+            if (periodicSaveInterval) clearInterval(periodicSaveInterval);
+
+            try {
+                const res = await postJson(U.submit, { AttemptID: STATE.attemptId, AutoSubmitted: !!autoFlag });
+                if (res.status === 'Success' || res.Status === 'Success') {
+                    // → Piece 4 will own this route. Falling back to a basic
+                    //   built-in confirmation if /Exam/Result isn't routed yet.
+                    location.href = '/Exam/Result?attemptId=' + STATE.attemptId;
+                } else {
+                    STATE.submitted = false; // allow retry
+                    Swal.fire({ icon: 'error', title: 'Submit failed', text: res.message || res.Message || 'Try again.', confirmButtonColor: '#4C1864' });
+                }
+            } catch (e) {
+                STATE.submitted = false;
+                Swal.fire({ icon: 'error', title: 'Submit error', text: e.message, confirmButtonColor: '#4C1864' });
+            }
+        }
+
+
+        // ── warn on leave (only while in-progress) ───────────────
+        window.addEventListener('beforeunload', e => {
+            if (!STATE.submitted && STATE.attemptId) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+
+        // ── go ────────────────────────────────────────────────────
+        boot();
+    </script>
+}

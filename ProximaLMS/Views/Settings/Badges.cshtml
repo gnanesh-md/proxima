@@ -1,0 +1,239 @@
+
+@model ProximaLMS.Models.SettingsPageVM
+@{ Layout = "_Layout"; ViewData["Title"] = Model.Title; }
+
+<div class="as-wrap">
+    <div class="as-head">
+        <h1><span class="ico"><i class="fa-solid fa-medal"></i></span> Badges</h1>
+        <div class="as-crumb">
+            <a asp-action="Index">Settings</a> &rsaquo; Badges
+        </div>
+    </div>
+
+    <div class="as-card">
+        <div class="as-card-head">
+            <div class="as-card-title">Badges &amp; the criteria to unlock them</div>
+            <button class="as-btn" id="btnAdd"><i class="fa-solid fa-plus"></i> Add badge</button>
+        </div>
+        <div class="as-card-body">
+            <table class="as-table">
+                <thead>
+                    <tr>
+                        <th style="width:60px"></th>
+                        <th style="width:25%">Name</th>
+                        <th>Description</th>
+                        <th>Criteria</th>
+                        <th style="width:110px">Status</th>
+                        <th style="width:120px;text-align:right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tblBody"><tr><td colspan="6" class="as-empty">Loading…</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="as-overlay d-none" id="modal">
+    <div class="as-dialog" style="max-width:640px">
+        <div class="as-dialog-head">
+            <h3 id="dlgTitle">Add badge</h3>
+            <button class="as-x" onclick="closeDlg()">&times;</button>
+        </div>
+        <div class="as-dialog-body">
+            <input type="hidden" id="fId" value="0" />
+            <div class="row g-3">
+                <div class="col-md-8">
+                    <label class="as-label">Badge name <span class="req">*</span></label>
+                    <input id="fName" class="as-input" placeholder="e.g. Course Champion" />
+                </div>
+                <div class="col-md-4">
+                    <label class="as-label">Sort order</label>
+                    <input id="fSort" type="number" class="as-input" value="0" />
+                </div>
+                <div class="col-12">
+                    <label class="as-label">Description</label>
+                    <textarea id="fDesc" class="as-textarea" rows="2" placeholder="Shown to learners when they earn this badge"></textarea>
+                </div>
+                <div class="col-md-7">
+                    <label class="as-label">Icon class <span style="color:#9aa0ac;font-weight:400;">(Font Awesome)</span></label>
+                    <input id="fIcon" class="as-input" placeholder="fa-solid fa-trophy" />
+                </div>
+                <div class="col-md-5">
+                    <label class="as-label">Badge color</label>
+                    <input id="fColor" type="color" class="as-input" value="#7B2CBF" style="height:42px;padding:4px;" />
+                </div>
+                <div class="col-12 d-flex align-items-center gap-3 mt-1" style="background:var(--as-bg);padding:12px;border-radius:10px;">
+                    <span style="font-size:12px;font-weight:700;color:var(--as-ink2);text-transform:uppercase;letter-spacing:.04em;">Preview:</span>
+                    <div id="iconPreview" style="width:54px;height:54px;border-radius:50%;background:#7B2CBF;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;">
+                        <i class="fa-solid fa-trophy"></i>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="as-label">Criteria type <span class="req">*</span></label>
+                    <select id="fCritType" class="as-select">
+                        <option value="POINTS_TOTAL">Total points reached</option>
+                        <option value="COURSES_COMPLETED">Courses completed</option>
+                        <option value="REVIEWS_WRITTEN">Reviews written</option>
+                        <option value="REFERRALS_MADE">Referrals made</option>
+                        <option value="STREAK_DAYS">Consecutive day streak</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="as-label">Threshold value <span class="req">*</span></label>
+                    <input id="fCritValue" type="number" class="as-input" min="1" value="1" />
+                    <div class="as-hint">Learner must reach <strong id="thresholdEcho">1</strong> <span id="thresholdUnit">points</span> to earn this badge.</div>
+                </div>
+                <div class="col-12">
+                    <label class="as-switch">
+                        <input id="fActive" type="checkbox" checked />
+                        <span></span> Active
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="as-dialog-foot">
+            <button class="as-btn-ghost" onclick="closeDlg()">Cancel</button>
+            <button class="as-btn" id="btnSave"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function () {
+    const tbl = document.getElementById('tblBody');
+    let rows = [];
+
+    const critLabels = {
+        POINTS_TOTAL:      { label: 'Points',           unit: 'points' },
+        COURSES_COMPLETED: { label: 'Courses complete', unit: 'courses' },
+        REVIEWS_WRITTEN:   { label: 'Reviews',          unit: 'reviews' },
+        REFERRALS_MADE:    { label: 'Referrals',        unit: 'referrals' },
+        STREAK_DAYS:       { label: 'Streak days',      unit: 'days' }
+    };
+
+    async function load() {
+        tbl.innerHTML = '<tr><td colspan="6" class="as-empty">Loading…</td></tr>';
+        try {
+            const r = await fetch('@Url.Action("BadgesList","Settings")');
+            const d = await r.json();
+            // API returns { success, data: [...] }
+            rows = d.data || [];
+            render();
+        } catch { tbl.innerHTML = '<tr><td colspan="6" class="as-empty">Could not load.</td></tr>'; }
+    }
+
+    function esc(s) { return (s ?? '').toString().replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c])); }
+
+    function render() {
+        if (!rows.length) {
+            tbl.innerHTML = '<tr><td colspan="6" class="as-empty">No badges yet.</td></tr>';
+            return;
+        }
+        rows.sort((a, b) => (a.SortOrder ?? 0) - (b.SortOrder ?? 0));
+        tbl.innerHTML = rows.map(r => {
+            const ico = r.IconClass || 'fa-solid fa-medal';
+            const col = r.BadgeColor || '#7B2CBF';
+            const ci  = critLabels[r.CriteriaType] || { label: r.CriteriaType, unit: '' };
+            return `
+                <tr>
+                    <td><div style="width:42px;height:42px;border-radius:50%;background:${esc(col)};color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;"><i class="${esc(ico)}"></i></div></td>
+                    <td><strong>${esc(r.BadgeName)}</strong></td>
+                    <td><span style="color:#6b7280">${esc(r.Description || '—')}</span></td>
+                    <td><span class="as-pill info">${esc(ci.label)} ≥ ${r.CriteriaValue ?? 0}</span></td>
+                    <td>${r.IsActive ? '<span class="as-pill ok">Active</span>' : '<span class="as-pill off">Inactive</span>'}</td>
+                    <td class="as-actions">
+                        <button class="as-icon-btn" title="Edit" onclick="editRow(${r.BadgeID})"><i class="fa-solid fa-pen"></i></button>
+                        <button class="as-icon-btn danger" title="Delete" onclick="delRow(${r.BadgeID}, '${esc(r.BadgeName).replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+        }).join('');
+    }
+
+    function updatePreview() {
+        const icon  = document.getElementById('fIcon').value.trim() || 'fa-solid fa-trophy';
+        const color = document.getElementById('fColor').value;
+        const p = document.getElementById('iconPreview');
+        p.style.background = color;
+        p.innerHTML = `<i class="${icon}"></i>`;
+    }
+
+    function updateThresholdEcho() {
+        const v = document.getElementById('fCritValue').value || 0;
+        const c = document.getElementById('fCritType').value;
+        document.getElementById('thresholdEcho').textContent = v;
+        document.getElementById('thresholdUnit').textContent = (critLabels[c]?.unit) || '';
+    }
+
+    window.editRow = id => openDlg(rows.find(x => x.BadgeID === id));
+
+    window.delRow = async (id, name) => {
+        const res = await Swal.fire({
+            icon: 'warning', title: 'Delete badge?', text: `"${name}" will be removed.`,
+            showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#dc2626'
+        });
+        if (!res.isConfirmed) return;
+        // API IdRequest expects { ID } not { BadgeID }
+        const r = await fetch('@Url.Action("BadgeDelete","Settings")', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ID: id })
+        });
+        const d = await r.json();
+        if (d.success) { Swal.fire({ icon: 'success', title: 'Deleted', timer: 1200, showConfirmButton: false }); load(); }
+        else Swal.fire({ icon: 'error', title: 'Failed', text: d.message || '' });
+    };
+
+    function openDlg(row) {
+        document.getElementById('dlgTitle').textContent = row ? 'Edit badge' : 'Add badge';
+        document.getElementById('fId').value        = row?.BadgeID       || 0;
+        document.getElementById('fName').value      = row?.BadgeName     || '';
+        document.getElementById('fDesc').value      = row?.Description   || '';
+        document.getElementById('fIcon').value      = row?.IconClass     || 'fa-solid fa-trophy';
+        document.getElementById('fColor').value     = row?.BadgeColor    || '#7B2CBF';
+        document.getElementById('fCritType').value  = row?.CriteriaType  || 'POINTS_TOTAL';
+        document.getElementById('fCritValue').value = row?.CriteriaValue ?? 1;
+        document.getElementById('fSort').value      = row?.SortOrder     ?? 0;
+        document.getElementById('fActive').checked  = row ? !!row.IsActive : true;
+        updatePreview();
+        updateThresholdEcho();
+        document.getElementById('modal').classList.remove('d-none');
+    }
+    window.closeDlg = () => document.getElementById('modal').classList.add('d-none');
+
+    ['fIcon', 'fColor'].forEach(id => document.getElementById(id).addEventListener('input', updatePreview));
+    ['fCritType', 'fCritValue'].forEach(id => document.getElementById(id).addEventListener('input', updateThresholdEcho));
+
+    document.getElementById('btnAdd').addEventListener('click', () => openDlg(null));
+    document.getElementById('btnSave').addEventListener('click', async function () {
+        const name = document.getElementById('fName').value.trim();
+        const val  = +document.getElementById('fCritValue').value;
+        if (!name) return Swal.fire({ icon: 'warning', title: 'Badge name required' });
+        if (val < 1) return Swal.fire({ icon: 'warning', title: 'Threshold must be 1 or greater' });
+
+        const body = {
+            BadgeID:       +document.getElementById('fId').value,
+            BadgeName:     name,
+            Description:   document.getElementById('fDesc').value.trim(),
+            IconClass:     document.getElementById('fIcon').value.trim(),
+            BadgeColor:    document.getElementById('fColor').value,
+            CriteriaType:  document.getElementById('fCritType').value,
+            CriteriaValue: val,
+            SortOrder:     +document.getElementById('fSort').value || 0,
+            IsActive:      document.getElementById('fActive').checked
+        };
+        this.disabled = true;
+        const r = await fetch('@Url.Action("BadgeSave","Settings")', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        this.disabled = false;
+        if (d.success) {
+            closeDlg();
+            Swal.fire({ icon: 'success', title: 'Saved', timer: 1200, showConfirmButton: false });
+            load();
+        } else Swal.fire({ icon: 'error', title: 'Failed', text: d.message || '' });
+    });
+
+    load();
+})();
+</script>

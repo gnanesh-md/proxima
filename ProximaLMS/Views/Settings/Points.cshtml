@@ -1,0 +1,181 @@
+@*  /Views/Settings/Points.cshtml
+    FIX: Delete payload changed from { RuleID: id } to { ID: id }
+         to match PointsRuleController's IdRequest DTO. *@
+@model ProximaLMS.Models.SettingsPageVM
+@{ Layout = "_Layout"; ViewData["Title"] = Model.Title; }
+
+<div class="as-wrap">
+    <div class="as-head">
+        <h1><span class="ico"><i class="fa-solid fa-star"></i></span> Points Rules</h1>
+        <div class="as-crumb">
+            <a asp-action="Index">Settings</a> &rsaquo; Points Rules
+        </div>
+    </div>
+
+    <div class="as-card">
+        <div class="as-card-head">
+            <div class="as-card-title">Points awarded for each user action</div>
+            <button class="as-btn" id="btnAdd"><i class="fa-solid fa-plus"></i> Add rule</button>
+        </div>
+        <div class="as-card-body">
+            <table class="as-table">
+                <thead>
+                    <tr>
+                        <th style="width:22%">Action code</th>
+                        <th style="width:30%">Label</th>
+                        <th style="width:90px">Points</th>
+                        <th>Description</th>
+                        <th style="width:110px">Status</th>
+                        <th style="width:120px;text-align:right">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tblBody"><tr><td colspan="6" class="as-empty">Loading…</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="as-overlay d-none" id="modal">
+    <div class="as-dialog">
+        <div class="as-dialog-head">
+            <h3 id="dlgTitle">Add points rule</h3>
+            <button class="as-x" onclick="closeDlg()">&times;</button>
+        </div>
+        <div class="as-dialog-body">
+            <input type="hidden" id="fId" value="0" />
+            <div class="row g-3">
+                <div class="col-md-7">
+                    <label class="as-label">Action code <span class="req">*</span></label>
+                    <input id="fCode" class="as-input" placeholder="e.g. COMPLETE_COURSE" />
+                    <div class="as-hint"><i class="fa-solid fa-info-circle"></i> UPPER_SNAKE_CASE. Must be unique — used in code to award points.</div>
+                </div>
+                <div class="col-md-5">
+                    <label class="as-label">Points <span class="req">*</span></label>
+                    <input id="fPoints" type="number" class="as-input" min="0" value="0" />
+                </div>
+                <div class="col-12">
+                    <label class="as-label">Label <span class="req">*</span></label>
+                    <input id="fLabel" class="as-input" placeholder="e.g. Complete a course" />
+                </div>
+                <div class="col-12">
+                    <label class="as-label">Description</label>
+                    <textarea id="fDesc" class="as-textarea" rows="2" placeholder="Optional context for admins"></textarea>
+                </div>
+                <div class="col-12">
+                    <label class="as-switch">
+                        <input id="fActive" type="checkbox" checked />
+                        <span></span> Active
+                    </label>
+                </div>
+            </div>
+        </div>
+        <div class="as-dialog-foot">
+            <button class="as-btn-ghost" onclick="closeDlg()">Cancel</button>
+            <button class="as-btn" id="btnSave"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function () {
+    const tbl = document.getElementById('tblBody');
+    let rows = [];
+
+    async function load() {
+        tbl.innerHTML = '<tr><td colspan="6" class="as-empty">Loading…</td></tr>';
+        try {
+            const r = await fetch('@Url.Action("PointsList","Settings")');
+            const d = await r.json();
+            // API returns { success, data: [...] }
+            rows = d.data || [];
+            render();
+        } catch { tbl.innerHTML = '<tr><td colspan="6" class="as-empty">Could not load.</td></tr>'; }
+    }
+
+    function esc(s) { return (s ?? '').toString().replace(/[<>&"]/g, c => ({ '<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;' }[c])); }
+
+    function render() {
+        if (!rows.length) {
+            tbl.innerHTML = '<tr><td colspan="6" class="as-empty">No rules yet.</td></tr>';
+            return;
+        }
+        tbl.innerHTML = rows.map(r => `
+            <tr>
+                <td><code class="as-code">${esc(r.ActionCode)}</code></td>
+                <td><strong>${esc(r.ActionLabel)}</strong></td>
+                <td><span class="as-pill info">+${r.Points ?? 0}</span></td>
+                <td><span style="color:#6b7280">${esc(r.Description || '—')}</span></td>
+                <td>${r.IsActive ? '<span class="as-pill ok">Active</span>' : '<span class="as-pill off">Inactive</span>'}</td>
+                <td class="as-actions">
+                    <button class="as-icon-btn" title="Edit" onclick="editRow(${r.RuleID})"><i class="fa-solid fa-pen"></i></button>
+                    <button class="as-icon-btn danger" title="Delete" onclick="delRow(${r.RuleID}, '${esc(r.ActionCode).replace(/'/g,"\\'")}')"><i class="fa-solid fa-trash"></i></button>
+                </td>
+            </tr>`).join('');
+    }
+
+    window.editRow = id => openDlg(rows.find(x => x.RuleID === id));
+
+    window.delRow = async (id, code) => {
+        const res = await Swal.fire({
+            icon: 'warning', title: 'Delete rule?', text: `Rule "${code}" will be removed.`,
+            showCancelButton: true, confirmButtonText: 'Delete', confirmButtonColor: '#dc2626'
+        });
+        if (!res.isConfirmed) return;
+        // API IdRequest expects { ID } not { RuleID }
+        const r = await fetch('@Url.Action("PointsDelete","Settings")', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ID: id })
+        });
+        const d = await r.json();
+        if (d.success) { Swal.fire({ icon: 'success', title: 'Deleted', timer: 1200, showConfirmButton: false }); load(); }
+        else Swal.fire({ icon: 'error', title: 'Failed', text: d.message || '' });
+    };
+
+    function openDlg(row) {
+        document.getElementById('dlgTitle').textContent = row ? 'Edit points rule' : 'Add points rule';
+        document.getElementById('fId').value     = row?.RuleID      || 0;
+        document.getElementById('fCode').value   = row?.ActionCode  || '';
+        document.getElementById('fLabel').value  = row?.ActionLabel || '';
+        document.getElementById('fPoints').value = row?.Points      ?? 0;
+        document.getElementById('fDesc').value   = row?.Description || '';
+        document.getElementById('fActive').checked = row ? !!row.IsActive : true;
+        // Lock the code when editing — it's a code-level identifier
+        document.getElementById('fCode').disabled = !!row;
+        document.getElementById('modal').classList.remove('d-none');
+    }
+    window.closeDlg = () => document.getElementById('modal').classList.add('d-none');
+
+    document.getElementById('btnAdd').addEventListener('click', () => openDlg(null));
+    document.getElementById('btnSave').addEventListener('click', async function () {
+        const code  = document.getElementById('fCode').value.trim().toUpperCase().replace(/[^A-Z0-9_]/g, '_');
+        const label = document.getElementById('fLabel').value.trim();
+        const pts   = +document.getElementById('fPoints').value;
+        if (!code)  return Swal.fire({ icon: 'warning', title: 'Action code required' });
+        if (!label) return Swal.fire({ icon: 'warning', title: 'Label required' });
+        if (isNaN(pts) || pts < 0) return Swal.fire({ icon: 'warning', title: 'Points must be 0 or greater' });
+
+        const body = {
+            RuleID:      +document.getElementById('fId').value,
+            ActionCode:  code,
+            ActionLabel: label,
+            Points:      pts,
+            Description: document.getElementById('fDesc').value.trim(),
+            IsActive:    document.getElementById('fActive').checked
+        };
+        this.disabled = true;
+        const r = await fetch('@Url.Action("PointsSave","Settings")', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        this.disabled = false;
+        if (d.success) {
+            closeDlg();
+            Swal.fire({ icon: 'success', title: 'Saved', timer: 1200, showConfirmButton: false });
+            load();
+        } else Swal.fire({ icon: 'error', title: 'Failed', text: d.message || '' });
+    });
+
+    load();
+})();
+</script>

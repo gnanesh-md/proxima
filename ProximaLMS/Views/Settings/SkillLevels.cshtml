@@ -1,0 +1,540 @@
+@*  /Views/Settings/SkillLevels.cshtml
+    ─────────────────────────────────────────────────────────────────
+    Fixes (May 2026):
+      • List load handles bare-array API responses (was d.data || [])
+      • Save/Toggle/Delete accept the API's actual response shape
+      • Field-name tolerance (camelCase / PascalCase)
+      • Inline validation, modal stays open on error
+      • Action confirmation surfaces real API messages
+    ─────────────────────────────────────────────────────────────────
+*@
+@model ProximaLMS.Models.SettingsPageVM
+@{
+    Layout = "_Layout"; ViewData["Title"] = Model.Title;
+}
+
+<div class="px-page">
+
+    <header class="px-hero">
+        <div class="px-hero__inner">
+            <div>
+                <div class="px-crumb" style="color: rgba(255,255,255,.6);">
+                    <a asp-action="Index" style="color: rgba(255,255,255,.7);">Settings</a>
+                    <span class="px-crumb__sep">›</span>
+                    <span style="color:#fff; font-weight:600;">Skill Levels</span>
+                </div>
+                <h1 class="px-hero__title">Skill Levels</h1>
+                <p class="px-hero__sub">The difficulty tiers learners see on every course — Beginner, Intermediate, Advanced, or anything else you define.</p>
+            </div>
+            <div class="px-hero__actions">
+                <button class="px-hero__btn px-hero__btn--solid" id="btnAdd">
+                    <i class="fa-solid fa-plus"></i> Add skill level
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="px-body">
+
+        @* ── STAT TILES ──────────────────────────────────────────── *@
+        <div class="px-stat-grid">
+            <div class="px-stat">
+                <div class="px-stat__icon px-stat__icon--grape"><i class="fa-solid fa-signal"></i></div>
+                <div>
+                    <div class="px-stat__num" id="statTotal">—</div>
+                    <div class="px-stat__lbl">Total Levels</div>
+                </div>
+            </div>
+            <div class="px-stat">
+                <div class="px-stat__icon px-stat__icon--green"><i class="fa-solid fa-circle-check"></i></div>
+                <div>
+                    <div class="px-stat__num" id="statActive">—</div>
+                    <div class="px-stat__lbl">Active</div>
+                </div>
+            </div>
+            <div class="px-stat">
+                <div class="px-stat__icon px-stat__icon--rose"><i class="fa-solid fa-circle-xmark"></i></div>
+                <div>
+                    <div class="px-stat__num" id="statInactive">—</div>
+                    <div class="px-stat__lbl">Inactive</div>
+                </div>
+            </div>
+            <div class="px-stat">
+                <div class="px-stat__icon px-stat__icon--blue"><i class="fa-solid fa-palette"></i></div>
+                <div>
+                    <div class="px-stat__num" id="statColored">—</div>
+                    <div class="px-stat__lbl">With Color</div>
+                </div>
+            </div>
+        </div>
+
+        @* ── MAIN TABLE ──────────────────────────────────────────── *@
+        <div class="px-card">
+
+            <div class="px-toolbar">
+                <div class="px-search">
+                    <i class="fa-solid fa-search px-search__icon"></i>
+                    <input type="text" id="lvlSearch" placeholder="Search by name or description…" />
+                </div>
+                <select class="px-select" id="statusFilter" style="width: 160px;">
+                    <option value="">All statuses</option>
+                    <option value="active">Active only</option>
+                    <option value="inactive">Inactive only</option>
+                </select>
+                <div class="px-toolbar__spacer"></div>
+                <span class="px-toolbar__count" id="visibleCount">— shown</span>
+            </div>
+
+            <div class="px-card__body px-card__body--flush">
+                <table class="px-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 70px;">ID</th>
+                            <th>Skill level</th>
+                            <th style="width: 140px;">Color</th>
+                            <th style="width: 80px; text-align:center;">Order</th>
+                            <th style="width: 110px;">Status</th>
+                            <th style="width: 140px; text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tblBody">
+                        <tr>
+                            <td colspan="6">
+                                <div class="px-empty">
+                                    <div class="px-skel" style="height:16px; width:200px; margin:0 auto;"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="px-card__foot">
+                <span class="px-text-muted" style="font-size:12.5px;">
+                    Showing <strong id="footCount">0</strong> levels
+                </span>
+            </div>
+        </div>
+
+    </div>
+
+    @* ── MODAL ──────────────────────────────────────────────────── *@
+    <div class="px-modal" id="lvlModal">
+        <div class="px-modal__panel">
+            <div class="px-modal__head">
+                <h3 class="px-modal__title" id="dlgTitle">Add skill level</h3>
+                <button class="px-modal__close" onclick="closeDlg()" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="px-modal__body">
+                <input type="hidden" id="fId" value="0" />
+
+                <div class="px-grid">
+                    <div class="px-col-6">
+                        <div class="px-field">
+                            <label class="px-label">Level name <span class="px-req">*</span></label>
+                            <input id="fName" class="px-input" placeholder="e.g. Beginner" autocomplete="off" />
+                            <div class="px-help" id="fNameErr" style="color: var(--px-danger); display:none;"></div>
+                        </div>
+                    </div>
+                    <div class="px-col-6">
+                        <div class="px-field">
+                            <label class="px-label">Sort order</label>
+                            <input id="fSort" type="number" class="px-input" value="0" min="0" />
+                        </div>
+                    </div>
+
+                    <div class="px-col-12">
+                        <div class="px-field">
+                            <label class="px-label">Description</label>
+                            <textarea id="fDesc" class="px-textarea" rows="3" placeholder="What learners should expect at this level…"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="px-col-6">
+                        <div class="px-field">
+                            <label class="px-label">Color</label>
+                            <div style="display:flex; gap:8px; align-items:center;">
+                                <input id="fColor" type="color" value="#16A34A"
+                                       style="width:46px; height:42px; border:1px solid var(--px-line-2); border-radius:8px; padding:3px; cursor:pointer;" />
+                                <input id="fColorHex" type="text" class="px-input" value="#16A34A"
+                                       maxlength="7" style="text-transform:uppercase; font-family: var(--px-font-mono); font-size:13px;" />
+                            </div>
+                            <div class="px-help">Used as the color chip wherever this level appears.</div>
+                        </div>
+                    </div>
+
+                    <div class="px-col-6">
+                        <div class="px-field" style="justify-content:flex-end;">
+                            <label class="px-switch">
+                                <input id="fActive" type="checkbox" checked />
+                                <span class="px-switch__track"></span>
+                                Active
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-modal__foot">
+                <button class="px-btn px-btn--ghost" onclick="closeDlg()">Cancel</button>
+                <button class="px-btn px-btn--primary" id="btnSave">
+                    <i class="fa-solid fa-floppy-disk"></i> Save level
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function () {
+            const tbl = document.getElementById('tblBody');
+            const modal = document.getElementById('lvlModal');
+            let rows = [];
+
+            // ─── Helpers ───────────────────────────────────────────────
+            function esc(s) {
+                return (s ?? '').toString().replace(/[<>&"]/g,
+                    c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+            }
+
+            function unwrapArray(d) {
+                if (Array.isArray(d)) return d;
+                if (d && typeof d === 'object') {
+                    if (Array.isArray(d.data)) return d.data;
+                    if (Array.isArray(d.result)) return d.result;
+                    if (Array.isArray(d.items)) return d.items;
+                }
+                return [];
+            }
+
+            function field(r, ...names) {
+                for (const n of names) {
+                    if (r[n] !== undefined && r[n] !== null) return r[n];
+                    const lower = n[0].toLowerCase() + n.slice(1);
+                    if (r[lower] !== undefined && r[lower] !== null) return r[lower];
+                }
+                return undefined;
+            }
+
+            function normaliseRow(r) {
+                return {
+                    LevelID: field(r, 'LevelID') ?? 0,
+                    LevelName: field(r, 'LevelName') ?? '',
+                    Description: field(r, 'Description') ?? '',
+                    ColorHex: field(r, 'ColorHex') ?? '',
+                    SortOrder: field(r, 'SortOrder') ?? 0,
+                    IsActive: !!field(r, 'IsActive'),
+                };
+            }
+
+            function isValidHex(s) {
+                if (!s) return false;
+                s = s.trim();
+                return /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(s);
+            }
+
+            // ─── Load ─────────────────────────────────────────────────
+            async function load() {
+                try {
+                    const r = await fetch('@Url.Action("SkillLevelList", "Settings")', {
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    const d = await r.json();
+                    rows = unwrapArray(d).map(normaliseRow);
+                    renderStats();
+                    render();
+                } catch (e) {
+                    console.error('SkillLevel load failed:', e);
+                    tbl.innerHTML = `
+                        <tr><td colspan="6">
+                            <div class="px-empty">
+                                <div class="px-empty__icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                                <div class="px-empty__title">Couldn't load skill levels</div>
+                                <p class="px-empty__sub">${esc(e.message || 'Check your connection and try again.')}</p>
+                            </div>
+                        </td></tr>`;
+                }
+            }
+
+            function renderStats() {
+                document.getElementById('statTotal').textContent = rows.length;
+                document.getElementById('statActive').textContent = rows.filter(r => r.IsActive).length;
+                document.getElementById('statInactive').textContent = rows.filter(r => !r.IsActive).length;
+                document.getElementById('statColored').textContent = rows.filter(r => r.ColorHex).length;
+            }
+
+            function applyFilter(list) {
+                const q = (document.getElementById('lvlSearch').value || '').toLowerCase().trim();
+                const status = document.getElementById('statusFilter').value;
+                return list.filter(r => {
+                    if (status === 'active' && !r.IsActive) return false;
+                    if (status === 'inactive' && r.IsActive) return false;
+                    if (!q) return true;
+                    return (r.LevelName || '').toLowerCase().includes(q)
+                        || (r.Description || '').toLowerCase().includes(q);
+                });
+            }
+
+            function render() {
+                const list = applyFilter(rows.slice().sort((a, b) => (a.SortOrder || 0) - (b.SortOrder || 0)));
+                document.getElementById('visibleCount').textContent = `${list.length} shown`;
+                document.getElementById('footCount').textContent = list.length;
+
+                if (!list.length) {
+                    const isEmpty = rows.length === 0;
+                    tbl.innerHTML = `
+                        <tr><td colspan="6">
+                            <div class="px-empty">
+                                <div class="px-empty__icon"><i class="fa-solid fa-signal"></i></div>
+                                <div class="px-empty__title">${isEmpty ? 'No skill levels yet' : 'No skill levels match your search'}</div>
+                                <p class="px-empty__sub">${isEmpty
+                            ? 'Click <b>Add skill level</b> to create your first one.'
+                            : 'Try a different keyword, or clear your filters.'}</p>
+                            </div>
+                        </td></tr>`;
+                    return;
+                }
+
+                tbl.innerHTML = list.map(r => `
+                    <tr>
+                        <td><span class="px-table__id">#${r.LevelID}</span></td>
+                        <td>
+                            <span class="px-table__primary">${esc(r.LevelName)}</span>
+                            ${r.Description ? `<div class="px-table__secondary">${esc(r.Description)}</div>` : ''}
+                        </td>
+                        <td>
+                            ${r.ColorHex
+                        ? `<div style="display:flex; align-items:center; gap:8px;">
+                                       <span style="display:inline-block; width:18px; height:18px; border-radius:5px; background:${esc(r.ColorHex)}; border:1px solid rgba(0,0,0,.1);"></span>
+                                       <code style="font-family: var(--px-font-mono); font-size:11.5px; color: var(--px-muted);">${esc(r.ColorHex.toUpperCase())}</code>
+                                   </div>`
+                        : '<span class="px-text-muted">—</span>'}
+                        </td>
+                        <td style="text-align:center;"><span class="px-table__id">${r.SortOrder || 0}</span></td>
+                        <td>
+                            ${r.IsActive
+                        ? '<span class="px-pill px-pill--success">Active</span>'
+                        : '<span class="px-pill px-pill--neutral">Inactive</span>'}
+                        </td>
+                        <td>
+                            <div class="px-table__actions">
+                                <button class="px-btn--icon" title="Toggle status" onclick="toggleRow(${r.LevelID})">
+                                    <i class="fa-solid ${r.IsActive ? 'fa-toggle-on' : 'fa-toggle-off'}"></i>
+                                </button>
+                                <button class="px-btn--icon" title="Edit" onclick="openEdit(${r.LevelID})">
+                                    <i class="fa-solid fa-pen"></i>
+                                </button>
+                                <button class="px-btn--icon is-danger" title="Delete" onclick="deleteRow(${r.LevelID})">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>`).join('');
+            }
+
+            document.getElementById('lvlSearch').addEventListener('input', render);
+            document.getElementById('statusFilter').addEventListener('change', render);
+
+            // ─── Modal helpers ────────────────────────────────────────
+            function openDlg(title) {
+                document.getElementById('dlgTitle').textContent = title;
+                hideFieldErr();
+                modal.classList.add('is-open');
+                document.body.style.overflow = 'hidden';
+                setTimeout(() => document.getElementById('fName').focus(), 50);
+            }
+            window.closeDlg = function () {
+                modal.classList.remove('is-open');
+                document.body.style.overflow = '';
+                hideFieldErr();
+            };
+            modal.addEventListener('click', e => { if (e.target === modal) closeDlg(); });
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape' && modal.classList.contains('is-open')) closeDlg();
+            });
+
+            function showFieldErr(msg) {
+                const e = document.getElementById('fNameErr');
+                e.textContent = msg;
+                e.style.display = '';
+                document.getElementById('fName').classList.add('is-invalid');
+            }
+            function hideFieldErr() {
+                document.getElementById('fNameErr').style.display = 'none';
+                document.getElementById('fName').classList.remove('is-invalid');
+            }
+            document.getElementById('fName').addEventListener('input', hideFieldErr);
+
+            // Sync the color picker ↔ hex text input
+            const fColor = document.getElementById('fColor');
+            const fColorHex = document.getElementById('fColorHex');
+            fColor.addEventListener('input', () => { fColorHex.value = fColor.value.toUpperCase(); });
+            fColorHex.addEventListener('input', () => {
+                const v = fColorHex.value.trim();
+                if (isValidHex(v)) {
+                    const six = v.length === 4
+                        ? '#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3]
+                        : v.substring(0, 7);
+                    fColor.value = six;
+                    fColorHex.classList.remove('is-invalid');
+                } else {
+                    fColorHex.classList.add('is-invalid');
+                }
+            });
+
+            document.getElementById('btnAdd').addEventListener('click', () => {
+                document.getElementById('fId').value = 0;
+                document.getElementById('fName').value = '';
+                document.getElementById('fSort').value = 0;
+                document.getElementById('fDesc').value = '';
+                document.getElementById('fColor').value = '#16A34A';
+                document.getElementById('fColorHex').value = '#16A34A';
+                document.getElementById('fActive').checked = true;
+                openDlg('Add skill level');
+            });
+
+            window.openEdit = function (id) {
+                const r = rows.find(x => x.LevelID === id);
+                if (!r) return;
+                document.getElementById('fId').value = r.LevelID;
+                document.getElementById('fName').value = r.LevelName || '';
+                document.getElementById('fSort').value = r.SortOrder || 0;
+                document.getElementById('fDesc').value = r.Description || '';
+                const hex = r.ColorHex || '#16A34A';
+                document.getElementById('fColor').value = isValidHex(hex) ? hex : '#16A34A';
+                document.getElementById('fColorHex').value = hex.toUpperCase();
+                document.getElementById('fActive').checked = !!r.IsActive;
+                openDlg('Edit skill level');
+            };
+
+            // ─── SAVE ─────────────────────────────────────────────────
+            document.getElementById('btnSave').addEventListener('click', async () => {
+                const name = document.getElementById('fName').value.trim();
+                if (!name) {
+                    showFieldErr('Level name is required.');
+                    document.getElementById('fName').focus();
+                    return;
+                }
+
+                const hex = document.getElementById('fColorHex').value.trim();
+                if (hex && !isValidHex(hex)) {
+                    Swal.fire({ icon: 'warning', title: 'Invalid color', text: 'Use a hex like #16A34A or leave it blank.' });
+                    return;
+                }
+
+                const payload = {
+                    LevelID: +document.getElementById('fId').value,
+                    LevelName: name,
+                    Description: document.getElementById('fDesc').value,
+                    ColorHex: hex || null,
+                    SortOrder: +document.getElementById('fSort').value || 0,
+                    IsActive: document.getElementById('fActive').checked,
+                    ActorEmail: '@(Context.Session.GetString("Email") ?? "Admin")'
+                };
+
+                const btn = document.getElementById('btnSave');
+                const orig = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
+
+                try {
+                    const r = await fetch('@Url.Action("SkillLevelSave", "Settings")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    let d = null;
+                    try { d = await r.json(); } catch { }
+
+                    const ok = r.ok && (d == null || d.success !== false);
+                    if (ok) {
+                        closeDlg();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Saved',
+                            text: (d && d.message) || 'Skill level saved successfully.',
+                            timer: 1400,
+                            showConfirmButton: false
+                        });
+                        await load();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Could not save',
+                            text: (d && d.message) || ('HTTP ' + r.status)
+                        });
+                    }
+                } catch (e) {
+                    Swal.fire({ icon: 'error', title: 'Network error', text: e.message || 'Please try again.' });
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = orig;
+                }
+            });
+
+            // ─── TOGGLE ───────────────────────────────────────────────
+            window.toggleRow = async function (id) {
+                try {
+                    const r = await fetch('@Url.Action("SkillLevelToggle", "Settings")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            LevelID: id,
+                            ActorEmail: '@(Context.Session.GetString("Email") ?? "Admin")'
+                        })
+                    });
+                    let d = null;
+                    try { d = await r.json(); } catch { }
+                    if (r.ok && (d == null || d.success !== false)) {
+                        await load();
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Could not toggle', text: (d && d.message) || ('HTTP ' + r.status) });
+                    }
+                } catch (e) {
+                    Swal.fire({ icon: 'error', title: 'Network error', text: e.message || 'Please try again.' });
+                }
+            };
+
+            // ─── DELETE ───────────────────────────────────────────────
+            window.deleteRow = function (id) {
+                const row = rows.find(r => r.LevelID === id);
+                Swal.fire({
+                    title: 'Delete this skill level?',
+                    html: `<b>${esc(row?.LevelName || '')}</b> will be removed.<br><span style="color:#6b7280; font-size:13px;">Courses using it must be reassigned first.</span>`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#DC2626',
+                    confirmButtonText: 'Delete',
+                    cancelButtonText: 'Cancel'
+                }).then(async res => {
+                    if (!res.isConfirmed) return;
+                    try {
+                        const r = await fetch('@Url.Action("SkillLevelDelete", "Settings")', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ LevelID: id })
+                        });
+                        let d = null;
+                        try { d = await r.json(); } catch { }
+                        if (r.ok && (d == null || d.success !== false)) {
+                            Swal.fire({ icon: 'success', title: 'Deleted', timer: 1200, showConfirmButton: false });
+                            await load();
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Could not delete', text: (d && d.message) || ('HTTP ' + r.status) });
+                        }
+                    } catch (e) {
+                        Swal.fire({ icon: 'error', title: 'Network error', text: e.message || 'Please try again.' });
+                    }
+                });
+            };
+
+            load();
+        })();
+    </script>
+}

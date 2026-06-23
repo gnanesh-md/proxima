@@ -1,0 +1,1117 @@
+﻿@model ProximaLMS.Models.LoginRegisterViewModel
+@{
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <title>Proxima LMS - Login</title>
+    <link rel="icon" type="image/x-icon" href="/assets/images/favicon.png" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet" />
+
+    <style>
+        body {
+            background: #f4f6fb;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .login-wrapper {
+            max-width: 1100px;
+            width: 100%;
+            background: #fff;
+            border-radius: 22px;
+            display: flex;
+            box-shadow: 0 30px 60px rgba(0,0,0,.12);
+            overflow: hidden;
+        }
+
+        .login-left {
+            width: 45%;
+            background: linear-gradient(135deg, #ffffff, #a379c8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+
+            .login-left img { max-width: 100%; }
+
+        .login-right { width: 55%; padding: 60px; }
+
+        .login-title { font-size: 1.9rem; font-weight: 700; }
+
+        .login-sub { color: #777; margin-bottom: 30px; }
+
+        .form-control {
+            height: 48px;
+            border-radius: 8px;
+        }
+
+            .form-control:focus {
+                border-color: #4c1864;
+                box-shadow: 0 0 0 2px rgba(76,24,100,.15);
+            }
+
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            cursor: pointer;
+            color: #888;
+            z-index: 5;
+            padding: 4px;
+        }
+
+            .password-toggle:hover { color: #4c1864; }
+
+        .btn-login {
+            background-color: #4c1864;
+            color: #fff;
+            border: none;
+        }
+
+            .btn-login:hover,
+            .btn-login:focus,
+            .btn-login:active {
+                background-color: #e85f00 !important;
+                color: #fff !important;
+                box-shadow: 0 6px 16px rgba(255,106,0,.35);
+                transform: translateY(-1px);
+            }
+
+            .btn-login:active { transform: translateY(0); }
+
+        .link-orange {
+            color: #4c1864;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .footer-text {
+            font-size: .8rem;
+            color: #999;
+            margin-top: 40px;
+            text-align: center;
+            font-weight: 200;
+        }
+
+        .otp-box {
+            width: 55px;
+            height: 55px;
+            font-size: 1.4rem;
+            text-align: center;
+            border-radius: 8px;
+            border: 2px solid #4c1864;
+            font-weight: bold;
+        }
+
+        .req {
+            color: #e53e3e;
+            font-size: 0.8rem;
+            margin-left: 2px;
+            vertical-align: middle;
+        }
+
+        /* ===== REGISTER MODAL ===== */
+        .register-form label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            margin-bottom: 4px;
+        }
+
+        .register-form .form-control,
+        .register-form .form-select {
+            height: 46px;
+            border-radius: 10px;
+            border: 1px solid #e1e5ee;
+            transition: all .2s ease;
+        }
+
+            .register-form .form-control:focus,
+            .register-form .form-select:focus {
+                border-color: #4c1864;
+                box-shadow: 0 0 0 2px rgba(76,24,100,.12);
+            }
+
+        .pw-wrap { position: relative; }
+
+            .pw-wrap .form-control { padding-right: 42px; }
+
+            .pw-wrap .password-toggle {
+                top: 50%;
+                transform: translateY(-50%);
+                right: 12px;
+            }
+
+        .register-form .row > div { margin-bottom: 14px; }
+
+        .register-btn {
+            height: 50px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 1rem;
+        }
+
+        .register-terms { font-size: 0.85rem; color: #555; }
+
+        .field-error-msg {
+            font-size: 0.78rem;
+            color: #e53e3e;
+            margin-top: 4px;
+            display: none;
+        }
+
+            .field-error-msg.show { display: block; }
+
+        span.text-danger,
+        .field-validation-error { display: none !important; }
+
+        .input-validation-error,
+        .form-control.is-error,
+        .form-select.is-error {
+            border-color: #ff4d4d !important;
+            background: #fffafa;
+        }
+
+        .form-control, .form-select { transition: border-color .2s ease; }
+
+        .form-check-input.is-invalid { border-color: #ff4d4d; }
+
+            .form-check-input.is-invalid:focus {
+                box-shadow: 0 0 0 2px rgba(255,77,77,.25);
+            }
+
+        .register-terms label { cursor: pointer; }
+
+        /* ===== PRELOADER ===== */
+        #pageLoader {
+            position: fixed;
+            inset: 0;
+            background: #ffffff;
+            z-index: 99999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loader-box { text-align: center; }
+
+        .loader-ring {
+            width: 64px;
+            height: 64px;
+            border: 6px solid #ffe1cc;
+            border-top-color: #4c1864;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 14px;
+        }
+
+        .loader-text { font-size: 0.9rem; color: #555; }
+
+        @@keyframes spin { to { transform: rotate(360deg); } }
+
+        #pageLoader.hide {
+            opacity: 0;
+            visibility: hidden;
+            transition: all .4s ease;
+        }
+
+        /* ===== CHAT SUPPORT ===== */
+        .chat-support-box {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            width: 260px;
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 12px 30px rgba(0,0,0,0.15);
+            z-index: 9999;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #4c1864, #ff8c1a);
+            color: #fff;
+            padding: 12px 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .chat-body { padding: 14px; }
+
+        .contact-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 8px;
+            font-size: 0.9rem;
+        }
+
+            .contact-row a {
+                color: #4c1864;
+                text-decoration: none;
+                font-weight: 500;
+            }
+
+                .contact-row a:hover { text-decoration: underline; }
+
+            .contact-row i { width: 18px; color: #4c1864; }
+
+        @@media (max-width: 768px) {
+            .chat-support-box { width: 220px; left: 10px; bottom: 10px; }
+            .login-wrapper { flex-direction: column; }
+            .login-left, .login-right { width: 100%; }
+            .login-right { padding: 30px; }
+        }
+
+        /* ===== REGISTER OTP BOXES ===== */
+        .reg-otp-box {
+            width: 46px;
+            height: 54px;
+            text-align: center;
+            font-size: 22px;
+            font-weight: 700;
+            border: 1.5px solid #d9c9ec;
+            border-radius: 10px;
+            outline: none;
+            transition: border-color .2s, box-shadow .2s;
+        }
+
+            .reg-otp-box:focus {
+                border-color: #7B2CBF;
+                box-shadow: 0 0 0 3px rgba(123,44,191,.15);
+            }
+
+            .reg-otp-box.input-validation-error {
+                border-color: #ff4d4d;
+                background: #fffafa;
+            }
+
+        /* ===== REMEMBER ME INDICATOR ===== */
+        .rem-saved-badge {
+            display: none;
+            font-size: 0.75rem;
+            color: #059669;
+            margin-top: 4px;
+            gap: 4px;
+            align-items: center;
+        }
+        .rem-saved-badge.show { display: flex; }
+    </style>
+</head>
+
+<body>
+
+    <!-- PRELOADER -->
+    <div id="pageLoader">
+        <div class="loader-box">
+            <div class="loader-ring"></div>
+            <div class="loader-text">
+                <strong style="color:#4c1864;">Proxima LMS</strong><br />
+                <small>Loading, please wait...</small>
+            </div>
+        </div>
+    </div>
+
+    <div class="login-wrapper">
+
+        <!-- LEFT -->
+        <div class="login-left">
+            <img src="~/assets/images/logologin.png" alt="Proxima LMS" />
+        </div>
+
+        <!-- RIGHT -->
+        <div class="login-right">
+
+            <h2 class="login-title">Login</h2>
+            <p class="login-sub">Enter your credentials to login your account</p>
+
+            <!-- LOGIN FORM -->
+            <form id="loginForm" asp-controller="Login" asp-action="Index" method="post">
+
+                <div class="mb-3">
+                    <label>Email <span class="req">*</span></label>
+                    <input asp-for="Login.Email"
+                           id="loginEmail"
+                           class="form-control"
+                           placeholder="Enter your email"
+                           autocomplete="username" />
+                    <span asp-validation-for="Login.Email" class="text-danger small"></span>
+                </div>
+
+                <div class="mb-3">
+                    <label>Password <span class="req">*</span></label>
+                    <div class="pw-wrap position-relative">
+                        <input asp-for="Login.Password"
+                               id="loginPassword"
+                               type="password"
+                               class="form-control"
+                               placeholder="Enter password"
+                               autocomplete="current-password"
+                               style="padding-right:42px;" />
+                        <span class="password-toggle" onclick="togglePw('loginPassword','loginEyeIcon')">
+                            <i class="fas fa-eye" id="loginEyeIcon"></i>
+                        </span>
+                    </div>
+                    <span asp-validation-for="Login.Password" class="text-danger small"></span>
+                </div>
+
+                <div class="d-flex justify-content-between mb-4">
+                    <div>
+                        <div class="form-check">
+                            <input asp-for="Login.RememberMe"
+                                   id="loginRememberMe"
+                                   class="form-check-input" />
+                            <label class="form-check-label" for="loginRememberMe">Remember me</label>
+                        </div>
+                        <!-- shows green tick when credentials are saved -->
+                        <div class="rem-saved-badge" id="remSavedBadge">
+                            <i class="fas fa-circle-check" style="font-size:11px;"></i>
+                            Credentials saved
+                        </div>
+                    </div>
+                    <a href="/Account/ForgotPassword" class="link-orange">Forgot Password?</a>
+                </div>
+
+                <button type="submit" id="loginBtn" class="btn btn-login w-100 text-white mb-3">
+                    Sign In
+                </button>
+
+                <p class="text-center mb-0">
+                    Don't have an account?
+                    <a href="#" class="link-orange" data-bs-toggle="modal" data-bs-target="#registerModal">
+                        Sign up
+                    </a>
+                </p>
+            </form>
+
+            <div class="footer-text">
+                &copy; 2026 <a href="https://kalpracademy.com/">Kalpra Academy.</a> All rights reserved.
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= REGISTER MODAL ================= -->
+    <div class="modal fade" id="registerModal" tabindex="-1">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content rounded-4">
+                <div class="modal-header text-white" style="background:#4c1864;">
+                    <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>Create Account</h5>
+                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="registerForm" asp-controller="Login" asp-action="Register"
+                          method="post" class="register-form" novalidate>
+
+                        <div class="row">
+
+                            <div class="col-md-6">
+                                <label>Full Name <span class="req">*</span></label>
+                                <input asp-for="Register.FullName" id="regFullName"
+                                       class="form-control" placeholder="Enter full name" />
+                                <div class="field-error-msg" id="errFullName">Full Name is required.</div>
+                                <span asp-validation-for="Register.FullName" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label>Gender <span class="req">*</span></label>
+                                <select asp-for="Register.Gender" id="regGender" class="form-select">
+                                    <option value="">Select gender</option>
+                                    <option>Male</option>
+                                    <option>Female</option>
+                                </select>
+                                <div class="field-error-msg" id="errGender">Please select a gender.</div>
+                                <span asp-validation-for="Register.Gender" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label>Phone <span class="req">*</span></label>
+                                <div class="row g-2">
+                                    <div class="col-4 col-md-3">
+                                        <select asp-for="Register.CountryCode" id="regCountryCode" class="form-select">
+                                            <option value="">Code</option>
+                                            <option value="+91">+91</option>
+                                            <option value="+1">+1</option>
+                                            <option value="+44">+44</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-8 col-md-9">
+                                        <input asp-for="Register.PhoneNumber" id="regPhone"
+                                               class="form-control" placeholder="Mobile number"
+                                               inputmode="numeric" maxlength="10"
+                                               oninput="this.value=this.value.replace(/[^0-9]/g,'')" />
+                                    </div>
+                                </div>
+                                <div class="field-error-msg" id="errPhone">Please enter a valid 10-digit mobile number.</div>
+                                <span asp-validation-for="Register.CountryCode" class="text-danger small"></span>
+                                <span asp-validation-for="Register.PhoneNumber" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label>Email <span class="req">*</span></label>
+                                <input asp-for="Register.Email" id="regEmail"
+                                       class="form-control" placeholder="Email address" />
+                                <div class="field-error-msg" id="errEmail">Please enter a valid email address.</div>
+                                <span asp-validation-for="Register.Email" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label>Password <span class="req">*</span></label>
+                                <div class="pw-wrap position-relative">
+                                    <input asp-for="Register.Password" id="regPassword"
+                                           type="password" class="form-control"
+                                           placeholder="Create password"
+                                           style="padding-right:42px;" />
+                                    <span class="password-toggle"
+                                          onclick="togglePw('regPassword','regPwIcon')">
+                                        <i class="fas fa-eye" id="regPwIcon"></i>
+                                    </span>
+                                </div>
+                                <div class="field-error-msg" id="errPassword">
+                                    Min 8 chars, 1 uppercase, 1 number, 1 special character.
+                                </div>
+                                <span asp-validation-for="Register.Password" class="text-danger small"></span>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label>Confirm Password <span class="req">*</span></label>
+                                <div class="pw-wrap position-relative">
+                                    <input asp-for="Register.ConfirmPassword" id="regConfirmPassword"
+                                           type="password" class="form-control"
+                                           placeholder="Re-enter password"
+                                           style="padding-right:42px;" />
+                                    <span class="password-toggle"
+                                          onclick="togglePw('regConfirmPassword','regCPwIcon')">
+                                        <i class="fas fa-eye" id="regCPwIcon"></i>
+                                    </span>
+                                </div>
+                                <div class="field-error-msg" id="errConfirmPassword">
+                                    Passwords do not match.
+                                </div>
+                                <span asp-validation-for="Register.ConfirmPassword" class="text-danger small"></span>
+                            </div>
+
+                        </div>
+
+                        <div class="mt-3">
+                            <label>Referral Code <span style="color:#9aa0ac;font-weight:400;">(optional)</span></label>
+                            <input asp-for="Register.ReferralCode" id="regReferralCode"
+                                   class="form-control" placeholder="Have a friend's code? e.g. ABHI0618"
+                                   maxlength="20" autocomplete="off"
+                                   style="text-transform:uppercase;" />
+                            <span asp-validation-for="Register.ReferralCode" class="text-danger small"></span>
+                        </div>
+
+                        <div class="form-check mt-2 register-terms">
+                            <input asp-for="Register.AcceptTerms" id="acceptTerms" class="form-check-input" />
+                            <label class="form-check-label" for="acceptTerms">
+                                I agree to Terms &amp; Conditions <span class="req">*</span>
+                            </label>
+                            <span asp-validation-for="Register.AcceptTerms" class="text-danger small"></span>
+                        </div>
+
+                        <button type="submit" id="registerBtn"
+                                class="btn btn-login w-100 text-white mt-4 register-btn">
+                            Register
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= OTP MODAL (Login) ================= -->
+    <div class="modal fade" id="otpModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 shadow-lg">
+                <div class="modal-header text-white" style="background:#4c1864;">
+                    <h5 class="modal-title">OTP Verification</h5>
+                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+
+                    <p class="mb-3 text-muted">
+                        OTP sent to your registered <strong>email</strong> and <strong>mobile</strong>
+                    </p>
+
+                    @if (TempData["OtpError"] != null)
+                    {
+                        <div class="alert alert-danger py-2">@TempData["OtpError"]</div>
+                    }
+                    @if (TempData["OtpMessage"] != null)
+                    {
+                        <div class="alert alert-success py-2">@TempData["OtpMessage"]</div>
+                    }
+
+                    <form asp-action="VerifyOtp" method="post" id="otpForm">
+                        @Html.AntiForgeryToken()
+
+                        <div class="d-flex justify-content-center gap-2 mb-3">
+                            @for (int i = 0; i < 6; i++)
+                            {
+                                <input type="text" class="otp-box"
+                                       maxlength="1" inputmode="numeric"
+                                       autocomplete="one-time-code" />
+                            }
+                        </div>
+
+                        <input type="hidden" id="otpInput" name="otpInput" />
+                        <div id="otpError" class="text-danger small mb-2"></div>
+
+                        <button type="submit" id="verifyOtpBtn" class="btn btn-login w-100 text-white">
+                            Verify &amp; Login
+                        </button>
+                    </form>
+
+                    <div class="mt-3">
+                        <small id="countdownText" class="text-muted"></small><br />
+                        <a href="javascript:void(0)" id="resendOtpBtn"
+                           class="link-orange fw-semibold d-none">
+                            Resend OTP
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============ REGISTER OTP MODAL ============ -->
+    <div class="modal fade" id="registerOtpModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 shadow-lg">
+                <div class="modal-header text-white" style="background:#4c1864;">
+                    <h5 class="modal-title"><i class="fas fa-envelope-circle-check me-2"></i>Verify Your Email</h5>
+                    <button class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center">
+
+                    <p class="mb-3 text-muted">
+                        Enter the 6-digit code sent to
+                        <strong>@(Context.Session.GetString("PendingRegEmail") ?? "your email")</strong>
+                    </p>
+
+                    @if (TempData["RegOtpError"] != null)
+                    {
+                        <div class="alert alert-danger py-2">@TempData["RegOtpError"]</div>
+                    }
+                    @if (TempData["RegOtpMessage"] != null)
+                    {
+                        <div class="alert alert-success py-2">@TempData["RegOtpMessage"]</div>
+                    }
+
+                    <form asp-controller="Login" asp-action="VerifyRegisterOtp" method="post" id="registerOtpForm">
+                        @Html.AntiForgeryToken()
+
+                        <div class="d-flex justify-content-center gap-2 mb-3">
+                            @for (int i = 0; i < 6; i++)
+                            {
+                                <input type="text" class="reg-otp-box"
+                                       maxlength="1" inputmode="numeric"
+                                       autocomplete="one-time-code" />
+                            }
+                        </div>
+
+                        <input type="hidden" id="registerOtpInput" name="otpInput" />
+                        <div id="registerOtpError" class="text-danger small mb-2"></div>
+
+                        <button type="submit" class="btn btn-login w-100 text-white">
+                            Verify &amp; Create Account
+                        </button>
+                    </form>
+
+                    <div class="text-center mt-3">
+                        <small id="regCountdownText" class="text-muted"></small>
+                        <form asp-controller="Login" asp-action="ResendRegisterOtp" method="post"
+                              id="regResendForm" class="d-none mt-1">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-link p-0">Resend code</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= CHAT SUPPORT ================= -->
+    <div class="chat-support-box" id="chatSupport">
+        <div class="chat-header" onclick="toggleChat()">
+            <i class="fa-solid fa-headset"></i>
+            <span>Support</span>
+        </div>
+        <div class="chat-body d-none" id="chatBody">
+            <div class="chat-contact">
+                <div class="contact-row">
+                    <i class="fa-brands fa-whatsapp"></i>
+                    <a href="https://wa.me/918341345668" target="_blank">WhatsApp Support</a>
+                </div>
+                <div class="contact-row">
+                    <i class="fa-solid fa-phone"></i>
+                    <a href="tel:+918341345668">+91 83413 45668</a>
+                </div>
+                <div class="contact-row">
+                    <i class="fa-solid fa-envelope"></i>
+                    <a href="mailto:Support@proximalms.com">Support@proximalms.com</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ================= SCRIPTS ================= -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/4.0.0/jquery.validate.unobtrusive.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <script>
+
+        // ═══════════════════════════════════════
+        // LOADER
+        // ═══════════════════════════════════════
+        function showLoader() {
+            const l = document.getElementById("pageLoader");
+            if (l) l.classList.remove("hide");
+        }
+        function hideLoader() {
+            const l = document.getElementById("pageLoader");
+            if (l) l.classList.add("hide");
+        }
+        window.addEventListener("load", () => setTimeout(hideLoader, 300));
+        setTimeout(hideLoader, 10000);
+
+        // ═══════════════════════════════════════
+        // PASSWORD TOGGLE
+        // ═══════════════════════════════════════
+        function togglePw(inputId, iconId) {
+            const input = document.getElementById(inputId);
+            const icon  = document.getElementById(iconId);
+            if (!input || !icon) return;
+            input.type = input.type === "password" ? "text" : "password";
+            icon.classList.toggle("fa-eye");
+            icon.classList.toggle("fa-eye-slash");
+        }
+
+        // ═══════════════════════════════════════
+        // CHAT TOGGLE
+        // ═══════════════════════════════════════
+        function toggleChat() {
+            document.getElementById("chatSupport")?.classList.toggle("open");
+            document.getElementById("chatBody")?.classList.toggle("d-none");
+        }
+
+        // ═══════════════════════════════════════
+        // REMEMBER ME
+        // NOTE: IDs used here match the explicit id="" set on each input above:
+        //   loginEmail, loginPassword, loginRememberMe
+        // ═══════════════════════════════════════
+        const REM_KEY_EMAIL = 'proxima_rem_email';
+        const REM_KEY_PASS  = 'proxima_rem_pass';
+        const REM_KEY_FLAG  = 'proxima_rem_flag';
+
+        function saveLoginCredentials() {
+            const emailEl    = document.getElementById('loginEmail');
+            const passEl     = document.getElementById('loginPassword');
+            const rememberEl = document.getElementById('loginRememberMe');
+
+            if (!emailEl || !passEl || !rememberEl) return;
+
+            const email    = emailEl.value.trim();
+            const password = passEl.value;
+            const remember = rememberEl.checked;
+
+            if (remember && email && password) {
+                try {
+                    localStorage.setItem(REM_KEY_EMAIL, email);
+                    localStorage.setItem(REM_KEY_PASS,  btoa(unescape(encodeURIComponent(password))));
+                    localStorage.setItem(REM_KEY_FLAG,  'true');
+                } catch (e) {
+                    console.warn('localStorage not available:', e);
+                }
+            } else {
+                clearSavedCredentials();
+            }
+        }
+
+        function clearSavedCredentials() {
+            try {
+                localStorage.removeItem(REM_KEY_EMAIL);
+                localStorage.removeItem(REM_KEY_PASS);
+                localStorage.removeItem(REM_KEY_FLAG);
+            } catch (e) { /* ignore */ }
+        }
+
+        function restoreLoginCredentials() {
+            let flag = '';
+            try { flag = localStorage.getItem(REM_KEY_FLAG); } catch (e) { return; }
+            if (flag !== 'true') return;
+
+            const email = localStorage.getItem(REM_KEY_EMAIL) || '';
+            const pass  = localStorage.getItem(REM_KEY_PASS)  || '';
+
+            const emailEl    = document.getElementById('loginEmail');
+            const passEl     = document.getElementById('loginPassword');
+            const rememberEl = document.getElementById('loginRememberMe');
+            const badge      = document.getElementById('remSavedBadge');
+
+            if (emailEl && email)   emailEl.value     = email;
+            if (passEl  && pass) {
+                try { passEl.value = decodeURIComponent(escape(atob(pass))); } catch (e) { passEl.value = ''; }
+            }
+            if (rememberEl) rememberEl.checked = true;
+            if (badge && email)    badge.classList.add('show');
+        }
+
+        // Clear saved badge when user manually unticks Remember Me
+        function bindRememberMeToggle() {
+            const rememberEl = document.getElementById('loginRememberMe');
+            const badge      = document.getElementById('remSavedBadge');
+            if (!rememberEl) return;
+            rememberEl.addEventListener('change', function () {
+                if (!this.checked) {
+                    clearSavedCredentials();
+                    if (badge) badge.classList.remove('show');
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════
+        // LOGIN OTP TIMER
+        // ═══════════════════════════════════════
+        let otpTimer = null;
+        let otpSeconds = 60;
+
+        function startOtpTimer() {
+            clearInterval(otpTimer);
+            otpSeconds = 60;
+            const label     = document.getElementById("countdownText");
+            const resendBtn = document.getElementById("resendOtpBtn");
+            if (resendBtn) resendBtn.classList.add("d-none");
+
+            otpTimer = setInterval(() => {
+                if (otpSeconds > 0) {
+                    if (label) label.innerText = `Resend OTP in ${otpSeconds--}s`;
+                } else {
+                    clearInterval(otpTimer);
+                    if (label) label.innerText = "Didn't receive OTP?";
+                    if (resendBtn) resendBtn.classList.remove("d-none");
+                }
+            }, 1000);
+        }
+
+        // ═══════════════════════════════════════
+        // LOGIN OTP BOXES
+        // ═══════════════════════════════════════
+        function initOtpBoxes() {
+            const boxes    = document.querySelectorAll(".otp-box");
+            const otpError = document.getElementById("otpError");
+            boxes.forEach((box, i) => {
+                box.value = "";
+                box.addEventListener("input", function () {
+                    this.value = this.value.replace(/[^0-9]/g, "");
+                    if (this.value && i < boxes.length - 1) boxes[i + 1].focus();
+                    if (otpError) otpError.innerText = "";
+                });
+                box.addEventListener("keydown", function (e) {
+                    if (e.key === "Backspace" && !this.value && i > 0) boxes[i - 1].focus();
+                });
+            });
+            boxes[0]?.focus();
+        }
+
+        // ═══════════════════════════════════════
+        // REGISTER OTP BOXES
+        // ═══════════════════════════════════════
+        function initRegisterOtpBoxes() {
+            const boxes    = document.querySelectorAll(".reg-otp-box");
+            const otpError = document.getElementById("registerOtpError");
+            boxes.forEach((box, i) => {
+                box.value = "";
+                box.addEventListener("input", function () {
+                    this.value = this.value.replace(/[^0-9]/g, "");
+                    if (this.value && i < boxes.length - 1) boxes[i + 1].focus();
+                    if (otpError) otpError.innerText = "";
+                });
+                box.addEventListener("keydown", function (e) {
+                    if (e.key === "Backspace" && !this.value && i > 0) boxes[i - 1].focus();
+                });
+            });
+            boxes[0]?.focus();
+        }
+
+        // ═══════════════════════════════════════
+        // REGISTER OTP TIMER
+        // ═══════════════════════════════════════
+        let regOtpTimer = null;
+
+        function startRegisterOtpTimer() {
+            clearInterval(regOtpTimer);
+            let s = 60;
+            const label      = document.getElementById("regCountdownText");
+            const resendForm = document.getElementById("regResendForm");
+            if (resendForm) resendForm.classList.add("d-none");
+
+            regOtpTimer = setInterval(() => {
+                if (s > 0) {
+                    if (label) label.innerText = `Resend code in ${s--}s`;
+                } else {
+                    clearInterval(regOtpTimer);
+                    if (label) label.innerText = "Didn't receive the code?";
+                    if (resendForm) resendForm.classList.remove("d-none");
+                }
+            }, 1000);
+        }
+
+        // ═══════════════════════════════════════
+        // REGISTER VALIDATION HELPERS
+        // ═══════════════════════════════════════
+        function showFieldError(fieldId, errId) {
+            const el  = document.getElementById(fieldId);
+            const err = document.getElementById(errId);
+            if (el)  el.classList.add("is-error");
+            if (err) err.classList.add("show");
+        }
+
+        function clearFieldError(fieldId, errId) {
+            const el  = document.getElementById(fieldId);
+            const err = document.getElementById(errId);
+            if (el)  el.classList.remove("is-error");
+            if (err) err.classList.remove("show");
+        }
+
+        function validateRegisterForm() {
+            let valid = true;
+
+            const fullName = document.getElementById("regFullName");
+            if (!fullName?.value.trim()) { showFieldError("regFullName", "errFullName"); valid = false; }
+            else                         { clearFieldError("regFullName", "errFullName"); }
+
+            const gender = document.getElementById("regGender");
+            if (!gender?.value) { showFieldError("regGender", "errGender"); valid = false; }
+            else                { clearFieldError("regGender", "errGender"); }
+
+            const countryCode = document.getElementById("regCountryCode")?.value ?? "";
+            const phone       = document.getElementById("regPhone");
+            const phoneVal    = phone?.value.trim() ?? "";
+            const phoneLengths = {
+                "+91": { min: 10, max: 10, label: "10-digit" },
+                "+1":  { min: 10, max: 10, label: "10-digit" },
+                "+44": { min: 10, max: 11, label: "10-11 digit" },
+            };
+            const rule     = phoneLengths[countryCode];
+            const phoneOnly = /^\d+$/.test(phoneVal);
+            const phoneOk  = rule
+                ? phoneOnly && phoneVal.length >= rule.min && phoneVal.length <= rule.max
+                : phoneOnly && phoneVal.length >= 7 && phoneVal.length <= 15;
+
+            if (!countryCode) {
+                showFieldError("regCountryCode", "errPhone");
+                document.getElementById("errPhone").innerText = "Please select a country code.";
+                valid = false;
+            } else if (!phoneVal || !phoneOk) {
+                showFieldError("regPhone", "errPhone");
+                document.getElementById("errPhone").innerText = rule
+                    ? `Please enter a valid ${rule.label} mobile number.`
+                    : "Please enter a valid mobile number (7-15 digits).";
+                valid = false;
+            } else {
+                clearFieldError("regCountryCode", "errPhone");
+                clearFieldError("regPhone", "errPhone");
+            }
+
+            const email    = document.getElementById("regEmail");
+            const emailVal = email?.value.trim() ?? "";
+            const emailRx = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+            if (!emailRx.test(emailVal)) { showFieldError("regEmail", "errEmail"); valid = false; }
+            else                         { clearFieldError("regEmail", "errEmail"); }
+
+            const pw    = document.getElementById("regPassword");
+            const pwVal = pw?.value ?? "";
+            const pwRx = /^(?=.*[A-Z])(?=.*\d)(?=.*[@@$!%*?&])[A-Za-z\d@@$!%*?&]{8,}$/;
+            if (!pwRx.test(pwVal)) { showFieldError("regPassword", "errPassword"); valid = false; }
+            else                   { clearFieldError("regPassword", "errPassword"); }
+
+            const cpw = document.getElementById("regConfirmPassword");
+            if (!cpw?.value || cpw.value !== pwVal) { showFieldError("regConfirmPassword", "errConfirmPassword"); valid = false; }
+            else                                     { clearFieldError("regConfirmPassword", "errConfirmPassword"); }
+
+            const terms = document.getElementById("acceptTerms");
+            if (!terms?.checked) {
+                terms?.classList.add("is-invalid");
+                valid = false;
+                Swal.fire({
+                    icon: "warning",
+                    title: "Terms Required",
+                    text: "You must accept the Terms & Conditions to register.",
+                    confirmButtonColor: "#4c1864",
+                    timer: 3000,
+                    timerProgressBar: true
+                });
+                setTimeout(() => terms?.classList.remove("is-invalid"), 2000);
+            } else {
+                terms?.classList.remove("is-invalid");
+            }
+
+            return valid;
+        }
+
+        function attachRegisterLiveValidation() {
+            const pairs = [
+                ["regFullName", "errFullName"],
+                ["regGender", "errGender"],
+                ["regPhone", "errPhone"],
+                ["regEmail", "errEmail"],
+                ["regPassword", "errPassword"],
+                ["regConfirmPassword", "errConfirmPassword"]
+            ];
+            pairs.forEach(([fieldId, errId]) => {
+                const el = document.getElementById(fieldId);
+                if (el) {
+                    el.addEventListener("input",  () => clearFieldError(fieldId, errId));
+                    el.addEventListener("change", () => clearFieldError(fieldId, errId));
+                }
+            });
+        }
+
+        // ═══════════════════════════════════════
+        // DOM READY
+        // ═══════════════════════════════════════
+        document.addEventListener("DOMContentLoaded", function () {
+
+            // Restore saved credentials immediately
+            restoreLoginCredentials();
+
+            // Bind remember-me untick handler
+            bindRememberMeToggle();
+
+            // Login error toast
+            const loginError = "@Html.Raw(TempData["LoginError"]?.ToString()?.Replace("\"", "\\\"") ?? "")";
+            if (loginError) {
+                Swal.fire({ icon: "error", title: "Login Failed", text: loginError, confirmButtonColor: "#4c1864" });
+            }
+
+            // Reopen register modal on server validation fail
+            if ("@(ViewBag.OpenRegisterModal ?? false)".toLowerCase() === "true") {
+                new bootstrap.Modal(document.getElementById("registerModal")).show();
+            }
+
+            // Login OTP modal
+            if ("@(ViewBag.ShowOtpPanel ?? false)".toLowerCase() === "true") {
+                new bootstrap.Modal(document.getElementById("otpModal")).show();
+                initOtpBoxes();
+                startOtpTimer();
+            }
+
+            // Register OTP modal
+            if ("@(ViewBag.ShowRegisterOtpPanel ?? false)".toLowerCase() === "true") {
+                new bootstrap.Modal(document.getElementById("registerOtpModal")).show();
+                initRegisterOtpBoxes();
+                startRegisterOtpTimer();
+            }
+
+            // Register success / error toasts
+            const regSuccess = "@Html.Raw(TempData["RegisterSuccess"]?.ToString()?.Replace("\"", "\\\"") ?? "")";
+            const regError   = "@Html.Raw(TempData["RegisterError"]?.ToString()?.Replace("\"", "\\\"") ?? "")";
+            if (regSuccess) Swal.fire({ icon: "success", title: "Registration Successful", text: regSuccess, confirmButtonColor: "#4c1864" });
+            if (regError)   Swal.fire({ icon: "error",   title: "Registration Failed",     text: regError,   confirmButtonColor: "#4c1864" });
+
+            attachRegisterLiveValidation();
+
+            // LOGIN FORM submit — save credentials then show loader
+            document.getElementById("loginForm")?.addEventListener("submit", function () {
+                saveLoginCredentials();
+                showLoader();
+            });
+
+            // REGISTER FORM submit
+            document.getElementById("registerForm")?.addEventListener("submit", function (e) {
+                if (!validateRegisterForm()) { e.preventDefault(); return false; }
+                showLoader();
+            });
+
+            // LOGIN OTP FORM submit
+            document.getElementById("otpForm")?.addEventListener("submit", function (e) {
+                const boxes = document.querySelectorAll(".otp-box");
+                const otp   = [...boxes].map(b => b.value.trim()).join("");
+                if (otp.length !== 6) {
+                    e.preventDefault();
+                    const otpErr = document.getElementById("otpError");
+                    if (otpErr) otpErr.innerText = "Please enter the 6-digit OTP";
+                    document.getElementById("otpInput").value = "";
+                    boxes.forEach(b => b.classList.add("input-validation-error"));
+                    boxes[0]?.focus();
+                    return;
+                }
+                document.getElementById("otpInput").value = otp;
+                showLoader();
+            });
+
+            // REGISTER OTP FORM submit
+            document.getElementById("registerOtpForm")?.addEventListener("submit", function (e) {
+                const boxes = document.querySelectorAll(".reg-otp-box");
+                const otp   = [...boxes].map(b => b.value.trim()).join("");
+                if (otp.length !== 6) {
+                    e.preventDefault();
+                    const err = document.getElementById("registerOtpError");
+                    if (err) err.innerText = "Please enter the 6-digit code";
+                    boxes.forEach(b => b.classList.add("input-validation-error"));
+                    boxes[0]?.focus();
+                    return;
+                }
+                document.getElementById("registerOtpInput").value = otp;
+                showLoader();
+            });
+
+            // RESEND LOGIN OTP
+            document.getElementById("resendOtpBtn")?.addEventListener("click", function () {
+                const btn   = this;
+                const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                btn.classList.add("disabled");
+                btn.innerText = "Sending...";
+
+                fetch("/Login/ResendOtp", {
+                    method: "POST",
+                    headers: { "RequestVerificationToken": token }
+                })
+                    .then(res => res.ok ? res.text() : Promise.reject(res.status))
+                    .then(() => {
+                        document.querySelectorAll(".otp-box").forEach(b => b.value = "");
+                        document.getElementById("otpInput").value = "";
+                        const otpErr = document.getElementById("otpError");
+                        if (otpErr) otpErr.innerText = "";
+
+                        Swal.fire({
+                            icon: "success", title: "OTP Sent",
+                            text: "A new OTP has been sent to your email and mobile.",
+                            timer: 2000, showConfirmButton: false
+                        });
+
+                        btn.innerText = "Resend OTP";
+                        btn.classList.add("d-none");
+                        btn.classList.remove("disabled");
+                        startOtpTimer();
+                        document.querySelector(".otp-box")?.focus();
+                    })
+                    .catch(() => {
+                        Swal.fire("Error", "Unable to resend OTP. Try again.", "error");
+                        btn.innerText = "Resend OTP";
+                        btn.classList.remove("disabled");
+                    });
+            });
+
+        }); // end DOMContentLoaded
+    </script>
+
+</body>
+</html>

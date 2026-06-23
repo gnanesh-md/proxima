@@ -1,0 +1,49 @@
+﻿@model ProximaLMS.Models.ErrorViewModel
+@{
+    ViewData["Title"] = "Error";
+    Layout = "_Layout";
+}
+
+<div class="container text-center mt-5">
+    <div class="card shadow-sm border-0 mx-auto" style="max-width: 650px; border-radius: 15px;">
+        <div class="card-body p-5">
+            <img src="~/assets/images/error.svg" alt="Error" width="140" class="mb-3" />
+            <h2 class="fw-bold text-danger mb-2">Something went wrong 😢</h2>
+
+            <h5 class="text-muted mb-3">@Model.ErrorMessage</h5>
+
+            @if (Model.ShowRequestId)
+            {
+                <p class="small text-secondary mb-1">
+                    <strong>Request ID:</strong> @Model.RequestId
+                </p>
+            }
+
+            @if (!string.IsNullOrEmpty(Model.Path))
+            {
+                <p class="small text-secondary mb-4">
+                    <strong>Path:</strong> @Model.Path
+                </p>
+            }
+
+            <a href="/" class="btn btn-primary px-4 py-2" style="background:#4C1864;border:none;">
+                <i class="fa fa-home me-1"></i> Back to Home
+            </a>
+        </div>
+    </div>
+</div>
+
+<style>
+    body {
+        background-color: #f8f9fb;
+    }
+
+    .card {
+        background: #fff;
+        border-radius: 15px;
+    }
+
+    .btn-primary:hover {
+        background-color: #7B2CBF !important;
+    }
+</style>

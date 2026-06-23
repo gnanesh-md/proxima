@@ -1,0 +1,1097 @@
+﻿@*
+    /Views/Tutor/Create.cshtml
+    ─────────────────────────────────────────────────────────────────
+    Tutor create / edit — redesigned in the Proxima design system.
+    Every field, validation, hidden input, and form behaviour from
+    the original is preserved 1:1. Only the styling and layout change.
+    ─────────────────────────────────────────────────────────────────
+*@
+@model TutorViewModel
+@{
+    var isEdit = Model.TutorID.HasValue;
+    ViewData["Title"] = isEdit ? "Edit Tutor" : "Create Tutor";
+    Layout = "_Layout";
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --tx-grape: #4C1864;
+        --tx-grape-dark: #2D0F4E;
+        --tx-violet: #7B2CBF;
+        --tx-violet-soft: #9F4FE8;
+        --tx-lavender: #EDE9F8;
+        --tx-lavender-2: #F5F0FB;
+        --tx-ink: #1A1035;
+        --tx-ink-2: #4B4369;
+        --tx-muted: #7B7691;
+        --tx-faint: #B5B0C7;
+        --tx-line: #ECE8F4;
+        --tx-line-2: #E0DAEE;
+        --tx-bg: #F6F2FB;
+        --tx-surface: #FFFFFF;
+        --tx-surface-alt: #FBFAFE;
+        --tx-success: #059669;
+        --tx-success-bg: #D1FAE5;
+        --tx-warn: #B45309;
+        --tx-warn-bg: #FEF3C7;
+        --tx-danger: #DC2626;
+        --tx-danger-bg: #FEE2E2;
+        --tx-info: #1D4ED8;
+        --tx-info-bg: #DBEAFE;
+        --tx-font-display: 'Fraunces', Georgia, serif;
+        --tx-font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+        --tx-font-mono: 'JetBrains Mono', ui-monospace, monospace;
+        --tx-r-md: 10px;
+        --tx-r-lg: 14px;
+        --tx-r-xl: 18px;
+        --tx-shadow-md: 0 2px 6px rgba(76,24,100,.06), 0 10px 24px rgba(76,24,100,.07);
+        --tx-shadow-lg: 0 4px 10px rgba(76,24,100,.08), 0 24px 48px rgba(76,24,100,.10);
+        --tx-focus: 0 0 0 4px rgba(123,44,191,.15);
+    }
+
+    .tx-page {
+        font-family: var(--tx-font-body);
+        background: var(--tx-bg);
+        color: var(--tx-ink);
+        min-height: calc(100vh - 60px);
+        padding-bottom: 60px;
+    }
+
+    /* ── HERO ─────────────────────────────────────────────────── */
+    .tx-hero {
+        position: relative;
+        overflow: hidden;
+        padding: 32px 36px 96px;
+        background: radial-gradient(circle at 85% -10%, rgba(159,79,232,.32) 0, transparent 55%), linear-gradient(135deg, var(--tx-grape-dark) 0%, var(--tx-grape) 50%, var(--tx-violet) 100%);
+        color: #fff;
+    }
+
+        .tx-hero::before {
+            content: '';
+            position: absolute;
+            width: 380px;
+            height: 380px;
+            border-radius: 50%;
+            top: -100px;
+            right: -80px;
+            background: radial-gradient(circle, rgba(159,79,232,.25) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+    .tx-hero__inner {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .tx-crumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: rgba(255,255,255,.65);
+        margin-bottom: 6px;
+    }
+
+        .tx-crumb a {
+            color: rgba(255,255,255,.75);
+            text-decoration: none;
+        }
+
+            .tx-crumb a:hover {
+                color: #fff;
+            }
+
+    .tx-crumb__sep {
+        opacity: .5;
+    }
+
+    .tx-hero h1 {
+        font-family: var(--tx-font-display);
+        font-size: clamp(26px, 3vw, 34px);
+        font-weight: 600;
+        letter-spacing: -.5px;
+        margin: 0;
+    }
+
+    .tx-hero p {
+        font-size: 14px;
+        color: rgba(255,255,255,.7);
+        margin: 6px 0 0;
+        max-width: 560px;
+    }
+
+    .tx-hero__btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 20px;
+        border-radius: var(--tx-r-md);
+        background: rgba(255,255,255,.14);
+        color: #fff;
+        border: 1px solid rgba(255,255,255,.25);
+        font-weight: 600;
+        font-size: 13.5px;
+        text-decoration: none;
+        backdrop-filter: blur(6px);
+        transition: background .15s;
+    }
+
+        .tx-hero__btn:hover {
+            background: rgba(255,255,255,.22);
+            color: #fff;
+        }
+
+    /* ── BODY (overlaps hero) ─────────────────────────────────── */
+    .tx-body {
+        max-width: 1200px;
+        margin: -64px auto 0;
+        padding: 0 36px;
+        position: relative;
+        z-index: 5;
+    }
+
+    /* ── ALERTS ───────────────────────────────────────────────── */
+    .tx-alert {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 14px 18px;
+        border-radius: var(--tx-r-md);
+        font-size: 13.5px;
+        margin-bottom: 18px;
+        border: 1px solid;
+        border-left-width: 4px;
+        background: var(--tx-surface);
+    }
+
+        .tx-alert i {
+            font-size: 16px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+        .tx-alert b {
+            display: block;
+            margin-bottom: 3px;
+            font-size: 13px;
+        }
+
+        .tx-alert ul {
+            margin: 6px 0 0;
+            padding-left: 18px;
+        }
+
+    .tx-alert--success {
+        background: #ECFDF5;
+        border-color: var(--tx-success);
+        color: #065F46;
+    }
+
+    .tx-alert--danger {
+        background: #FEF2F2;
+        border-color: var(--tx-danger);
+        color: #7F1D1D;
+    }
+
+    .tx-alert__close {
+        margin-left: auto;
+        background: transparent;
+        border: none;
+        color: currentColor;
+        opacity: .55;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        padding: 0 4px;
+    }
+
+        .tx-alert__close:hover {
+            opacity: 1;
+        }
+
+    /* ── FIELDSETS ────────────────────────────────────────────── */
+    .tx-fieldset {
+        background: var(--tx-surface);
+        border: 1px solid var(--tx-line);
+        border-radius: var(--tx-r-xl);
+        padding: 26px 28px;
+        margin-bottom: 20px;
+        box-shadow: var(--tx-shadow-md);
+    }
+
+    .tx-section-title {
+        font-family: var(--tx-font-display);
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--tx-violet);
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        margin: 0 0 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .tx-section-title::before {
+            content: '';
+            width: 4px;
+            height: 18px;
+            background: var(--tx-violet);
+            border-radius: 2px;
+        }
+
+        .tx-section-title i {
+            color: var(--tx-grape);
+            font-size: 14px;
+            margin-left: 2px;
+        }
+
+    /* ── GRID ─────────────────────────────────────────────────── */
+    .tx-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 18px;
+    }
+
+    .tx-col-12 {
+        grid-column: span 12;
+    }
+
+    .tx-col-6 {
+        grid-column: span 6;
+    }
+
+    .tx-col-4 {
+        grid-column: span 4;
+    }
+
+    .tx-col-3 {
+        grid-column: span 3;
+    }
+
+    @@media (max-width: 900px) {
+        .tx-col-6, .tx-col-4, .tx-col-3 {
+            grid-column: span 12;
+        }
+    }
+
+    @@media (max-width: 640px) {
+        .tx-body {
+            padding: 0 18px;
+        }
+
+        .tx-fieldset {
+            padding: 20px;
+        }
+    }
+
+    /* ── FIELDS ───────────────────────────────────────────────── */
+    .tx-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .tx-label {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--tx-ink-2);
+        letter-spacing: .2px;
+    }
+
+    .tx-req {
+        color: var(--tx-danger);
+        margin-left: 3px;
+    }
+
+    .tx-hint {
+        font-size: 11.5px;
+        color: var(--tx-muted);
+        margin-top: 3px;
+    }
+
+    .tx-err {
+        font-size: 12px;
+        color: var(--tx-danger);
+        margin-top: 4px;
+    }
+
+    .tx-input,
+    .tx-select,
+    .tx-textarea {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1px solid var(--tx-line-2);
+        border-radius: var(--tx-r-md);
+        background: var(--tx-surface);
+        font-family: inherit;
+        font-size: 13.5px;
+        color: var(--tx-ink);
+        transition: border .15s, box-shadow .15s, background .15s;
+    }
+
+        .tx-input::placeholder,
+        .tx-textarea::placeholder {
+            color: var(--tx-faint);
+        }
+
+        .tx-input:focus,
+        .tx-select:focus,
+        .tx-textarea:focus {
+            outline: none;
+            border-color: var(--tx-violet);
+            box-shadow: var(--tx-focus);
+        }
+
+        .tx-input.input-validation-error,
+        .tx-select.input-validation-error,
+        .tx-textarea.input-validation-error {
+            border-color: var(--tx-danger);
+            background: #FFFAFA;
+        }
+
+    .tx-textarea {
+        resize: vertical;
+        min-height: 90px;
+        line-height: 1.5;
+    }
+
+    .tx-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%237B7691'%3e%3cpath d='M4 6l4 4 4-4z'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 36px;
+    }
+
+    /* Input with leading icon */
+    .tx-input-group {
+        position: relative;
+    }
+
+    .tx-input-group__icon {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--tx-faint);
+        font-size: 13px;
+        pointer-events: none;
+    }
+
+    .tx-input-group .tx-input {
+        padding-left: 40px;
+    }
+
+    /* ── FILE UPLOAD ──────────────────────────────────────────── */
+    .tx-file {
+        position: relative;
+        display: block;
+        border: 1.5px dashed var(--tx-line-2);
+        border-radius: var(--tx-r-lg);
+        padding: 14px;
+        background: var(--tx-surface-alt);
+        transition: border .15s, background .15s;
+    }
+
+        .tx-file:hover {
+            border-color: var(--tx-violet);
+            background: var(--tx-lavender-2);
+        }
+
+        .tx-file input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            inset: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+    .tx-file__inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+        padding: 18px 10px;
+        color: var(--tx-muted);
+        font-size: 12.5px;
+        pointer-events: none;
+    }
+
+        .tx-file__inner i {
+            font-size: 26px;
+            color: var(--tx-violet);
+        }
+
+        .tx-file__inner b {
+            color: var(--tx-ink);
+            font-size: 13px;
+        }
+
+    .tx-existing {
+        background: var(--tx-lavender-2);
+        border: 1px solid var(--tx-line);
+        border-radius: var(--tx-r-md);
+        padding: 10px 14px;
+        font-size: 12.5px;
+        color: var(--tx-ink-2);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+    }
+
+        .tx-existing i {
+            color: var(--tx-violet);
+        }
+
+    .tx-existing__tag {
+        background: var(--tx-warn-bg);
+        color: var(--tx-warn);
+        font-size: 10.5px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 999px;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+    }
+
+    .tx-preview {
+        margin-top: 10px;
+        background: var(--tx-surface);
+        border: 1px solid var(--tx-line);
+        border-radius: var(--tx-r-md);
+        padding: 10px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+        .tx-preview img {
+            width: 56px;
+            height: 56px;
+            object-fit: cover;
+            border-radius: 8px;
+            background: var(--tx-lavender);
+        }
+
+    .tx-preview__meta {
+        flex: 1;
+        min-width: 0;
+        font-size: 12px;
+        color: var(--tx-muted);
+    }
+
+        .tx-preview__meta b {
+            color: var(--tx-ink);
+            font-size: 12.5px;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 2px;
+        }
+
+    .tx-preview__tag {
+        display: inline-block;
+        background: var(--tx-success-bg);
+        color: var(--tx-success);
+        font-size: 10.5px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 999px;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+    }
+
+    /* ── BUTTONS ──────────────────────────────────────────────── */
+    .tx-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 22px;
+        border-radius: var(--tx-r-md);
+        border: none;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        line-height: 1;
+        transition: all .15s;
+        white-space: nowrap;
+    }
+
+    .tx-btn--primary {
+        background: linear-gradient(135deg, var(--tx-grape), var(--tx-violet));
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(76,24,100,.22);
+    }
+
+        .tx-btn--primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(76,24,100,.32);
+            color: #fff;
+        }
+
+        .tx-btn--primary:disabled {
+            opacity: .65;
+            cursor: wait;
+            transform: none;
+        }
+
+    .tx-btn--ghost {
+        background: #fff;
+        color: var(--tx-ink-2);
+        border: 1px solid var(--tx-line-2);
+    }
+
+        .tx-btn--ghost:hover {
+            border-color: var(--tx-violet);
+            color: var(--tx-violet);
+        }
+
+    .tx-actions {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 8px;
+        padding: 18px 24px;
+        background: var(--tx-surface);
+        border: 1px solid var(--tx-line);
+        border-radius: var(--tx-r-xl);
+        box-shadow: var(--tx-shadow-md);
+    }
+
+    .tx-actions__hint {
+        font-size: 12.5px;
+        color: var(--tx-muted);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .tx-actions__hint i {
+            color: var(--tx-violet);
+        }
+
+    .tx-actions__btns {
+        display: flex;
+        gap: 10px;
+    }
+
+    /* ASP.NET validation summary uses these classes */
+    .validation-summary-valid {
+        display: none;
+    }
+
+    .field-validation-valid {
+        display: none;
+    }
+
+    .field-validation-error {
+        font-size: 12px;
+        color: var(--tx-danger);
+        margin-top: 4px;
+    }
+
+    .input-validation-error {
+        border-color: var(--tx-danger) !important;
+        background: #FFFAFA;
+    }
+</style>
+
+
+<div class="tx-page">
+
+    @* ═══════════════ HERO ═══════════════ *@
+    <header class="tx-hero">
+        <div class="tx-hero__inner">
+            <div>
+                <div class="tx-crumb">
+                    <a asp-action="List">Tutors</a>
+                    <span class="tx-crumb__sep">›</span>
+                    <span style="color:#fff;">@(isEdit ? "Edit" : "New")</span>
+                </div>
+                <h1>@(isEdit ? $"Edit {Model.FullName}" : "Add a new tutor")</h1>
+                <p>
+                    @(isEdit
+                        ? "Update personal, professional, address and banking details."
+                        : "Capture every detail you need to onboard an instructor — profile, qualifications, contact, and payout information.")
+                </p>
+            </div>
+            <div>
+                <a asp-action="List" class="tx-hero__btn">
+                    <i class="fa-solid fa-arrow-left"></i> Back to list
+                </a>
+            </div>
+        </div>
+    </header>
+
+    @* ═══════════════ BODY ═══════════════ *@
+    <div class="tx-body">
+
+        @* ── Flash messages ──────────────────────────────────── *@
+        @if (TempData["Success"] != null)
+        {
+            <div class="tx-alert tx-alert--success" id="txSuccess">
+                <i class="fa-solid fa-circle-check"></i>
+                <div><b>Success</b>@TempData["Success"]</div>
+                <button type="button" class="tx-alert__close" onclick="this.parentElement.remove()">&times;</button>
+            </div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="tx-alert tx-alert--danger">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div><b>Error</b>@TempData["Error"]</div>
+                <button type="button" class="tx-alert__close" onclick="this.parentElement.remove()">&times;</button>
+            </div>
+        }
+
+        @if (!ViewData.ModelState.IsValid)
+        {
+            <div class="tx-alert tx-alert--danger" asp-validation-summary="All">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div>
+                    <b>Please fix the following errors</b>
+                </div>
+                <button type="button" class="tx-alert__close" onclick="this.parentElement.remove()">&times;</button>
+            </div>
+        }
+
+        <form asp-controller="Tutor" asp-action="Create" method="post" enctype="multipart/form-data" id="txForm">
+            @Html.AntiForgeryToken()
+
+            @* Hidden fields *@
+            <input type="hidden" asp-for="TutorID" />
+            <input type="hidden" asp-for="ProfilePhoto" />
+            <input type="hidden" asp-for="ResumeFile" />
+
+            @* ─────────── PERSONAL DETAILS ─────────── *@
+            <fieldset class="tx-fieldset">
+                <h2 class="tx-section-title">
+                    <i class="fa-solid fa-user-circle"></i> Personal details
+                </h2>
+
+                <div class="tx-grid">
+                    <div class="tx-col-4">
+                        <div class="tx-field">
+                            <label class="tx-label">Full name <span class="tx-req">*</span></label>
+                            <input asp-for="FullName" class="tx-input" placeholder="e.g. Priya Sharma" />
+                            <span asp-validation-for="FullName" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-4">
+                        <div class="tx-field">
+                            <label class="tx-label">Gender <span class="tx-req">*</span></label>
+                            <select asp-for="Gender" class="tx-select">
+                                <option value="">— Select gender —</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            <span asp-validation-for="Gender" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-4">
+                        <div class="tx-field">
+                            <label class="tx-label">Date of birth <span class="tx-req">*</span></label>
+                            <input asp-for="DateOfBirth" type="date" class="tx-input"
+                                   max="@DateTime.Now.AddYears(-18).ToString("yyyy-MM-dd")" />
+                            <span asp-validation-for="DateOfBirth" class="field-validation-valid"></span>
+                            <div class="tx-hint">Must be at least 18 years old.</div>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-4">
+                        <div class="tx-field">
+                            <label class="tx-label">Email <span class="tx-req">*</span></label>
+                            <div class="tx-input-group">
+                                <i class="fa-solid fa-envelope tx-input-group__icon"></i>
+                                <input asp-for="Email" type="email" class="tx-input"
+                                       placeholder="name@example.com" />
+                            </div>
+                            <span asp-validation-for="Email" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-4">
+                        <div class="tx-field">
+                            <label class="tx-label">Mobile number <span class="tx-req">*</span></label>
+                            <div class="tx-input-group">
+                                <i class="fa-solid fa-phone tx-input-group__icon"></i>
+                                <input asp-for="MobileNumber" class="tx-input"
+                                       placeholder="10-digit mobile" maxlength="10" inputmode="numeric" />
+                            </div>
+                            <span asp-validation-for="MobileNumber" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-4">
+                        <div class="tx-field">
+                            <label class="tx-label">Alternate mobile</label>
+                            <div class="tx-input-group">
+                                <i class="fa-solid fa-phone tx-input-group__icon"></i>
+                                <input asp-for="AlternateMobile" class="tx-input"
+                                       placeholder="Optional" maxlength="10" inputmode="numeric" />
+                            </div>
+                            <span asp-validation-for="AlternateMobile" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            @* ─────────── PROFESSIONAL DETAILS ─────────── *@
+            <fieldset class="tx-fieldset">
+                <h2 class="tx-section-title">
+                    <i class="fa-solid fa-briefcase"></i> Professional details
+                </h2>
+
+                <div class="tx-grid">
+                    <div class="tx-col-4">
+                        <div class="tx-field">
+                            <label class="tx-label">Qualification <span class="tx-req">*</span></label>
+                            <input asp-for="Qualification" class="tx-input"
+                                   placeholder="e.g. B.Tech, M.Sc" />
+                            <span asp-validation-for="Qualification" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-4">
+                        <div class="tx-field">
+                            <label class="tx-label">Experience (years)</label>
+                            <input asp-for="ExperienceYears" type="number" class="tx-input"
+                                   min="0" max="50" placeholder="0" />
+                            <span asp-validation-for="ExperienceYears" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-4">
+                        <div class="tx-field">
+                            <label class="tx-label">Expertise areas</label>
+                            <input asp-for="ExpertiseAreas" class="tx-input"
+                                   placeholder="e.g. Mathematics, Physics" />
+                            <span asp-validation-for="ExpertiseAreas" class="field-validation-valid"></span>
+                            <div class="tx-hint">Comma-separated list of topics or subjects.</div>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-12">
+                        <div class="tx-field">
+                            <label class="tx-label">
+                                Profile summary
+                                <span class="tx-hint" style="font-weight:400;">(max 500 characters)</span>
+                            </label>
+                            <textarea asp-for="ProfileSummary" rows="3" class="tx-textarea"
+                                      id="txSummary" maxlength="500"
+                                      placeholder="A short bio that appears on tutor profile pages…"></textarea>
+                            <div class="tx-hint" style="text-align:right;" id="txSummaryCount">0 / 500</div>
+                            <span asp-validation-for="ProfileSummary" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            @* ─────────── ADDRESS DETAILS ─────────── *@
+            <fieldset class="tx-fieldset">
+                <h2 class="tx-section-title">
+                    <i class="fa-solid fa-location-dot"></i> Address details
+                </h2>
+
+                <div class="tx-grid">
+                    <div class="tx-col-6">
+                        <div class="tx-field">
+                            <label class="tx-label">Address line 1</label>
+                            <input asp-for="AddressLine1" class="tx-input"
+                                   placeholder="Street address, P.O. box, building" />
+                            <span asp-validation-for="AddressLine1" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-6">
+                        <div class="tx-field">
+                            <label class="tx-label">Address line 2</label>
+                            <input asp-for="AddressLine2" class="tx-input"
+                                   placeholder="Apartment, suite, unit, floor (optional)" />
+                            <span asp-validation-for="AddressLine2" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-3">
+                        <div class="tx-field">
+                            <label class="tx-label">City</label>
+                            <input asp-for="City" class="tx-input" placeholder="e.g. Hyderabad" />
+                            <span asp-validation-for="City" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-3">
+                        <div class="tx-field">
+                            <label class="tx-label">State</label>
+                            <input asp-for="State" class="tx-input" placeholder="e.g. Telangana" />
+                            <span asp-validation-for="State" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-3">
+                        <div class="tx-field">
+                            <label class="tx-label">Country</label>
+                            <input asp-for="Country" class="tx-input" placeholder="e.g. India" />
+                            <span asp-validation-for="Country" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-3">
+                        <div class="tx-field">
+                            <label class="tx-label">Pincode</label>
+                            <input asp-for="Pincode" class="tx-input"
+                                   placeholder="e.g. 500001" maxlength="10" />
+                            <span asp-validation-for="Pincode" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            @* ─────────── BANK DETAILS ─────────── *@
+            <fieldset class="tx-fieldset">
+                <h2 class="tx-section-title">
+                    <i class="fa-solid fa-building-columns"></i> Bank &amp; payout details
+                </h2>
+
+                <div class="tx-grid">
+                    <div class="tx-col-4">
+                        <div class="tx-field">
+                            <label class="tx-label">Bank account number</label>
+                            <input asp-for="BankAccountNumber" class="tx-input"
+                                   placeholder="Account number" autocomplete="off" />
+                            <span asp-validation-for="BankAccountNumber" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-4">
+                        <div class="tx-field">
+                            <label class="tx-label">IFSC code</label>
+                            <input asp-for="IFSCCode" class="tx-input"
+                                   placeholder="e.g. HDFC0001234"
+                                   style="text-transform: uppercase; font-family: var(--tx-font-mono);" />
+                            <span asp-validation-for="IFSCCode" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-4">
+                        <div class="tx-field">
+                            <label class="tx-label">Bank name</label>
+                            <input asp-for="BankName" class="tx-input"
+                                   placeholder="e.g. HDFC Bank" />
+                            <span asp-validation-for="BankName" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-6">
+                        <div class="tx-field">
+                            <label class="tx-label">UPI ID</label>
+                            <div class="tx-input-group">
+                                <i class="fa-solid fa-mobile-screen tx-input-group__icon"></i>
+                                <input asp-for="UPIID" class="tx-input"
+                                       placeholder="e.g. name@upi" />
+                            </div>
+                            <span asp-validation-for="UPIID" class="field-validation-valid"></span>
+                            <div class="tx-hint">Alternative payout method to bank transfer.</div>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            @* ─────────── DOCUMENTS ─────────── *@
+            <fieldset class="tx-fieldset">
+                <h2 class="tx-section-title">
+                    <i class="fa-solid fa-paperclip"></i> Documents
+                </h2>
+
+                <div class="tx-grid">
+                    <div class="tx-col-6">
+                        <div class="tx-field">
+                            <label class="tx-label">Profile photo</label>
+
+                            @if (!string.IsNullOrEmpty(Model.ProfilePhoto))
+                            {
+                                <div class="tx-existing">
+                                    <i class="fa-solid fa-image"></i>
+                                    <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                        @Model.ProfilePhoto
+                                    </span>
+                                    <span class="tx-existing__tag">Current</span>
+                                </div>
+                            }
+
+                            <label class="tx-file">
+                                <input asp-for="ProfilePhotoFile" type="file" accept="image/*"
+                                       id="txPhotoInput" data-preview="txPhotoPreview" />
+                                <div class="tx-file__inner">
+                                    <i class="fa-solid fa-image"></i>
+                                    <b>@(isEdit ? "Replace photo" : "Choose photo")</b>
+                                    <span>JPG, PNG, GIF · max 5 MB</span>
+                                </div>
+                            </label>
+                            <div id="txPhotoPreview"></div>
+                            <span asp-validation-for="ProfilePhotoFile" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+
+                    <div class="tx-col-6">
+                        <div class="tx-field">
+                            <label class="tx-label">Resume / CV</label>
+
+                            @if (!string.IsNullOrEmpty(Model.ResumeFile))
+                            {
+                                <div class="tx-existing">
+                                    <i class="fa-solid fa-file-lines"></i>
+                                    <span style="flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                        @Model.ResumeFile
+                                    </span>
+                                    <span class="tx-existing__tag">Current</span>
+                                </div>
+                            }
+
+                            <label class="tx-file">
+                                <input asp-for="ResumeFileUpload" type="file" accept=".pdf,.doc,.docx"
+                                       id="txResumeInput" data-preview="txResumePreview" />
+                                <div class="tx-file__inner">
+                                    <i class="fa-solid fa-file-lines"></i>
+                                    <b>@(isEdit ? "Replace resume" : "Choose resume")</b>
+                                    <span>PDF, DOC, DOCX · max 10 MB</span>
+                                </div>
+                            </label>
+                            <div id="txResumePreview"></div>
+                            <span asp-validation-for="ResumeFileUpload" class="field-validation-valid"></span>
+                        </div>
+                    </div>
+                </div>
+            </fieldset>
+
+            @* ─────────── ACTIONS ─────────── *@
+            <div class="tx-actions">
+                <div class="tx-actions__hint">
+                    <i class="fa-solid fa-circle-info"></i>
+                    Fields marked with <span style="color: var(--tx-danger); font-weight:700;">*</span> are required.
+                </div>
+                <div class="tx-actions__btns">
+                    <a asp-action="List" class="tx-btn tx-btn--ghost">Cancel</a>
+                    <button type="submit" class="tx-btn tx-btn--primary" id="txSubmit">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        @(isEdit ? "Update tutor" : "Save tutor")
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        (function () {
+            // ── Submit lock + spinner ─────────────────────────────
+            const form = document.getElementById('txForm');
+            const submitBtn = document.getElementById('txSubmit');
+            const origSubmit = submitBtn.innerHTML;
+
+            form.addEventListener('submit', function () {
+                // Let jQuery Validate run; only lock the button if the form is valid.
+                if (typeof $ !== 'undefined' && $(form).valid && !$(form).valid()) return;
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
+            });
+
+            // ── Auto-uppercase IFSC ───────────────────────────────
+            const ifsc = document.querySelector('[name="IFSCCode"]');
+            if (ifsc) {
+                ifsc.addEventListener('input', function () {
+                    this.value = this.value.toUpperCase();
+                });
+            }
+
+            // ── Profile summary char counter ──────────────────────
+            const sum = document.getElementById('txSummary');
+            const cnt = document.getElementById('txSummaryCount');
+            if (sum && cnt) {
+                const update = () => {
+                    const n = sum.value.length;
+                    cnt.textContent = n + ' / 500';
+                    cnt.style.color = n > 450 ? 'var(--tx-warn)' :
+                        n >= 500 ? 'var(--tx-danger)' : '';
+                };
+                sum.addEventListener('input', update);
+                update();
+            }
+
+            // ── File previews ─────────────────────────────────────
+            function fmtSize(b) {
+                if (b < 1024) return b + ' B';
+                if (b < 1024 * 1024) return (b / 1024).toFixed(0) + ' KB';
+                return (b / (1024 * 1024)).toFixed(2) + ' MB';
+            }
+
+            // Image preview
+            const photo = document.getElementById('txPhotoInput');
+            if (photo) {
+                photo.addEventListener('change', function () {
+                    const host = document.getElementById(this.dataset.preview);
+                    host.innerHTML = '';
+                    const f = this.files && this.files[0];
+                    if (!f) return;
+                    const url = URL.createObjectURL(f);
+                    host.innerHTML = `
+                                <div class="tx-preview">
+                                    <img src="${url}" alt="preview" />
+                                    <div class="tx-preview__meta">
+                                        <b>${f.name.replace(/</g, '&lt;')}</b>
+                                        <span class="tx-preview__tag">New</span> ${fmtSize(f.size)}
+                                    </div>
+                                </div>`;
+                });
+            }
+
+            // Resume preview (no image — show filename + size)
+            const resume = document.getElementById('txResumeInput');
+            if (resume) {
+                resume.addEventListener('change', function () {
+                    const host = document.getElementById(this.dataset.preview);
+                    host.innerHTML = '';
+                    const f = this.files && this.files[0];
+                    if (!f) return;
+                    host.innerHTML = `
+                                <div class="tx-preview">
+                                    <div style="width:56px; height:56px; border-radius:8px; background: var(--tx-lavender); display:flex; align-items:center; justify-content:center; color: var(--tx-grape); font-size:22px;">
+                                        <i class="fa-solid fa-file-lines"></i>
+                                    </div>
+                                    <div class="tx-preview__meta">
+                                        <b>${f.name.replace(/</g, '&lt;')}</b>
+                                        <span class="tx-preview__tag">New</span> ${fmtSize(f.size)}
+                                    </div>
+                                </div>`;
+                });
+            }
+
+            // ── Auto-dismiss success toast after 4s ───────────────
+            const successEl = document.getElementById('txSuccess');
+            if (successEl) setTimeout(() => successEl.remove(), 4000);
+        })();
+    </script>
+}

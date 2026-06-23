@@ -1,0 +1,594 @@
+@model ProximaLMS.Controllers.RolePermissionsViewModel
+@{
+    ViewData["Title"] = $"Permissions — {Model.RoleName}";
+    Layout = "_Layout";
+
+    var groups = Model.Screens
+        .GroupBy(s => s.ScreenGroup)
+        .OrderBy(g => g.Key)
+        .ToList();
+
+    Func<string, string> GetGroupIcon = (group) => group?.ToLower() switch {
+        "dashboard"  => "tachometer-alt",
+        "masters"    => "database",
+        "courses"    => "book",
+        "admin"      => "user-shield",
+        "reports"    => "chart-bar",
+        "management" => "sitemap",
+        "learning"   => "play-circle",
+        "roles"      => "shield-halved",
+        _            => "folder"
+    };
+
+    Func<string, string> GetGroupColor = (group) => group?.ToLower() switch {
+        "dashboard"  => "#6366f1",
+        "masters"    => "#0891b2",
+        "courses"    => "#059669",
+        "admin"      => "#7c3aed",
+        "reports"    => "#db2777",
+        "management" => "#d97706",
+        "learning"   => "#16a34a",
+        "roles"      => "#4C1864",
+        _            => "#6b7280"
+    };
+}
+
+<style>
+    :root {
+        --primary: #4C1864;
+        --secondary: #7B2CBF;
+        --bg: #f4f6fb;
+        --radius: 10px;
+    }
+
+    body { background: var(--bg); font-family: "Inter","Segoe UI",sans-serif; }
+    .container-fluid { padding-left: 0 !important; padding-right: 0 !important; }
+
+    /* PAGE HEADER */
+    .page-header {
+        background: #fff;
+        padding: 20px 25px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+    }
+
+    .page-title { font-size: 22px; font-weight: 700; color: var(--primary); margin: 0; }
+    .page-sub   { font-size: 13px; color: #888; margin-top: 3px; }
+
+    .role-pill {
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        color: #fff;
+        font-family: 'Courier New', monospace;
+        font-size: 12px;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 20px;
+        letter-spacing: .5px;
+    }
+
+    /* STATS BAR */
+    .perm-stats {
+        display: flex;
+        gap: 14px;
+        padding: 0 25px 16px;
+        flex-wrap: wrap;
+    }
+
+    .perm-stat {
+        background: #fff;
+        border-radius: 10px;
+        padding: 12px 18px;
+        flex: 1;
+        min-width: 140px;
+        box-shadow: 0 2px 10px rgba(0,0,0,.04);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .perm-stat-num { font-size: 22px; font-weight: 800; color: var(--primary); }
+    .perm-stat-lbl { font-size: 11px; color: #9ca3af; }
+
+    /* SAVE BAR */
+    .save-bar {
+        position: sticky;
+        top: 0;
+        z-index: 100;
+        background: #fff;
+        border-bottom: 2px solid #f0e8f8;
+        padding: 12px 25px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        box-shadow: 0 4px 12px rgba(0,0,0,.06);
+        margin-bottom: 20px;
+    }
+
+    .save-bar-left  { font-size: 13px; color: #666; }
+    .save-bar-left strong { color: var(--primary); }
+
+    .save-bar-right { display: flex; gap: 10px; align-items: center; }
+
+    .btn-save-all {
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        color: #fff;
+        border: none;
+        padding: 10px 22px;
+        border-radius: 8px;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: opacity .2s;
+    }
+
+    .btn-save-all:hover { opacity: .88; }
+
+    .btn-select-all-global {
+        background: #f0ebf8;
+        color: var(--primary);
+        border: 2px solid var(--primary);
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 13px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        transition: .15s;
+    }
+
+    .btn-select-all-global:hover { background: var(--primary); color: #fff; }
+
+    /* GROUP SECTION */
+    .group-section {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.05);
+        overflow: hidden;
+        margin: 0 25px 20px;
+    }
+
+    .group-header {
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .group-header-title {
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .group-select-all {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+    }
+
+    .col-label {
+        color: rgba(255,255,255,.85);
+        font-size: 11px;
+        font-weight: 600;
+        text-align: center;
+        width: 70px;
+    }
+
+    .screen-count-badge {
+        background: rgba(255,255,255,.2);
+        color: #fff;
+        font-size: 11px;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 10px;
+    }
+
+    /* TABLE */
+    .perm-table { width: 100%; border-collapse: collapse; }
+
+    .perm-table thead th {
+        background: #faf8fc;
+        font-size: 12px;
+        font-weight: 700;
+        color: #555;
+        padding: 10px 16px;
+        border-bottom: 1px solid #f0e8f8;
+        text-align: center;
+    }
+
+    .perm-table thead th:first-child { text-align: left; }
+
+    .perm-table tbody tr {
+        border-bottom: 1px solid #f5f5f5;
+        transition: background .12s;
+    }
+
+    .perm-table tbody tr:hover { background: #faf8fc; }
+
+    .perm-table tbody td {
+        padding: 12px 16px;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .perm-table tbody td:first-child {
+        text-align: left;
+        font-size: 14px;
+        color: #374151;
+        font-weight: 500;
+    }
+
+    /* CHECKBOXES */
+    .perm-check {
+        width: 20px; height: 20px;
+        cursor: pointer;
+        accent-color: var(--primary);
+        border-radius: 4px;
+    }
+
+    .all-check {
+        width: 18px; height: 18px;
+        cursor: pointer;
+        accent-color: rgba(255,255,255,.9);
+    }
+
+    /* LABELS */
+    .perm-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .4px;
+    }
+
+    .lbl-view   { color: #1565c0; }
+    .lbl-create { color: #2e7d32; }
+    .lbl-edit   { color: #e65100; }
+    .lbl-delete { color: #c62828; }
+
+    /* SPINNER */
+    .spinner-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(255,255,255,.75);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .spinner-overlay.show { display: flex; }
+
+    /* SCREEN CODE BADGE */
+    .screen-code {
+        background: #f3f4f6;
+        color: #6b7280;
+        font-family: monospace;
+        font-size: 11px;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 6px;
+    }
+
+    /* EMPTY STATE */
+    .no-screens {
+        padding: 40px;
+        text-align: center;
+        color: #9ca3af;
+    }
+
+    .back-btn {
+        background: #f1f1f1;
+        color: #333;
+        border: none;
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        text-decoration: none;
+        transition: background .15s;
+    }
+
+    .back-btn:hover { background: #e5e5e5; color: #333; }
+</style>
+
+<div class="container-fluid">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+        <div>
+            <h4 class="page-title">
+                <i class="fas fa-shield-alt me-2"></i>
+                Screen Permissions
+                &nbsp;<span class="role-pill">@Model.RoleCode</span>
+            </h4>
+            <p class="page-sub">Manage view/create/edit/delete access for <strong>@Model.RoleName</strong></p>
+        </div>
+        <a asp-action="List" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Back to Roles
+        </a>
+    </div>
+
+    <!-- STATS -->
+    <div class="perm-stats">
+        <div class="perm-stat">
+            <div style="font-size:22px; color:var(--primary);"><i class="fas fa-desktop"></i></div>
+            <div>
+                <div class="perm-stat-num">@Model.Screens.Count</div>
+                <div class="perm-stat-lbl">Total Screens</div>
+            </div>
+        </div>
+        <div class="perm-stat">
+            <div style="font-size:22px; color:#1565c0;"><i class="fas fa-eye"></i></div>
+            <div>
+                <div class="perm-stat-num">@Model.Screens.Count(s => s.CanView)</div>
+                <div class="perm-stat-lbl">Can View</div>
+            </div>
+        </div>
+        <div class="perm-stat">
+            <div style="font-size:22px; color:#2e7d32;"><i class="fas fa-plus-circle"></i></div>
+            <div>
+                <div class="perm-stat-num">@Model.Screens.Count(s => s.CanCreate)</div>
+                <div class="perm-stat-lbl">Can Create</div>
+            </div>
+        </div>
+        <div class="perm-stat">
+            <div style="font-size:22px; color:#e65100;"><i class="fas fa-pen"></i></div>
+            <div>
+                <div class="perm-stat-num">@Model.Screens.Count(s => s.CanEdit)</div>
+                <div class="perm-stat-lbl">Can Edit</div>
+            </div>
+        </div>
+        <div class="perm-stat">
+            <div style="font-size:22px; color:#c62828;"><i class="fas fa-trash"></i></div>
+            <div>
+                <div class="perm-stat-num">@Model.Screens.Count(s => s.CanDelete)</div>
+                <div class="perm-stat-lbl">Can Delete</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STICKY SAVE BAR -->
+    <div class="save-bar">
+        <div class="save-bar-left">
+            <strong>@Model.RoleName</strong> — assign screen-level permissions below, then click Save.
+            <br><small>Changes take effect immediately for all users with this role.</small>
+        </div>
+        <div class="save-bar-right">
+            <button class="btn-select-all-global" onclick="selectAllGlobal(true)">
+                <i class="fas fa-check-double"></i> Grant All
+            </button>
+            <button class="btn-select-all-global" onclick="selectAllGlobal(false)" style="border-color:#ef4444; color:#ef4444;">
+                <i class="fas fa-times"></i> Revoke All
+            </button>
+            <button class="btn-save-all" onclick="saveAllPermissions()">
+                <i class="fas fa-save"></i> Save All Permissions
+            </button>
+        </div>
+    </div>
+
+    <!-- EMPTY STATE -->
+    @if (!Model.Screens.Any())
+    {
+        <div class="group-section" style="margin: 0 25px 30px;">
+            <div class="no-screens">
+                <i class="fas fa-desktop" style="font-size:48px; color:#d1d5db; display:block; margin-bottom:12px;"></i>
+                <h5>No Screens Configured</h5>
+                <p>No screens have been added to the system yet. Please configure screens via the API.</p>
+            </div>
+        </div>
+    }
+
+    <!-- PERMISSION GROUPS -->
+    @foreach (var group in groups)
+    {
+        var screens = group.ToList();
+        var groupId = group.Key.Replace(" ", "_").ToLower();
+        var color = GetGroupColor(group.Key);
+
+        <div class="group-section" id="group_@groupId">
+
+            <div class="group-header" style="background: linear-gradient(90deg, @color, @color + 'cc');">
+                <div class="group-header-title">
+                    <i class="fas fa-@GetGroupIcon(group.Key)"></i>
+                    @group.Key
+                    <span class="screen-count-badge">@screens.Count screens</span>
+                </div>
+                <div class="group-select-all">
+                    @foreach (var col in new[] {
+                        ("View",   "view",   "fa-eye"),
+                        ("Create", "create", "fa-plus"),
+                        ("Edit",   "edit",   "fa-pen"),
+                        ("Delete", "delete", "fa-trash") })
+                    {
+                        <div class="text-center" style="width:70px;">
+                            <div class="col-label">@col.Item1</div>
+                            <input type="checkbox" class="all-check"
+                                   title="Select all @col.Item1 in @group.Key"
+                                   onchange="selectAllInGroup('@groupId', '@col.Item2', this.checked)" />
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <table class="perm-table">
+                <thead>
+                    <tr>
+                        <th>Screen</th>
+                        <th><span class="perm-label lbl-view"><i class="fas fa-eye"></i> View</span></th>
+                        <th><span class="perm-label lbl-create"><i class="fas fa-plus"></i> Create</span></th>
+                        <th><span class="perm-label lbl-edit"><i class="fas fa-pen"></i> Edit</span></th>
+                        <th><span class="perm-label lbl-delete"><i class="fas fa-trash"></i> Delete</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var screen in screens.OrderBy(s => s.SortOrder))
+                    {
+                        <tr data-screen-id="@screen.ScreenID">
+                            <td>
+                                @screen.ScreenName
+                                <span class="screen-code">@screen.ScreenCode</span>
+                            </td>
+                            <td>
+                                <input type="checkbox" class="perm-check chk-view grp-@groupId"
+                                       data-screen="@screen.ScreenID" data-perm="view"
+                                       @(screen.CanView ? "checked" : "")
+                                       onchange="onPermChange(this)" />
+                            </td>
+                            <td>
+                                <input type="checkbox" class="perm-check chk-create grp-@groupId"
+                                       data-screen="@screen.ScreenID" data-perm="create"
+                                       @(screen.CanCreate ? "checked" : "")
+                                       onchange="onPermChange(this)" />
+                            </td>
+                            <td>
+                                <input type="checkbox" class="perm-check chk-edit grp-@groupId"
+                                       data-screen="@screen.ScreenID" data-perm="edit"
+                                       @(screen.CanEdit ? "checked" : "")
+                                       onchange="onPermChange(this)" />
+                            </td>
+                            <td>
+                                <input type="checkbox" class="perm-check chk-delete grp-@groupId"
+                                       data-screen="@screen.ScreenID" data-perm="delete"
+                                       @(screen.CanDelete ? "checked" : "")
+                                       onchange="onPermChange(this)" />
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+
+</div>
+
+<!-- SPINNER -->
+<div class="spinner-overlay" id="spinnerOverlay">
+    <div class="spinner-border" style="color:var(--primary);width:3rem;height:3rem;" role="status"></div>
+    <div style="color:var(--primary); font-weight:600; font-size:15px;">Saving permissions...</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    const ROLE_ID = @Model.RoleID;
+
+    // ── SELECT ALL IN GROUP ─────────────────────
+    function selectAllInGroup(groupId, perm, checked) {
+        document.querySelectorAll(`.grp-${groupId}[data-perm="${perm}"]`)
+            .forEach(cb => {
+                cb.checked = checked;
+                if (perm === 'view' && !checked) {
+                    const row = cb.closest('tr');
+                    row.querySelectorAll('.perm-check').forEach(c => c.checked = false);
+                }
+            });
+        updateStats();
+    }
+
+    // ── GRANT / REVOKE ALL ──────────────────────
+    function selectAllGlobal(checked) {
+        document.querySelectorAll('.perm-check').forEach(cb => cb.checked = checked);
+        updateStats();
+    }
+
+    // ── VIEW DEPENDENCY ─────────────────────────
+    function onPermChange(cb) {
+        const perm = cb.dataset.perm;
+        const row  = cb.closest('tr');
+        if (['create','edit','delete'].includes(perm) && cb.checked) {
+            row.querySelector('[data-perm="view"]').checked = true;
+        }
+        updateStats();
+    }
+
+    // ── LIVE STATS UPDATE ───────────────────────
+    function updateStats() {
+        // (if we want to live-update stats, we can; omit for simplicity)
+    }
+
+    // ── COLLECT PERMISSIONS ─────────────────────
+    function collectPermissions() {
+        const perms = {};
+        document.querySelectorAll('.perm-check').forEach(cb => {
+            const sid  = cb.dataset.screen;
+            const perm = cb.dataset.perm;
+            if (!perms[sid]) perms[sid] = {
+                ScreenID: parseInt(sid),
+                CanView: false, CanCreate: false, CanEdit: false, CanDelete: false
+            };
+            if (perm === 'view')   perms[sid].CanView   = cb.checked;
+            if (perm === 'create') perms[sid].CanCreate = cb.checked;
+            if (perm === 'edit')   perms[sid].CanEdit   = cb.checked;
+            if (perm === 'delete') perms[sid].CanDelete = cb.checked;
+        });
+        return Object.values(perms);
+    }
+
+    // ── SAVE PERMISSIONS ────────────────────────
+    async function saveAllPermissions() {
+        const permissions = collectPermissions();
+
+        const confirmResult = await Swal.fire({
+            title: 'Save Permissions?',
+            html: `This will update all screen access for the <strong>${@Html.Raw(Json.Serialize(Model.RoleName))}</strong> role.`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#4C1864',
+            confirmButtonText: 'Yes, Save',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (!confirmResult.isConfirmed) return;
+
+        document.getElementById('spinnerOverlay').classList.add('show');
+
+        try {
+            const resp = await fetch('/Role/SavePermissions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roleID: ROLE_ID, permissions })
+            });
+
+            const data = await resp.json();
+            document.getElementById('spinnerOverlay').classList.remove('show');
+
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Saved!',
+                    text: data.message || 'Permissions updated successfully.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Failed', text: data.message });
+            }
+        } catch (e) {
+            document.getElementById('spinnerOverlay').classList.remove('show');
+            Swal.fire({ icon: 'error', title: 'Error', text: e.message });
+        }
+    }
+
+    // ── TEMPDATA ─────────────────────────────────
+    @if (TempData["Error"] != null)
+    {
+        <text>Swal.fire({ icon: 'error', title: 'Error', text: '@TempData["Error"]' });</text>
+    }
+</script>

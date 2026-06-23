@@ -1,0 +1,85 @@
+@*
+    /Views/Settings/Index.cshtml
+    Hub showing all configuration sections, grouped into 3 categories.
+*@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Settings";
+}
+
+<div class="as-wrap">
+    <div class="as-head">
+        <h1><span class="ico"><i class="fa-solid fa-sliders"></i></span> System Settings</h1>
+        <div class="as-crumb">All system configuration in one place</div>
+    </div>
+
+    <!-- ── 1. Course Catalog masters ──────────────────────── -->
+    <h2 class="as-section-title">Course Catalog</h2>
+    <div class="as-tiles">
+        <a class="as-tile" asp-action="Categories">
+            <div class="as-tile-ico"><i class="fa-solid fa-folder-tree"></i></div>
+            <div class="as-tile-name">Categories</div>
+            <div class="as-tile-desc">Hierarchical course categories with parent/child structure.</div>
+        </a>
+        <a class="as-tile" asp-action="Tags">
+            <div class="as-tile-ico"><i class="fa-solid fa-tags"></i></div>
+            <div class="as-tile-name">Tags</div>
+            <div class="as-tile-desc">Cross-cutting labels for courses (used in search and filters).</div>
+        </a>
+        <a class="as-tile" asp-action="SkillLevels">
+            <div class="as-tile-ico"><i class="fa-solid fa-signal"></i></div>
+            <div class="as-tile-name">Skill Levels</div>
+            <div class="as-tile-desc">Difficulty tiers (Beginner / Intermediate / Advanced…).</div>
+        </a>
+        <a class="as-tile" asp-action="Languages">
+            <div class="as-tile-ico"><i class="fa-solid fa-language"></i></div>
+            <div class="as-tile-name">Languages</div>
+            <div class="as-tile-desc">Supported languages for courses and the UI.</div>
+        </a>
+    </div>
+
+    <!-- ── 2. Learner Engagement ──────────────────────── -->
+    <h2 class="as-section-title">Learner Engagement</h2>
+    <div class="as-tiles">
+        <a class="as-tile" asp-action="Certificates">
+            <div class="as-tile-ico"><i class="fa-solid fa-award"></i></div>
+            <div class="as-tile-name">Certificate Templates</div>
+            <div class="as-tile-desc">Design completion certificates with HTML + live preview.</div>
+        </a>
+        <a class="as-tile" asp-action="Points">
+            <div class="as-tile-ico"><i class="fa-solid fa-star"></i></div>
+            <div class="as-tile-name">Points Rules</div>
+            <div class="as-tile-desc">Points awarded for each user action.</div>
+        </a>
+        <a class="as-tile" asp-action="Badges">
+            <div class="as-tile-ico"><i class="fa-solid fa-medal"></i></div>
+            <div class="as-tile-name">Badges</div>
+            <div class="as-tile-desc">Badge definitions and the criteria to unlock them.</div>
+        </a>
+        <a class="as-tile" asp-action="Emails">
+            <div class="as-tile-ico"><i class="fa-solid fa-envelope"></i></div>
+            <div class="as-tile-name">Email Templates</div>
+            <div class="as-tile-desc">Transactional emails with variable placeholders.</div>
+        </a>
+        <a class="as-tile" asp-action="ReferralPolicy">
+            <div class="as-tile-ico"><i class="fa-solid fa-share-nodes"></i></div>
+            <div class="as-tile-name">Referral Policy</div>
+            <div class="as-tile-desc">Rewards for referrers and discounts for referees.</div>
+        </a>
+    </div>
+
+    <!-- ── 3. Platform Integrations ──────────────────────── -->
+    <h2 class="as-section-title">Platform</h2>
+    <div class="as-tiles">
+        <a class="as-tile" asp-action="Payment">
+            <div class="as-tile-ico"><i class="fa-solid fa-credit-card"></i></div>
+            <div class="as-tile-name">Payment Gateway</div>
+            <div class="as-tile-desc">Razorpay keys and the test / live mode toggle.</div>
+        </a>
+        <a class="as-tile" asp-action="Storage">
+            <div class="as-tile-ico"><i class="fa-solid fa-hard-drive"></i></div>
+            <div class="as-tile-name">Storage</div>
+            <div class="as-tile-desc">Upload paths, size limits, allowed file extensions.</div>
+        </a>
+    </div>
+</div>

@@ -1,0 +1,40 @@
+@{
+    ViewData["Title"] = "Broadcast";
+    Layout = "_Layout";
+}
+<style>
+    :root{--primary:#4C1864;--secondary:#7B2CBF;}
+    .bc-card{max-width:600px;margin:0 auto;background:#fff;border-radius:16px;box-shadow:0 10px 35px rgba(76,24,100,.08);overflow:hidden;}
+    .bc-head{background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;padding:22px 26px;}
+    .bc-head h4{margin:0;font-weight:700;}
+    .bc-body{padding:26px;}
+    .bc-body label{font-weight:600;font-size:13px;color:#344;margin:12px 0 6px;display:block;}
+    .bc-body input,.bc-body select,.bc-body textarea{width:100%;padding:11px;border:1px solid #d6d9e0;border-radius:9px;font-size:14px;}
+    .bc-btn{margin-top:18px;width:100%;background:linear-gradient(90deg,var(--primary),var(--secondary));color:#fff;border:none;padding:12px;border-radius:9px;font-weight:600;cursor:pointer;}
+    .bc-alert{padding:10px 14px;border-radius:8px;margin-bottom:16px;font-size:13.5px;}
+    .bc-alert.ok{background:#e7f7ed;color:#1a7f43;} .bc-alert.err{background:#fdeaea;color:#b42318;}
+</style>
+<div class="bc-card">
+    <div class="bc-head"><h4><i class="fa-solid fa-bullhorn me-2"></i>Broadcast Notification</h4></div>
+    <div class="bc-body">
+        @if (TempData["BcSuccess"] != null) { <div class="bc-alert ok">@TempData["BcSuccess"]</div> }
+        @if (TempData["BcError"] != null) { <div class="bc-alert err">@TempData["BcError"]</div> }
+        <form asp-action="Broadcast" method="post">
+            @Html.AntiForgeryToken()
+            <label>Audience</label>
+            <select name="RoleFilter">
+                <option value="">Everyone</option>
+                <option value="3">Students only</option>
+                <option value="2">Tutors/Staff only</option>
+                <option value="1">Admins only</option>
+            </select>
+            <label>Title</label>
+            <input name="Title" required maxlength="200" placeholder="e.g. Scheduled maintenance Sunday" />
+            <label>Message</label>
+            <textarea name="Body" rows="3" maxlength="500" placeholder="Optional details…"></textarea>
+            <label>Link (optional)</label>
+            <input name="LinkUrl" placeholder="/Courses/Browse" />
+            <button class="bc-btn" type="submit"><i class="fa-solid fa-paper-plane me-1"></i>Send Broadcast</button>
+        </form>
+    </div>
+</div>

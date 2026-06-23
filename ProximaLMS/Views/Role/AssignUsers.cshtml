@@ -1,0 +1,447 @@
+@model ProximaLMS.Controllers.RoleAssignUsersViewModel
+@{
+    ViewData["Title"] = $"Assign Users — {Model.RoleName}";
+    Layout = "_Layout";
+
+    // Collect assigned user IDs for filtering available list
+    var assignedIds = Model.AssignedUsers.Select(u => u.UserID).ToHashSet();
+    var unassigned  = Model.AvailableUsers
+        .Where(u => !assignedIds.Contains(u.ID))
+        .ToList();
+}
+
+<style>
+    :root {
+        --primary: #4C1864;
+        --secondary: #7B2CBF;
+        --bg: #f4f6fb;
+    }
+
+    body { background: var(--bg); }
+    .container-fluid { padding-left: 0 !important; padding-right: 0 !important; }
+
+    .page-header {
+        background: #fff;
+        padding: 20px 25px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .page-title { font-size: 22px; font-weight: 700; color: var(--primary); margin: 0; }
+    .page-sub   { font-size: 13px; color: #888; margin-top: 3px; }
+
+    .role-pill {
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        color: #fff;
+        font-family: 'Courier New', monospace;
+        font-size: 12px; font-weight: 700;
+        padding: 4px 12px; border-radius: 20px;
+        letter-spacing: .5px;
+    }
+
+    /* TWO-COLUMN LAYOUT */
+    .assign-layout {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        padding: 0 25px 30px;
+    }
+
+    @@media (max-width: 900px) {
+        .assign-layout { grid-template-columns: 1fr; }
+    }
+
+    .assign-panel {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.05);
+        overflow: hidden;
+    }
+
+    .panel-header {
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .panel-header.assigned { background: linear-gradient(90deg, #15803d, #16a34a); }
+    .panel-header.available { background: linear-gradient(90deg, var(--primary), var(--secondary)); }
+
+    .panel-title {
+        color: #fff;
+        font-weight: 700;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .panel-count {
+        background: rgba(255,255,255,.2);
+        color: #fff;
+        font-size: 12px; font-weight: 600;
+        padding: 3px 10px; border-radius: 12px;
+    }
+
+    /* SEARCH */
+    .panel-search {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    .panel-search input {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 8px 12px;
+        width: 100%;
+        font-size: 13px;
+    }
+
+    .panel-search input:focus { border-color: var(--primary); outline: none; }
+
+    /* USER LIST */
+    .user-list {
+        max-height: 420px;
+        overflow-y: auto;
+    }
+
+    .user-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 18px;
+        border-bottom: 1px solid #f9fafb;
+        transition: background .1s;
+    }
+
+    .user-item:hover { background: #faf8fc; }
+
+    .user-info { display: flex; align-items: center; gap: 12px; }
+
+    .user-avatar {
+        width: 38px; height: 38px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 15px;
+        font-weight: 700;
+        color: #fff;
+    }
+
+    .avatar-green  { background: linear-gradient(135deg, #16a34a, #22c55e); }
+    .avatar-purple { background: linear-gradient(135deg, var(--primary), var(--secondary)); }
+
+    .user-name  { font-size: 14px; font-weight: 600; color: #374151; }
+    .user-email { font-size: 12px; color: #9ca3af; }
+
+    .user-gender-badge {
+        font-size: 10px; font-weight: 700;
+        padding: 2px 7px; border-radius: 6px;
+        text-transform: uppercase;
+    }
+
+    .gender-m { background: #eff6ff; color: #1d4ed8; }
+    .gender-f { background: #fdf2f8; color: #9d174d; }
+
+    /* ACTION BUTTONS */
+    .btn-assign {
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        color: #fff;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex; align-items: center; gap: 5px;
+        transition: opacity .15s;
+        white-space: nowrap;
+    }
+
+    .btn-assign:hover { opacity: .88; }
+
+    .btn-remove {
+        background: #fff1f2;
+        color: #be123c;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex; align-items: center; gap: 5px;
+        transition: .15s;
+    }
+
+    .btn-remove:hover { background: #fecdd3; }
+
+    /* STATUS DOT */
+    .status-dot {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+
+    .dot-active   { background: #22c55e; }
+    .dot-inactive { background: #9ca3af; }
+
+    /* EMPTY PANEL */
+    .panel-empty {
+        padding: 40px;
+        text-align: center;
+        color: #9ca3af;
+    }
+
+    .panel-empty i { font-size: 36px; margin-bottom: 10px; display: block; }
+
+    /* DATE ASSIGNED */
+    .assigned-date {
+        font-size: 11px;
+        color: #9ca3af;
+    }
+
+    /* BACK BTN */
+    .back-btn {
+        background: #f1f1f1; color: #333;
+        border: none; padding: 9px 18px;
+        border-radius: 8px; font-size: 14px;
+        display: flex; align-items: center; gap: 7px;
+        text-decoration: none; transition: .15s;
+    }
+
+    .back-btn:hover { background: #e5e5e5; color: #333; }
+</style>
+
+<div class="container-fluid">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+        <div>
+            <h4 class="page-title">
+                <i class="fas fa-user-shield me-2"></i>
+                User Assignment &nbsp;<span class="role-pill">@Model.RoleCode</span>
+            </h4>
+            <p class="page-sub">Assign or remove users for the <strong>@Model.RoleName</strong> role</p>
+        </div>
+        <a asp-action="List" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Back to Roles
+        </a>
+    </div>
+
+    <div class="assign-layout">
+
+        <!-- ── ASSIGNED USERS PANEL ── -->
+        <div class="assign-panel">
+            <div class="panel-header assigned">
+                <div class="panel-title">
+                    <i class="fas fa-user-check"></i> Assigned Users
+                </div>
+                <span class="panel-count" id="assignedCount">@Model.AssignedUsers.Count</span>
+            </div>
+
+            <div class="panel-search">
+                <input type="text" id="searchAssigned"
+                       placeholder="Search assigned users..."
+                       oninput="filterList('assignedList', this.value)" />
+            </div>
+
+            <div class="user-list" id="assignedList">
+                @if (Model.AssignedUsers.Any())
+                {
+                    @foreach (var user in Model.AssignedUsers)
+                    {
+                        var initial = user.Name?.Length > 0 ? user.Name[0].ToString().ToUpper() : "?";
+                        <div class="user-item" id="assigned_@user.UserID"
+                             data-name="@user.Name?.ToLower()" data-email="@user.Email?.ToLower()">
+                            <div class="user-info">
+                                <div class="user-avatar avatar-green">@initial</div>
+                                <div>
+                                    <div class="user-name">
+                                        @user.Name
+                                        <span class="status-dot @(user.IsActive ? "dot-active" : "dot-inactive")"
+                                              title="@(user.IsActive ? "Active" : "Inactive")"></span>
+                                    </div>
+                                    <div class="user-email">@user.Email</div>
+                                    <div class="assigned-date">Assigned: @user.AssignedDate</div>
+                                </div>
+                            </div>
+                            <button class="btn-remove"
+                                    onclick="removeUser(@user.UserID, '@Html.Raw(user.Name)')">
+                                <i class="fas fa-times"></i> Remove
+                            </button>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="panel-empty" id="assignedEmpty">
+                        <i class="fas fa-user-slash"></i>
+                        <p>No users assigned to this role yet.</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- ── AVAILABLE USERS PANEL ── -->
+        <div class="assign-panel">
+            <div class="panel-header available">
+                <div class="panel-title">
+                    <i class="fas fa-users"></i> Available Users
+                </div>
+                <span class="panel-count" id="availableCount">@unassigned.Count</span>
+            </div>
+
+            <div class="panel-search">
+                <input type="text" id="searchAvailable"
+                       placeholder="Search available users..."
+                       oninput="filterList('availableList', this.value)" />
+            </div>
+
+            <div class="user-list" id="availableList">
+                @if (unassigned.Any())
+                {
+                    @foreach (var user in unassigned)
+                    {
+                        var initial = user.Name?.Length > 0 ? user.Name[0].ToString().ToUpper() : "?";
+                        var genderClass = user.Gender?.ToLower() == "female" ? "gender-f" : "gender-m";
+                        <div class="user-item" id="available_@user.ID"
+                             data-name="@user.Name?.ToLower()" data-email="@user.Email?.ToLower()">
+                            <div class="user-info">
+                                <div class="user-avatar avatar-purple">@initial</div>
+                                <div>
+                                    <div class="user-name">
+                                        @user.Name
+                                        <span class="user-gender-badge @genderClass">@user.Gender</span>
+                                        <span class="status-dot @(user.IsActive ? "dot-active" : "dot-inactive")"
+                                              title="@(user.IsActive ? "Active" : "Inactive")"></span>
+                                    </div>
+                                    <div class="user-email">@user.Email</div>
+                                </div>
+                            </div>
+                            <button class="btn-assign"
+                                    onclick="assignUser(@user.ID, '@Html.Raw(user.Name)', '@Html.Raw(user.Email)', '@(user.IsActive ? "Active" : "Inactive")')">
+                                <i class="fas fa-plus"></i> Assign
+                            </button>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div class="panel-empty" id="availableEmpty">
+                        <i class="fas fa-check-circle" style="color:#22c55e;"></i>
+                        <p>All users have been assigned to this role.</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    const ROLE_ID = @Model.RoleID;
+
+    // ── FILTER LIST ─────────────────────────────
+    function filterList(listId, query) {
+        const q = query.toLowerCase();
+        document.querySelectorAll(`#${listId} .user-item`).forEach(item => {
+            const match = item.dataset.name?.includes(q) || item.dataset.email?.includes(q);
+            item.style.display = match ? '' : 'none';
+        });
+    }
+
+    // ── ASSIGN USER ─────────────────────────────
+    async function assignUser(userId, name, email, status) {
+        try {
+            const resp = await fetch('/Role/AssignUser', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roleID: ROLE_ID, userID: userId })
+            });
+            const data = await resp.json();
+
+            if (data.success) {
+                // Remove from available panel
+                const avEl = document.getElementById(`available_${userId}`);
+                if (avEl) avEl.remove();
+
+                // Add to assigned panel
+                const assignedList = document.getElementById('assignedList');
+                const empty = document.getElementById('assignedEmpty');
+                if (empty) empty.remove();
+
+                const initial = name.charAt(0).toUpperCase();
+                const now = new Date().toLocaleDateString('en-IN');
+                const div = document.createElement('div');
+                div.className = 'user-item';
+                div.id = `assigned_${userId}`;
+                div.dataset.name  = name.toLowerCase();
+                div.dataset.email = email.toLowerCase();
+                div.innerHTML = `
+                    <div class="user-info">
+                        <div class="user-avatar avatar-green">${initial}</div>
+                        <div>
+                            <div class="user-name">${name} <span class="status-dot dot-active"></span></div>
+                            <div class="user-email">${email}</div>
+                            <div class="assigned-date">Assigned: ${now}</div>
+                        </div>
+                    </div>
+                    <button class="btn-remove" onclick="removeUser(${userId}, '${name}')">
+                        <i class="fas fa-times"></i> Remove
+                    </button>`;
+                assignedList.appendChild(div);
+                updateCounts();
+
+                Swal.fire({ icon: 'success', title: 'Assigned!', text: `${name} has been assigned.`, timer: 1500, showConfirmButton: false });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Failed', text: data.message });
+            }
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'Error', text: e.message });
+        }
+    }
+
+    // ── REMOVE USER ─────────────────────────────
+    async function removeUser(userId, name) {
+        const confirm = await Swal.fire({
+            title: `Remove "${name}"?`,
+            text: 'This user will lose access granted by this role.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            confirmButtonText: 'Remove'
+        });
+        if (!confirm.isConfirmed) return;
+
+        try {
+            const resp = await fetch('/Role/RemoveUser', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ roleID: ROLE_ID, userID: userId })
+            });
+            const data = await resp.json();
+
+            if (data.success) {
+                document.getElementById(`assigned_${userId}`)?.remove();
+                updateCounts();
+                Swal.fire({ icon: 'success', title: 'Removed!', timer: 1500, showConfirmButton: false });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Failed', text: data.message });
+            }
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'Error', text: e.message });
+        }
+    }
+
+    // ── COUNT BADGES ─────────────────────────────
+    function updateCounts() {
+        document.getElementById('assignedCount').textContent =
+            document.querySelectorAll('#assignedList .user-item').length;
+        document.getElementById('availableCount').textContent =
+            document.querySelectorAll('#availableList .user-item').length;
+    }
+</script>

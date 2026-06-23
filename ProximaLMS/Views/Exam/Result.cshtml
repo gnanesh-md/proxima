@@ -1,0 +1,459 @@
+@model ProximaLMS.Models.ExamBuilderPageViewModel
+@{
+    ViewData["Title"] = Model.CourseTitle;
+    Layout = "_Layout";
+}
+
+<style>
+    :root {
+        --grape:#4C1864; --grape-2:#7B2CBF; --ink:#1f1d2b;
+        --muted:#6b7280; --border:#e7e5ee; --ok:#16a34a;
+        --amber:#d97706; --red:#dc2626; --blue:#1e40af;
+    }
+    .rs-wrap { max-width:980px; margin:0 auto; }
+
+    /* ── HERO ────────────────────────────────────────────────── */
+    .rs-hero {
+        border-radius:16px; padding:28px 32px; color:#fff; margin-bottom:22px;
+        box-shadow:0 14px 36px rgba(76,24,100,.25);
+        display:grid; grid-template-columns:1fr auto; gap:18px; align-items:center;
+    }
+    .rs-hero.pass    { background:linear-gradient(120deg,#15803d,#22c55e); }
+    .rs-hero.fail    { background:linear-gradient(120deg,#b91c1c,#ef4444); }
+    .rs-hero.pending { background:linear-gradient(120deg,#92400e,#f59e0b); }
+    .rs-hero.unknown { background:linear-gradient(120deg,var(--grape),var(--grape-2)); }
+    .rs-hero h1 { margin:0 0 4px; font-size:1.5rem; font-weight:800; }
+    .rs-hero .sub { opacity:.92; font-size:.92rem; }
+    .rs-hero .meta { display:flex; gap:18px; margin-top:14px; font-size:.83rem; opacity:.95; flex-wrap:wrap; }
+    .rs-hero .meta b { font-weight:700; }
+    .rs-score {
+        background:rgba(255,255,255,.18); border:1px solid rgba(255,255,255,.3);
+        border-radius:14px; padding:18px 28px; text-align:center; min-width:160px;
+    }
+    .rs-score .pct { font-size:2.6rem; font-weight:800; line-height:1; }
+    .rs-score .lbl { font-size:.75rem; text-transform:uppercase; letter-spacing:.07em; opacity:.85; margin-top:5px; }
+    .rs-score .marks { font-size:.85rem; opacity:.92; margin-top:7px; }
+    .rs-actions { margin-top:14px; display:flex; gap:8px; }
+    .rs-btn {
+        background:rgba(255,255,255,.2); color:#fff; text-decoration:none;
+        font-weight:700; font-size:.83rem; padding:8px 16px; border-radius:9px;
+        border:1px solid rgba(255,255,255,.3); cursor:pointer;
+    }
+    .rs-btn:hover { background:rgba(255,255,255,.3); color:#fff; }
+
+    /* ── BREAKDOWN ───────────────────────────────────────────── */
+    .rs-panels { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:22px; }
+    @@media (max-width:820px){ .rs-panels { grid-template-columns:1fr; } }
+    .rs-panel { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 6px 18px rgba(10,20,40,.05); padding:18px 20px; }
+    .rs-panel h3 { font-size:.92rem; font-weight:800; color:var(--ink); margin:0 0 12px; display:flex; align-items:center; gap:7px; }
+    .rs-panel h3 i { color:var(--grape-2); }
+
+    .br-row { display:grid; grid-template-columns:90px 1fr 70px; gap:10px; align-items:center; padding:7px 0; font-size:.86rem; }
+    .br-row .lbl { font-weight:700; color:var(--ink); }
+    .br-row .track { height:8px; background:#eee7f5; border-radius:999px; overflow:hidden; }
+    .br-row .fill { height:100%; border-radius:999px; transition:width .3s; }
+    .br-row .pct { text-align:right; font-weight:800; font-variant-numeric:tabular-nums; }
+    .br-row.easy   .fill { background:linear-gradient(90deg,#10b981,#16a34a); }
+    .br-row.medium .fill { background:linear-gradient(90deg,#f59e0b,#d97706); }
+    .br-row.hard   .fill { background:linear-gradient(90deg,#ef4444,#dc2626); }
+    .br-row .meta { font-size:.74rem; color:var(--muted); margin-top:2px; }
+
+    .ty-row { display:flex; align-items:center; padding:8px 0; font-size:.86rem; border-bottom:1px solid #f1eef7; }
+    .ty-row:last-child { border-bottom:none; }
+    .ty-row .lbl { font-weight:700; color:var(--ink); flex:1; }
+    .ty-row .num { font-weight:800; color:var(--grape); margin-right:14px; }
+    .ty-row .pend { font-size:.7rem; padding:2px 7px; border-radius:999px; background:#fef3c7; color:#92400e; font-weight:700; }
+
+    /* ── REVIEW ─────────────────────────────────────────────── */
+    .rv-toggle { display:flex; align-items:center; gap:8px; margin-bottom:14px; }
+    .rv-toggle .pill {
+        cursor:pointer; user-select:none; font-size:.78rem; font-weight:700;
+        padding:6px 13px; border-radius:999px; border:1px solid var(--border);
+        color:var(--ink); background:#fff;
+    }
+    .rv-toggle .pill.on { background:linear-gradient(90deg,var(--grape),var(--grape-2)); color:#fff; border-color:transparent; }
+    .rv-info { font-size:.78rem; color:var(--muted); margin-left:auto; }
+    .rv-info i { color:var(--amber); }
+
+    .qc {
+        background:#fff; border:1px solid var(--border); border-radius:13px;
+        padding:18px 22px; margin-bottom:12px; box-shadow:0 4px 14px rgba(10,20,40,.04);
+        border-left:4px solid var(--border);
+    }
+    .qc.correct  { border-left-color:var(--ok); }
+    .qc.wrong    { border-left-color:var(--red); }
+    .qc.pending  { border-left-color:var(--amber); }
+    .qc.unknown  { border-left-color:var(--muted); }
+
+    .qc-head { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+    .qc-num { font-weight:800; color:var(--ink); font-size:.95rem; }
+    .qc-badges { margin-left:auto; display:flex; gap:5px; }
+
+    .badge { font-size:.66rem; font-weight:700; padding:3px 9px; border-radius:999px; white-space:nowrap; }
+    .b-easy   { background:#d1fae5; color:#15803d; }
+    .b-medium { background:#fef3c7; color:#92400e; }
+    .b-hard   { background:#fee2e2; color:#b91c1c; }
+    .b-marks  { background:#f4f1fa; color:var(--grape); }
+    .b-correct{ background:#d1fae5; color:#15803d; }
+    .b-wrong  { background:#fee2e2; color:#b91c1c; }
+    .b-pending{ background:#fef3c7; color:#92400e; }
+
+    .qc-text { color:var(--ink); margin:6px 0 12px; line-height:1.5; font-size:.95rem; }
+
+    .opt-line {
+        display:flex; align-items:flex-start; gap:10px;
+        padding:9px 12px; border-radius:8px; margin-bottom:5px; font-size:.88rem;
+        background:#faf9fc;
+    }
+    .opt-line.correct  { background:#d1fae5; color:#15803d; }
+    .opt-line.selected { outline:2px solid var(--grape-2); outline-offset:-2px; }
+    .opt-line.selected-wrong { background:#fee2e2; color:#b91c1c; outline:2px solid #fecaca; outline-offset:-2px; }
+    .opt-line .ic { font-size:.78rem; width:16px; flex-shrink:0; padding-top:3px; }
+    .opt-line .lt { font-weight:700; min-width:22px; }
+    .text-block {
+        font-size:.88rem; padding:9px 12px; border-radius:8px; background:#faf9fc;
+        color:var(--ink); margin-bottom:6px;
+    }
+    .text-block .lab { font-size:.7rem; text-transform:uppercase; letter-spacing:.05em; font-weight:700; color:var(--muted); margin-bottom:4px; }
+    .text-block.correct { background:#d1fae5; color:#15803d; }
+    .text-block.wrong   { background:#fee2e2; color:#b91c1c; }
+
+    .qc-expl {
+        margin-top:10px; padding:11px 13px; background:#f4f1fa; border-radius:9px;
+        font-size:.85rem; color:var(--ink);
+    }
+    .qc-expl .lab { font-weight:800; color:var(--grape); margin-right:4px; }
+
+    .rv-empty { padding:30px; text-align:center; color:var(--muted); font-size:.85rem; }
+</style>
+
+
+<div id="bootingState" style="text-align:center; padding:60px; color:var(--muted);">
+    <i class="fa-solid fa-spinner fa-spin" style="font-size:32px; color:var(--grape);"></i>
+    <p style="margin-top:14px; font-weight:600;">Loading result…</p>
+</div>
+
+<div class="rs-wrap" id="resultRoot" style="display:none;">
+    <!-- HERO -->
+    <div class="rs-hero unknown" id="hero">
+        <div>
+            <h1 id="heroTitle">Result</h1>
+            <div class="sub" id="heroSub">—</div>
+            <div class="meta" id="heroMeta"></div>
+            <div class="rs-actions">
+                <a class="rs-btn" href="@Url.Action("Index","StudentDashboard")"><i class="fa-solid fa-house"></i> Dashboard</a>
+                <a class="rs-btn" id="retakeBtn" href="#" style="display:none;"><i class="fa-solid fa-rotate-right"></i> Retake</a>
+            </div>
+        </div>
+        <div class="rs-score">
+            <div class="pct" id="scorePct">0%</div>
+            <div class="lbl">Score</div>
+            <div class="marks" id="scoreMarks">0 / 0</div>
+        </div>
+    </div>
+
+    <!-- BREAKDOWN -->
+    <div class="rs-panels">
+        <div class="rs-panel">
+            <h3><i class="fa-solid fa-layer-group"></i> By Difficulty</h3>
+            <div id="byDiff"></div>
+        </div>
+        <div class="rs-panel">
+            <h3><i class="fa-solid fa-shapes"></i> By Question Type</h3>
+            <div id="byType"></div>
+        </div>
+    </div>
+
+    <!-- REVIEW (only shown when RevealAnswers=1) -->
+    <div id="reviewSection" style="display:none;">
+        <div class="rs-panel">
+            <div class="rv-toggle">
+                <h3 style="margin:0;"><i class="fa-solid fa-magnifying-glass"></i> Question Review</h3>
+                <span style="width:14px;"></span>
+                <span class="pill on"  data-flt="all">All</span>
+                <span class="pill"     data-flt="wrong">Wrong only</span>
+                <span class="pill"     data-flt="pending">Pending review</span>
+                <span class="rv-info" id="rvNote"></span>
+            </div>
+            <div id="reviewList"></div>
+        </div>
+    </div>
+
+    <!-- REVEAL OFF NOTICE -->
+    <div id="noReveal" class="rs-panel" style="display:none;">
+        <h3><i class="fa-solid fa-lock"></i> Answer review disabled</h3>
+        <p style="color:var(--muted);font-size:.92rem;margin:0;">
+            Detailed answer review is disabled for this exam by the instructor.
+            You can still see your score and breakdown above.
+        </p>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script>
+        const ATTEMPT_ID = @Model.CourseID;
+        const URL_RESULT = '@Url.Action("AttemptResult","Exam")';
+        const esc = s => (s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+        const truthy = v => v===true||v===1||v==='1';
+        const propOf = (obj, ...keys) => { for (const k of keys) if (obj && obj[k] !== undefined && obj[k] !== null) return obj[k]; return null; };
+
+        let FILTER = 'all';
+        let QUESTIONS = [];
+        let OPTIONS_BY_KEY = {};
+
+        async function boot() {
+            try {
+                const data = await fetch(URL_RESULT + '?attemptId=' + ATTEMPT_ID).then(r=>r.json());
+                if (!data || !data.header) {
+                    document.getElementById('bootingState').innerHTML = '<div style="color:var(--red);">Result not found.</div>';
+                    return;
+                }
+                document.getElementById('bootingState').style.display = 'none';
+                document.getElementById('resultRoot').style.display = '';
+                renderHero(data.header);
+                renderBreakdown(data.byDifficulty || [], data.byType || []);
+                indexOptions(data.options || []);
+                QUESTIONS = data.questions || [];
+                if (truthy(propOf(data.header, 'revealAnswers', 'RevealAnswers'))) {
+                    document.getElementById('reviewSection').style.display = '';
+                    renderReview();
+                } else {
+                    document.getElementById('noReveal').style.display = '';
+                }
+            } catch (e) {
+                document.getElementById('bootingState').innerHTML = '<div style="color:var(--red);">Load error: ' + esc(e.message) + '</div>';
+            }
+        }
+
+
+        // ── hero ──────────────────────────────────────────────────
+        function renderHero(h) {
+            const pct        = propOf(h,'scorePercent','ScorePercent') ?? 0;
+            const scored     = propOf(h,'scoredMarks','ScoredMarks') ?? 0;
+            const total      = propOf(h,'totalMarks','TotalMarks') ?? 0;
+            const passed     = propOf(h,'passed','Passed');           // 1, 0, or null
+            const passPct    = propOf(h,'passPercentage','PassPercentage') ?? 0;
+            const needsRev   = truthy(propOf(h,'needsReview','NeedsReview'));
+            const auto       = truthy(propOf(h,'autoSubmitted','AutoSubmitted'));
+            const examTitle  = propOf(h,'examTitle','ExamTitle') ?? 'Exam';
+            const submitted  = propOf(h,'submittedAt','SubmittedAt');
+            const maxAttempts= propOf(h,'maxAttempts','MaxAttempts') ?? 0;
+            const examId     = propOf(h,'examID','ExamID');
+
+            const hero = document.getElementById('hero');
+            let title, sub, cls;
+            if (passed === null || needsRev) {
+                cls = 'pending'; title = 'Result Pending Review';
+                sub = 'Some answers (short-answer) need to be graded manually by your instructor before your final score is finalized.';
+            } else if (truthy(passed)) {
+                cls = 'pass'; title = 'Congratulations — you passed!';
+                sub = `You scored above the ${passPct}% pass mark.`;
+            } else {
+                cls = 'fail'; title = "Didn't pass this time";
+                sub = `The pass mark for this exam is ${passPct}%.`;
+            }
+
+            hero.className = 'rs-hero ' + cls;
+            document.getElementById('heroTitle').textContent = title;
+            document.getElementById('heroSub').textContent   = sub;
+            document.getElementById('scorePct').textContent  = pct + '%';
+            document.getElementById('scoreMarks').textContent = scored + ' / ' + total + ' marks';
+
+            const meta = [];
+            meta.push(`<i class="fa-solid fa-file-lines"></i> <b>${esc(examTitle)}</b>`);
+            if (submitted) meta.push(`<i class="fa-regular fa-clock"></i> Submitted ${new Date(submitted).toLocaleString('en-IN')}`);
+            if (auto)      meta.push(`<i class="fa-solid fa-stopwatch"></i> Auto-submitted on time-out`);
+            document.getElementById('heroMeta').innerHTML = meta.join(' &nbsp;·&nbsp; ');
+
+            // Show "Retake" only if not yet passed AND attempts remaining
+            if (examId && !truthy(passed)) {
+                // We don't know the count here, so just show retake; the start API
+                // will reject with max-attempts-reached if the student is out.
+                const btn = document.getElementById('retakeBtn');
+                btn.style.display = '';
+                btn.href = '/Exam/Take?examId=' + examId;
+            }
+        }
+
+
+        // ── breakdown ─────────────────────────────────────────────
+        function renderBreakdown(diffs, types) {
+            const diffBox = document.getElementById('byDiff');
+            if (!diffs.length) { diffBox.innerHTML = '<div class="rv-empty">No breakdown data.</div>'; }
+            else {
+                diffBox.innerHTML = diffs.map(d => {
+                    const diff = (d.difficulty || 'Medium');
+                    const cls  = diff.toLowerCase();
+                    const total  = d.totalMarks  || 0;
+                    const scored = d.scoredMarks || 0;
+                    const pct = total === 0 ? 0 : Math.round(scored * 100 / total);
+                    return `<div class="br-row ${cls}">
+                        <div class="lbl">${esc(diff)}</div>
+                        <div>
+                            <div class="track"><div class="fill" style="width:${pct}%;"></div></div>
+                            <div class="meta">${d.correctCount}/${d.questions} correct · ${scored}/${total} marks</div>
+                        </div>
+                        <div class="pct">${pct}%</div>
+                    </div>`;
+                }).join('');
+            }
+
+            const typeBox = document.getElementById('byType');
+            const typeLabels = {Single:'MCQ', Multiple:'Multi-select', TrueFalse:'True / False', FillBlank:'Fill in the blank', ShortAnswer:'Short Answer'};
+            if (!types.length) { typeBox.innerHTML = '<div class="rv-empty">No type data.</div>'; }
+            else {
+                typeBox.innerHTML = types.map(t => {
+                    const lbl = typeLabels[t.questionType] || t.questionType;
+                    const total  = t.totalMarks  || 0;
+                    const scored = t.scoredMarks || 0;
+                    const pend   = t.needsReviewCount || 0;
+                    return `<div class="ty-row">
+                        <div class="lbl">${esc(lbl)}</div>
+                        <div class="num">${scored}/${total}</div>
+                        <div style="color:var(--muted);font-size:.78rem;">${t.correctCount}/${t.questions}</div>
+                        ${pend > 0 ? `<span class="pend" style="margin-left:8px;">${pend} pending</span>` : ''}
+                    </div>`;
+                }).join('');
+            }
+        }
+
+
+        // ── review ────────────────────────────────────────────────
+        function indexOptions(opts) {
+            OPTIONS_BY_KEY = {};
+            opts.forEach(o => {
+                const src = (o.source || o.Source);
+                const ref = (o.questionRefID ?? o.QuestionRefID);
+                const key = src + ':' + ref;
+                if (!OPTIONS_BY_KEY[key]) OPTIONS_BY_KEY[key] = [];
+                OPTIONS_BY_KEY[key].push(o);
+            });
+        }
+
+        function matchFilter(q) {
+            const correct = truthy(q.isCorrect);
+            const needsRev= truthy(q.needsReview);
+            if (FILTER === 'wrong')   return !correct && !needsRev;
+            if (FILTER === 'pending') return needsRev;
+            return true;
+        }
+
+        function renderReview() {
+            const rows = QUESTIONS.filter(matchFilter);
+            const box = document.getElementById('reviewList');
+            const pendingCount = QUESTIONS.filter(q => truthy(q.needsReview)).length;
+            document.getElementById('rvNote').innerHTML = pendingCount > 0
+                ? `<i class="fa-solid fa-circle-info"></i> ${pendingCount} short-answer ${pendingCount===1?'question':'questions'} awaiting tutor review`
+                : '';
+
+            if (rows.length === 0) {
+                box.innerHTML = '<div class="rv-empty">No questions in this view.</div>';
+                return;
+            }
+
+            box.innerHTML = rows.map((q, idx) => renderQuestionCard(q, idx + 1)).join('');
+        }
+
+        function renderQuestionCard(q, num) {
+            const key = (q.source || q.Source) + ':' + (q.questionRefID ?? q.QuestionRefID);
+            const opts = (OPTIONS_BY_KEY[key] || []).sort((a,b) => (a.sortOrder ?? a.SortOrder) - (b.sortOrder ?? b.SortOrder));
+            const qType = q.questionType || q.QuestionType;
+            const qDiff = q.difficulty || q.Difficulty || 'Medium';
+            const marks = q.marks || q.Marks || 0;
+            const awarded = q.marksAwarded;
+            const isCorrect = truthy(q.isCorrect);
+            const needsRev  = truthy(q.needsReview);
+            const expl = q.explanation || q.Explanation;
+            const accept = q.acceptableAnswers || q.AcceptableAnswers;
+
+            const cls = needsRev ? 'pending' : isCorrect ? 'correct' : awarded === null ? 'unknown' : 'wrong';
+            const diffCls = qDiff === 'Easy' ? 'b-easy' : qDiff === 'Hard' ? 'b-hard' : 'b-medium';
+            const statusBadge = needsRev
+                ? '<span class="badge b-pending">⏳ Pending review</span>'
+                : isCorrect
+                    ? '<span class="badge b-correct">✓ Correct</span>'
+                    : awarded === null
+                        ? ''
+                        : '<span class="badge b-wrong">✗ Incorrect</span>';
+
+            // Build body depending on type
+            const choiceTypes = ['Single','Multiple','TrueFalse'];
+            const selectedIds = (q.selectedOptionIDs || q.SelectedOptionIDs || '').split(',').filter(x=>x).map(x=>parseInt(x,10));
+            const textAns     = q.textAnswer || q.TextAnswer || '';
+
+            let body = '';
+            if (choiceTypes.includes(qType)) {
+                body = opts.map((o, i) => {
+                    const oid = o.optionID ?? o.OptionID;
+                    const correctOpt = truthy(o.isCorrect ?? o.IsCorrect);
+                    const picked = selectedIds.includes(oid);
+                    let lineCls = '';
+                    if (correctOpt) lineCls = 'correct';
+                    if (picked && !correctOpt) lineCls = 'selected-wrong';
+                    if (picked && correctOpt) lineCls += ' selected';
+                    const letter = String.fromCharCode(65 + i);
+                    const ic = picked
+                        ? (correctOpt ? '<i class="fa-solid fa-circle-check ic"></i>' : '<i class="fa-solid fa-circle-xmark ic" style="color:#b91c1c;"></i>')
+                        : (correctOpt ? '<i class="fa-solid fa-circle-check ic" style="color:#15803d;"></i>' : '<i class="fa-regular fa-circle ic" style="color:#cbd5e1;"></i>');
+                    return `<div class="opt-line ${lineCls}">
+                        ${ic}
+                        <span class="lt">${letter}.</span>
+                        <span>${esc(o.optionText ?? o.OptionText)}</span>
+                    </div>`;
+                }).join('');
+            } else if (qType === 'FillBlank') {
+                const lineCls = isCorrect ? 'correct' : (awarded === null ? '' : 'wrong');
+                body = `<div class="text-block ${lineCls}">
+                            <div class="lab">Your answer</div>
+                            ${textAns ? esc(textAns) : '<span style="opacity:.6;">(not answered)</span>'}
+                        </div>
+                        ${accept ? `<div class="text-block correct">
+                            <div class="lab">Accepted answers</div>
+                            ${esc(accept).split('|').map(a => `<span class="badge b-correct" style="margin-right:5px;">${esc(a.trim())}</span>`).join('')}
+                        </div>` : ''}`;
+            } else { // ShortAnswer
+                body = `<div class="text-block">
+                            <div class="lab">Your answer</div>
+                            ${textAns ? esc(textAns).replace(/\n/g,'<br>') : '<span style="opacity:.6;">(not answered)</span>'}
+                        </div>
+                        <div style="font-size:.78rem; color:var(--muted); margin-top:6px;">
+                            <i class="fa-solid fa-circle-info" style="color:var(--amber);"></i>
+                            This question is graded manually. Marks will be updated once the tutor reviews it.
+                        </div>`;
+            }
+
+            const marksDisplay = (awarded === null || awarded === undefined)
+                ? `<span class="badge b-marks">${marks} mark${marks>1?'s':''}</span>`
+                : `<span class="badge b-marks">${awarded} / ${marks} mark${marks>1?'s':''}</span>`;
+
+            return `
+            <div class="qc ${cls}">
+                <div class="qc-head">
+                    <span class="qc-num">Q${num}.</span>
+                    <div class="qc-badges">
+                        <span class="badge ${diffCls}">${esc(qDiff)}</span>
+                        ${marksDisplay}
+                        ${statusBadge}
+                    </div>
+                </div>
+                <div class="qc-text">${esc(q.questionText || q.QuestionText)}</div>
+                ${body}
+                ${expl ? `<div class="qc-expl"><span class="lab">Explanation:</span> ${esc(expl)}</div>` : ''}
+            </div>`;
+        }
+
+
+        // ── filters
+        document.querySelectorAll('.rv-toggle .pill').forEach(p => {
+            p.addEventListener('click', function() {
+                document.querySelectorAll('.rv-toggle .pill').forEach(x => x.classList.remove('on'));
+                this.classList.add('on');
+                FILTER = this.dataset.flt;
+                renderReview();
+            });
+        });
+
+        boot();
+    </script>
+}

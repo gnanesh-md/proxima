@@ -1,0 +1,785 @@
+@*
+    ProximaLMS/Views/Courses/MyCourses.cshtml
+    -------------------------------------------------------------
+    Student "My Courses" page  →  rendered by CoursesController.List()
+    when RoleID == 3. Shows ONLY assigned courses with live search.
+    -------------------------------------------------------------
+*@
+@model ProximaLMS.Models.StudentDashboardViewModel
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+@{
+    ViewData["Title"] = "My Courses";
+    Layout = "_Layout";
+
+    var firstName = (Model.StudentName ?? "Student").Split('@')[0].Split(' ')[0];
+    firstName = firstName.Length > 0 ? char.ToUpper(firstName[0]) + firstName.Substring(1) : "Student";
+
+    var levelMap = new Dictionary<string, string>
+    {
+        {"1","Beginner"}, {"2","Intermediate"}, {"3","Advanced"}
+    };
+    var langMap = new Dictionary<string, string>
+    {
+        {"1","English"},  {"2","Telugu"},       {"3","Hindi"}
+    };
+
+    string Level(string raw) =>
+        !string.IsNullOrEmpty(raw) && raw.Length > 1
+            ? raw
+            : (levelMap.TryGetValue(raw ?? "", out var l) ? l : "Beginner");
+
+    string Lang(string raw) =>
+        !string.IsNullOrEmpty(raw) && raw.Length > 1
+            ? raw
+            : (langMap.TryGetValue(raw ?? "", out var l) ? l : "English");
+
+    // ── star renderer: full / half / empty ──
+    Func<double, string> Stars = rating =>
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 1; i <= 5; i++)
+        {
+            if (rating >= i) sb.Append("<i class='fas fa-star'></i>");
+            else if (rating >= i - 0.5) sb.Append("<i class='fas fa-star-half-stroke'></i>");
+            else sb.Append("<i class='far fa-star'></i>");
+        }
+        return sb.ToString();
+    };
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --mp1: #4C1864;
+        --mp2: #7B2CBF;
+        --mp3: #9D4EDD;
+        --mgold: #FFB300;
+        --mink: #1A0F2E;
+        --mmuted: #6B7280;
+        --mcard: #fff;
+        --mborder: #EFE6F4;
+        --mshadow: 0 6px 20px rgba(76,24,100,0.08);
+        --mshadow-lg: 0 14px 40px rgba(76,24,100,0.16);
+    }
+
+    .mc-shell {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        padding: 4px 24px 60px;
+    }
+
+    /* ─────── HERO ─────── */
+    .mc-hero {
+        background: linear-gradient(135deg, #4C1864 0%, #7B2CBF 60%, #9D4EDD 100%);
+        border-radius: 22px;
+        padding: 28px 32px;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 22px;
+        box-shadow: 0 12px 40px rgba(76,24,100,0.22);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 22px;
+        flex-wrap: wrap;
+    }
+
+        .mc-hero::after {
+            content: "";
+            position: absolute;
+            top: -60px;
+            right: -60px;
+            width: 240px;
+            height: 240px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.06);
+        }
+
+        .mc-hero::before {
+            content: "";
+            position: absolute;
+            bottom: -80px;
+            right: 130px;
+            width: 180px;
+            height: 180px;
+            border-radius: 50%;
+            background: rgba(255,179,0,0.10);
+        }
+
+        .mc-hero h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.3px;
+            position: relative;
+        }
+
+        .mc-hero p {
+            margin: 6px 0 0;
+            font-size: 14px;
+            opacity: 0.92;
+            max-width: 540px;
+            position: relative;
+        }
+
+    .mc-hero-stats {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .mc-hero-pill {
+        background: rgba(255,255,255,0.14);
+        backdrop-filter: blur(8px);
+        padding: 10px 16px;
+        border-radius: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        min-width: 100px;
+    }
+
+    .mc-hero-pill-val {
+        font-size: 20px;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .mc-hero-pill-lbl {
+        font-size: 11px;
+        opacity: 0.85;
+        font-weight: 600;
+    }
+
+    /* ─────── SEARCH ─────── */
+    .mc-search-wrap {
+        background: var(--mcard);
+        border: 1px solid var(--mborder);
+        border-radius: 16px;
+        padding: 10px 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        box-shadow: var(--mshadow);
+        margin-bottom: 22px;
+        position: sticky;
+        top: 80px;
+        z-index: 9;
+    }
+
+        .mc-search-wrap i {
+            color: var(--mp2);
+            font-size: 16px;
+        }
+
+        .mc-search-wrap input {
+            flex: 1;
+            border: 0;
+            background: transparent;
+            outline: none;
+            font-size: 15px;
+            font-weight: 500;
+            color: var(--mink);
+            padding: 8px 4px;
+            font-family: inherit;
+        }
+
+    .mc-search-clear {
+        background: #F3E8FF;
+        color: var(--mp1);
+        border: 0;
+        border-radius: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        display: none;
+        font-family: inherit;
+    }
+
+        .mc-search-clear:hover {
+            background: var(--mp3);
+            color: #fff;
+        }
+
+    /* ─────── SECTION HEADER ─────── */
+    .mc-sec-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+        gap: 12px;
+    }
+
+    .mc-sec-title {
+        font-size: 18px;
+        font-weight: 800;
+        color: var(--mink);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .mc-sec-title::before {
+            content: "";
+            width: 4px;
+            height: 22px;
+            background: linear-gradient(180deg, var(--mp1), var(--mp3));
+            border-radius: 4px;
+        }
+
+    .mc-sec-count {
+        font-size: 12px;
+        color: var(--mmuted);
+        font-weight: 600;
+        background: #F5EBFB;
+        padding: 4px 10px;
+        border-radius: 999px;
+    }
+
+    /* ─────── GRID ─────── */
+    .mc-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+        gap: 20px;
+    }
+
+    .mc-card {
+        background: var(--mcard);
+        border-radius: 18px;
+        border: 1px solid var(--mborder);
+        box-shadow: var(--mshadow);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        transition: transform .25s cubic-bezier(.34,1.56,.64,1), box-shadow .25s;
+        text-decoration: none;
+        color: inherit;
+    }
+
+        .mc-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--mshadow-lg);
+            text-decoration: none;
+            color: inherit;
+        }
+
+    .mc-thumb {
+        position: relative;
+        aspect-ratio: 16/9;
+        overflow: hidden;
+        background: linear-gradient(135deg, var(--mp1), var(--mp3));
+    }
+
+        .mc-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform .3s;
+        }
+
+    .mc-card:hover .mc-thumb img {
+        transform: scale(1.05);
+    }
+
+    .mc-thumb-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(to top, rgba(26,15,46,0.55) 0%, transparent 60%);
+    }
+
+    .mc-play-ring {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        transition: opacity .25s;
+    }
+
+    .mc-play-ring-inner {
+        width: 56px;
+        height: 56px;
+        background: rgba(255,255,255,0.94);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        color: var(--mp1);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.32);
+    }
+
+    .mc-card:hover .mc-play-ring {
+        opacity: 1;
+    }
+
+    .mc-owned-badge {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: linear-gradient(135deg, #16A34A, #22C55E);
+        color: #fff;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 800;
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        box-shadow: 0 4px 12px rgba(22,163,74,0.32);
+    }
+
+    .mc-card-body {
+        padding: 16px 18px 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        flex: 1;
+    }
+
+    .mc-card-title {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--mink);
+        line-height: 1.35;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 41px;
+    }
+
+    .mc-tutor {
+        font-size: 13px;
+        color: var(--mmuted);
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+    }
+
+        .mc-tutor i {
+            color: var(--mp2);
+            font-size: 11px;
+        }
+
+    .mc-chips {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+    }
+
+    .mc-chip {
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 9px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+        .mc-chip.lvl {
+            background: #F5EBFB;
+            color: var(--mp1);
+        }
+
+        .mc-chip.lang {
+            background: #FFF7E6;
+            color: #B45309;
+        }
+
+    .mc-rating {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--mmuted);
+    }
+
+        .mc-rating .mc-stars {
+            color: #FFB300;
+            font-size: 12px;
+            display: inline-flex;
+            gap: 1.5px;
+        }
+
+            .mc-rating .mc-stars .far {
+                color: #E0D4EC;
+            }
+
+        .mc-rating .mc-rating-num {
+            color: var(--mink);
+            font-weight: 800;
+        }
+
+        .mc-rating.none {
+            color: #B7AEC4;
+            font-weight: 600;
+            font-style: italic;
+        }
+
+    .mc-progress-bar {
+        height: 6px;
+        background: #F3E8FF;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 2px;
+    }
+
+    .mc-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--mp1), #E040FB);
+        border-radius: 3px;
+        width: 0%;
+        animation: mcFill .9s ease-out forwards;
+    }
+
+    @@keyframes mcFill {
+        to {
+            width: var(--fill, 0%);
+        }
+    }
+
+    .mc-progress-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 11px;
+        color: var(--mmuted);
+        font-weight: 600;
+    }
+
+        .mc-progress-row .mc-progress-state {
+            color: var(--mp2);
+            font-weight: 700;
+        }
+
+    .mc-cta {
+        margin-top: auto;
+        padding: 11px 12px;
+        background: linear-gradient(135deg, var(--mp1), var(--mp2));
+        color: #fff;
+        border-radius: 11px;
+        font-size: 13px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 7px;
+        box-shadow: 0 6px 16px rgba(76,24,100,0.28);
+        transition: box-shadow .15s, transform .15s;
+        text-decoration: none;
+    }
+
+        .mc-cta:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(76,24,100,0.38);
+            color: #fff;
+        }
+
+    /* ─────── EMPTY ─────── */
+    .mc-empty {
+        background: var(--mcard);
+        border: 1px dashed #D9C2EC;
+        border-radius: 18px;
+        padding: 48px 32px;
+        text-align: center;
+        color: var(--mmuted);
+    }
+
+    .mc-empty-ico {
+        font-size: 52px;
+        margin-bottom: 14px;
+        color: var(--mp3);
+    }
+
+    .mc-empty h4 {
+        font-size: 18px;
+        color: var(--mink);
+        margin-bottom: 8px;
+        font-weight: 800;
+    }
+
+    .mc-empty p {
+        font-size: 14px;
+        margin: 0 0 18px;
+    }
+
+    .mc-empty-cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: linear-gradient(135deg, var(--mp1), var(--mp2));
+        color: #fff;
+        padding: 12px 22px;
+        border-radius: 12px;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: 14px;
+        box-shadow: 0 8px 22px rgba(76,24,100,0.28);
+        transition: transform .15s, box-shadow .15s;
+    }
+
+        .mc-empty-cta:hover {
+            transform: translateY(-2px);
+            color: #fff;
+            box-shadow: 0 12px 30px rgba(76,24,100,0.38);
+        }
+
+    /* card reveal */
+    .mc-card {
+        opacity: 0;
+        animation: cardReveal .45s ease-out forwards;
+    }
+
+        .mc-card:nth-child(1) {
+            animation-delay: .05s;
+        }
+
+        .mc-card:nth-child(2) {
+            animation-delay: .10s;
+        }
+
+        .mc-card:nth-child(3) {
+            animation-delay: .15s;
+        }
+
+        .mc-card:nth-child(4) {
+            animation-delay: .20s;
+        }
+
+        .mc-card:nth-child(5) {
+            animation-delay: .25s;
+        }
+
+        .mc-card:nth-child(6) {
+            animation-delay: .30s;
+        }
+
+        .mc-card:nth-child(n+7) {
+            animation-delay: .35s;
+        }
+
+    @@keyframes cardReveal {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @@media (max-width: 700px) {
+        .mc-shell {
+            padding: 4px 14px 50px;
+        }
+
+        .mc-hero {
+            padding: 22px;
+        }
+    }
+</style>
+
+
+<div class="mc-shell">
+
+    <!-- ╔══════════ HERO ══════════╗ -->
+    <div class="mc-hero">
+        <div style="position:relative;">
+            <h1>My Courses, @firstName 📚</h1>
+            <p>Pick up where you left off — your enrolled courses live here.</p>
+        </div>
+
+        <div class="mc-hero-stats">
+            <div class="mc-hero-pill">
+                <span class="mc-hero-pill-val">@Model.TotalAssignedCourses</span>
+                <span class="mc-hero-pill-lbl">Enrolled</span>
+            </div>
+            <div class="mc-hero-pill">
+                <span class="mc-hero-pill-val">@Model.InProgressCourses</span>
+                <span class="mc-hero-pill-lbl">In Progress</span>
+            </div>
+            <div class="mc-hero-pill">
+                <span class="mc-hero-pill-val">@Model.CompletedCourses</span>
+                <span class="mc-hero-pill-lbl">Completed</span>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div style="background:#fee2e2;color:#dc2626;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;margin-bottom:18px;">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+        </div>
+    }
+
+    @if (Model.AssignedCourses != null && Model.AssignedCourses.Any())
+    {
+        <!-- ╔══════════ SEARCH ══════════╗ -->
+        <div class="mc-search-wrap">
+            <i class="fas fa-search"></i>
+            <input type="text" id="mcSearch" placeholder="Search your courses by title, tutor, level, language…" autocomplete="off" />
+            <button class="mc-search-clear" id="mcSearchClear" type="button">
+                <i class="fas fa-times me-1"></i> Clear
+            </button>
+        </div>
+
+        <!-- ╔══════════ SECTION HEAD ══════════╗ -->
+        <div class="mc-sec-head">
+            <div class="mc-sec-title">Enrolled Courses</div>
+            <span class="mc-sec-count" id="mcCount">@Model.AssignedCourses.Count course@(Model.AssignedCourses.Count == 1 ? "" : "s")</span>
+        </div>
+
+        <!-- ╔══════════ GRID ══════════╗ -->
+        <div class="mc-grid" id="mcGrid">
+            @foreach (var course in Model.AssignedCourses)
+            {
+                <a class="mc-card js-mc-card"
+                   href="@Url.Action("Details", "Courses", new { id = course.CourseID })"
+                   data-keys="@($"{course.CourseTitle} {course.TutorName} {Level(course.CourseLevelName)} {Lang(course.Language)}".ToLower())">
+
+                    <div class="mc-thumb">
+                        <img src="@(string.IsNullOrEmpty(course.CoverImage) ? "/assets/images/noimage.png" : Url.Content("~/uploads/" + course.CoverImage))"
+                             alt="@course.CourseTitle"
+                             onerror="this.src='/assets/images/noimage.png';" />
+                        <div class="mc-thumb-overlay"></div>
+                        <span class="mc-owned-badge"><i class="fas fa-check"></i> Enrolled</span>
+                        <div class="mc-play-ring">
+                            <div class="mc-play-ring-inner"><i class="fas fa-play"></i></div>
+                        </div>
+                    </div>
+
+                    <div class="mc-card-body">
+                        <div class="mc-card-title">@course.CourseTitle</div>
+                        <div class="mc-tutor">
+                            <i class="fas fa-user-tie"></i>
+                            @(string.IsNullOrEmpty(course.TutorName) ? "Instructor" : course.TutorName)
+                        </div>
+                        <div class="mc-chips">
+                            <span class="mc-chip lvl"><i class="fas fa-layer-group" style="font-size:9px;"></i>@Level(course.CourseLevelName)</span>
+                            <span class="mc-chip lang"><i class="fas fa-globe" style="font-size:9px;"></i>@Lang(course.Language)</span>
+                        </div>
+
+                        @if (course.ReviewCount > 0)
+                        {
+                            <div class="mc-rating">
+                                <span class="mc-stars">@Html.Raw(Stars(course.AvgRating))</span>
+                                <span class="mc-rating-num">@course.AvgRating.ToString("0.0")</span>
+                                <span>(@course.ReviewCount)</span>
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="mc-rating none">No reviews yet</div>
+                        }
+
+                        <div>
+                            <div class="mc-progress-row">
+                                <span>Progress</span>
+                                @if (course.ProgressPercent >= 100)
+                                {
+                                    <span class="mc-progress-state" style="color:#16A34A;">
+                                        <i class="fas fa-circle-check" style="font-size:10px;"></i> Completed
+                                    </span>
+                                }
+                                else if (course.ProgressPercent > 0)
+                                {
+                                    <span class="mc-progress-state">@course.ProgressPercent% · In Progress</span>
+                                }
+                                else
+                                {
+                                    <span class="mc-progress-state" style="color:#9CA3AF;">Not started</span>
+                                }
+                            </div>
+                            <div class="mc-progress-bar">
+                                <div class="mc-progress-fill" style="--fill: @course.ProgressPercent%;"></div>
+                            </div>
+                        </div>
+
+                        <span class="mc-cta">
+                            @if (course.ProgressPercent >= 100)
+                            {
+                                <i class="fas fa-rotate-right"></i> <text>Revisit Course</text>
+                            }
+                            else if (course.ProgressPercent > 0)
+                            {
+                                <i class="fas fa-play-circle"></i> <text>Continue Learning</text>
+                            }
+                            else
+                            {
+                                <i class="fas fa-play-circle"></i> <text>Start Course</text>
+                            }
+                        </span>
+                    </div>
+                </a>
+            }
+        </div>
+
+        <!-- empty-after-filter -->
+        <div class="mc-empty" id="mcEmptyFilter" style="display:none; margin-top:20px;">
+            <div class="mc-empty-ico">🔎</div>
+            <h4>No matches</h4>
+            <p>No course in your library matches that search. Try a different keyword.</p>
+        </div>
+    }
+    else
+    {
+        <!-- empty-state -->
+        <div class="mc-empty">
+            <div class="mc-empty-ico">📚</div>
+            <h4>No courses yet</h4>
+            <p>You haven't enrolled in any course yet. Browse the catalog and pick one to get started.</p>
+            <a asp-controller="Courses" asp-action="Browse" class="mc-empty-cta">
+                <i class="fas fa-store"></i> Browse Courses
+            </a>
+        </div>
+    }
+
+</div>
+
+
+<script>
+    (function () {
+        const input = document.getElementById('mcSearch');
+        const clearBtn = document.getElementById('mcSearchClear');
+        const grid = document.getElementById('mcGrid');
+        const empty = document.getElementById('mcEmptyFilter');
+        const countEl = document.getElementById('mcCount');
+        if (!input || !grid) return;
+
+        const cards = grid.querySelectorAll('.js-mc-card');
+        const totalLbl = '@Model.AssignedCourses.Count course' + (@Model.AssignedCourses.Count === 1 ? '' : 's');
+
+        function apply() {
+            const q = (input.value || '').toLowerCase().trim();
+            clearBtn.style.display = q ? 'inline-flex' : 'none';
+
+            let visible = 0;
+            cards.forEach(card => {
+                const match = !q || (card.dataset.keys || '').includes(q);
+                card.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+
+            grid.style.display = visible ? '' : 'none';
+            empty.style.display = (q && visible === 0) ? 'block' : 'none';
+            countEl.textContent = q
+                ? visible + ' match' + (visible === 1 ? '' : 'es')
+                : totalLbl;
+        }
+
+        input.addEventListener('input', apply);
+        clearBtn.addEventListener('click', () => { input.value = ''; apply(); input.focus(); });
+    })();
+</script>

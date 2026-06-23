@@ -1,0 +1,538 @@
+@using Newtonsoft.Json.Linq
+@{
+    ViewData["Title"] = "My Learning";
+    Layout = "_Layout";
+    var summary  = ViewBag.Summary as JObject ?? new JObject();
+    var pending  = ViewBag.Pending as JArray  ?? new JArray();
+    var sname    = (ViewBag.StudentName as string ?? "Learner").Split(' ')[0];
+    var now      = DateTime.Now;
+    var greeting = now.Hour < 12 ? "Good morning" : now.Hour < 17 ? "Good afternoon" : "Good evening";
+
+    // Cast via (int?) — NOT .Value<int>() — so a JSON null (e.g. CurrentStreak
+    // when a student has no TblUserStreak row) safely becomes 0 instead of
+    // throwing in the view and 500-ing the whole dashboard.
+    int enrolled  = (int?)summary["EnrolledCourses"]  ?? 0;
+    int completed = (int?)summary["CompletedCourses"] ?? 0;
+    int certs     = (int?)summary["Certificates"]     ?? 0;
+    int streak    = (int?)summary["CurrentStreak"]    ?? 0;
+    int points    = (int?)summary["TotalPoints"]      ?? 0;
+    int rank      = (int?)summary["MyRank"]           ?? 0;
+    int badges    = (int?)summary["Badges"]           ?? 0;
+
+    int daysInMonth = DateTime.DaysInMonth(now.Year, now.Month);
+    int firstDow    = (int)new DateTime(now.Year, now.Month, 1).DayOfWeek;
+    int todayDow    = (int)now.DayOfWeek;
+}
+
+<style>
+:root {
+    --g1:#4C1864; --g2:#7B2CBF; --g3:#9D4EDD;
+    --ink:#1a1523; --sub:#4b5563; --muted:#94a3b8;
+    --border:#ede9fe; --bg:#f8f5ff; --card:#fff;
+    --shadow:0 2px 12px rgba(76,24,100,.07);
+    --shadow-md:0 6px 24px rgba(76,24,100,.11);
+}
+
+/* ── Page shell ── */
+.db { display:flex; flex-direction:column; gap:20px; font-family:'Plus Jakarta Sans',system-ui,sans-serif; }
+
+/* ── HERO ── */
+.db-hero {
+    background:linear-gradient(135deg,#2d0a50 0%,#4C1864 30%,#7B2CBF 65%,#9D4EDD 100%);
+    border-radius:22px; padding:30px 36px; color:#fff;
+    position:relative; overflow:hidden;
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;
+    box-shadow:0 10px 40px rgba(76,24,100,.22);
+}
+.db-hero::before { content:''; position:absolute; top:-100px; right:-80px; width:360px; height:360px; border-radius:50%; background:rgba(255,255,255,.05); pointer-events:none; }
+.db-hero::after  { content:''; position:absolute; bottom:-70px; left:25%; width:200px; height:200px; border-radius:50%; background:rgba(232,121,249,.10); pointer-events:none; }
+.db-hero-l { position:relative; z-index:1; }
+.db-eyebrow { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; opacity:.65; margin:0 0 5px; }
+.db-hero-name { font-size:1.85rem; font-weight:900; margin:0 0 7px; line-height:1.1; }
+.db-hero-name em { font-style:normal; background:linear-gradient(90deg,#FFD60A,#E879F9); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+.db-hero-sub { font-size:.87rem; opacity:.82; margin:0 0 18px; }
+.db-hero-pills { display:flex; gap:8px; flex-wrap:wrap; }
+.db-pill { display:inline-flex; align-items:center; gap:6px; padding:6px 14px; background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.22); border-radius:20px; font-size:.78rem; font-weight:700; color:#fff; }
+.db-hero-r { position:relative; z-index:1; display:flex; flex-direction:column; align-items:flex-end; gap:10px; }
+.db-cta { display:inline-flex; align-items:center; gap:7px; padding:12px 22px; border-radius:12px; font-size:.85rem; font-weight:700; border:none; cursor:pointer; text-decoration:none; transition:.15s; }
+.db-cta--white { background:#fff; color:var(--g2); box-shadow:0 4px 14px rgba(0,0,0,.15); }
+.db-cta--white:hover { background:#f3e8ff; color:var(--g1); }
+.db-cta--ghost { background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.28); }
+.db-cta--ghost:hover { background:rgba(255,255,255,.25); color:#fff; }
+
+/* ── STAT ROW ── */
+.db-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+@@media(max-width:900px){ .db-stats { grid-template-columns:repeat(2,1fr); } }
+@@media(max-width:480px){ .db-stats { grid-template-columns:1fr 1fr; } }
+
+.db-stat {
+    background:var(--card); border:1px solid var(--border); border-radius:16px;
+    padding:18px 20px; display:flex; align-items:center; gap:14px;
+    box-shadow:var(--shadow); transition:transform .18s,box-shadow .18s;
+    cursor:default;
+}
+.db-stat:hover { transform:translateY(-2px); box-shadow:var(--shadow-md); }
+.db-stat-ico {
+    width:48px; height:48px; border-radius:14px; flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; font-size:20px;
+}
+.ico-purple { background:#ede9fe; color:#7B2CBF; }
+.ico-green  { background:#dcfce7; color:#16a34a; }
+.ico-amber  { background:#fef3c7; color:#d97706; }
+.ico-orange { background:#ffedd5; color:#ea580c; }
+.ico-blue   { background:#dbeafe; color:#2563eb; }
+.ico-rose   { background:#ffe4e6; color:#e11d48; }
+.ico-gold   { background:#fef9c3; color:#ca8a04; }
+.db-stat-val { font-size:1.55rem; font-weight:900; color:var(--ink); line-height:1; }
+.db-stat-lbl { font-size:.72rem; font-weight:600; color:var(--muted); margin-top:3px; }
+
+/* ── SECOND STATS ROW (extra 3) ── */
+.db-stats-2 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+@@media(max-width:900px){ .db-stats-2 { grid-template-columns:1fr 1fr; } }
+
+/* ── MAIN 2-COL GRID ── */
+.db-grid { display:grid; grid-template-columns:minmax(0,3fr) minmax(0,2fr); gap:18px; }
+@@media(max-width:1200px){ .db-grid { grid-template-columns:1fr 1fr; } }
+@@media(max-width:900px)  { .db-grid { grid-template-columns:1fr; } }
+
+/* ── CARD ── */
+.db-card {
+    background:var(--card); border:1px solid var(--border); border-radius:18px;
+    box-shadow:var(--shadow); overflow:hidden; display:flex; flex-direction:column;
+}
+.db-card-head {
+    padding:16px 20px; display:flex; align-items:center; justify-content:space-between;
+    border-bottom:1px solid #f5f3ff;
+}
+.db-card-title { font-size:.92rem; font-weight:800; color:var(--ink); margin:0; display:flex; align-items:center; gap:8px; }
+.db-card-title i { font-size:15px; }
+.db-card-body { padding:18px 20px; flex:1; }
+
+.db-link { display:inline-flex; align-items:center; gap:5px; padding:5px 12px; border-radius:8px; font-size:.75rem; font-weight:700; color:var(--sub); border:1px solid var(--border); text-decoration:none; background:transparent; transition:.15s; }
+.db-link:hover { background:var(--bg); color:var(--g2); border-color:#c4b5fd; }
+
+/* ── COURSE LIST ── */
+.course-list { display:flex; flex-direction:column; gap:10px; }
+.course-row {
+    display:flex; align-items:center; gap:12px;
+    padding:12px 14px; border-radius:12px;
+    border:1px solid #f3effd; background:#faf8ff; transition:.15s;
+}
+.course-row:hover { border-color:#c4b5fd; background:#f3e8ff; }
+.c-thumb {
+    width:46px; height:46px; border-radius:10px; flex-shrink:0;
+    background:linear-gradient(135deg,#7B2CBF,#9D4EDD);
+    display:flex; align-items:center; justify-content:center; font-size:20px; color:#fff;
+}
+.c-info { flex:1; min-width:0; }
+.c-title { font-size:.84rem; font-weight:700; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.c-tutor { font-size:.72rem; color:var(--muted); margin-top:2px; }
+.c-prog-wrap { height:4px; background:#ede9fe; border-radius:99px; overflow:hidden; margin-top:7px; }
+.c-prog-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,#7B2CBF,#9D4EDD); }
+.c-prog-txt { font-size:.68rem; color:var(--muted); margin-top:3px; text-align:right; }
+.db-play { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px; border-radius:9px; background:var(--g2); color:#fff; text-decoration:none; flex-shrink:0; font-size:11px; transition:background .15s; }
+.db-play:hover { background:var(--g1); color:#fff; }
+
+/* ── STREAK CALENDAR ── */
+.streak-day-labels { display:grid; grid-template-columns:repeat(7,1fr); text-align:center; font-size:.6rem; font-weight:700; color:var(--muted); margin-bottom:5px; }
+.streak-cal { display:grid; grid-template-columns:repeat(7,1fr); gap:4px; }
+.s-day { aspect-ratio:1; border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:.62rem; font-weight:700; }
+.s-done   { background:#7B2CBF; color:#fff; }
+.s-today  { background:#f3e8ff; color:#7B2CBF; border:2px solid #c4b5fd; font-weight:900; }
+.s-miss   { background:#fee2e2; color:#ef4444; }
+.s-future { background:#f8f5ff; color:#d8b4fe; }
+
+/* ── DEADLINE ITEMS ── */
+.dl-item { display:flex; align-items:flex-start; gap:12px; padding:10px 0; border-bottom:1px solid #f9f7ff; }
+.dl-item:last-child { border-bottom:none; }
+.dl-ic { width:36px; height:36px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+.dl-urgent { background:#fee2e2; color:#dc2626; }
+.dl-soon   { background:#fef3c7; color:#d97706; }
+.dl-ok     { background:#dcfce7; color:#16a34a; }
+.dl-t { font-size:.83rem; font-weight:600; color:var(--ink); }
+.dl-m { font-size:.71rem; color:var(--muted); margin-top:2px; }
+.dl-cd { font-size:.72rem; font-weight:700; margin-top:3px; }
+.cd-u { color:#dc2626; } .cd-s { color:#d97706; } .cd-ok { color:#16a34a; }
+
+/* ── BADGES ── */
+.badges-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+@@media(max-width:600px){ .badges-grid { grid-template-columns:repeat(3,1fr); } }
+.badge-chip { display:flex; flex-direction:column; align-items:center; gap:4px; padding:12px 6px; border-radius:12px; border:1px solid var(--border); background:#faf8ff; text-align:center; transition:.15s; }
+.badge-chip:hover { border-color:#c4b5fd; background:#f3e8ff; }
+.badge-chip .bi { font-size:22px; }
+.badge-chip .bn { font-size:.62rem; font-weight:700; color:var(--ink); line-height:1.2; }
+.badge-chip.locked { opacity:.38; filter:grayscale(1); }
+
+/* ── LEADERBOARD ── */
+.lb-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid #f9f7ff; }
+.lb-row:last-child { border-bottom:none; }
+.lb-rk { width:24px; text-align:center; font-size:.78rem; font-weight:800; color:var(--muted); }
+.lb-av { width:32px; height:32px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#fff; flex-shrink:0; }
+.lb-nm { font-size:.82rem; font-weight:600; color:var(--ink); flex:1; }
+.lb-pts { font-size:.77rem; font-weight:700; color:var(--g2); }
+
+/* ── REC SCROLL ── */
+.rec-row { display:flex; gap:12px; overflow-x:auto; padding-bottom:6px; scrollbar-width:thin; scrollbar-color:#ddd6fe transparent; }
+.rec-row::-webkit-scrollbar { height:4px; }
+.rec-row::-webkit-scrollbar-thumb { background:#ddd6fe; border-radius:4px; }
+.rec-c { flex:0 0 150px; background:#faf8ff; border:1px solid #ede9fe; border-radius:12px; overflow:hidden; text-decoration:none; transition:transform .18s,box-shadow .18s; }
+.rec-c:hover { transform:translateY(-2px); box-shadow:0 8px 22px rgba(76,24,100,.12); }
+.rec-c-thumb { height:72px; background:linear-gradient(135deg,#4C1864,#9D4EDD); display:flex; align-items:center; justify-content:center; font-size:26px; }
+.rec-c-body { padding:10px; }
+.rec-c-title { font-size:.75rem; font-weight:700; color:var(--ink); display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; line-height:1.3; }
+.rec-c-price { font-size:.73rem; font-weight:800; color:var(--g2); margin-top:5px; }
+
+/* ── CHART WRAP ── */
+.chart-wrap { position:relative; height:160px; }
+
+/* ── Utility ── */
+.empty-state { text-align:center; padding:28px 16px; }
+.empty-state .ei { font-size:36px; margin-bottom:10px; }
+.empty-state p  { font-size:.82rem; color:var(--muted); margin:0; }
+</style>
+
+<div class="db">
+
+    <!-- ── HERO ── -->
+    <div class="db-hero">
+        <div class="db-hero-l">
+            <p class="db-eyebrow">My Learning Hub</p>
+            <h1 class="db-hero-name">@greeting, <em>@sname</em>! 🎓</h1>
+            <p class="db-hero-sub">
+                @if (streak > 1) { <text>🔥 You're on a <strong>@streak-day streak</strong> — keep going!</text> }
+                else             { <text>Ready to learn something new today?</text> }
+            </p>
+            <div class="db-hero-pills">
+                <span class="db-pill"><i class="fa-solid fa-fire"></i> @streak Day Streak</span>
+                <span class="db-pill"><i class="fa-solid fa-star"></i> @points Points</span>
+                @if (rank > 0) { <span class="db-pill"><i class="fa-solid fa-trophy"></i> Rank #@rank</span> }
+            </div>
+        </div>
+        <div class="db-hero-r">
+            <a asp-controller="Courses" asp-action="Browse" class="db-cta db-cta--white">
+                <i class="fa-solid fa-compass"></i> Explore Courses
+            </a>
+            <a asp-controller="Exam" asp-action="MyExams" class="db-cta db-cta--ghost">
+                <i class="fa-solid fa-clipboard-list"></i> My Exams
+            </a>
+        </div>
+    </div>
+
+    <!-- ── STAT ROW 1 (4 cols) ── -->
+    <div class="db-stats">
+        <div class="db-stat">
+            <div class="db-stat-ico ico-purple"><i class="fa-solid fa-book-open"></i></div>
+            <div><div class="db-stat-val">@enrolled</div><div class="db-stat-lbl">Enrolled</div></div>
+        </div>
+        <div class="db-stat">
+            <div class="db-stat-ico ico-green"><i class="fa-solid fa-circle-check"></i></div>
+            <div><div class="db-stat-val" style="color:#16a34a">@completed</div><div class="db-stat-lbl">Completed</div></div>
+        </div>
+        <div class="db-stat">
+            <div class="db-stat-ico ico-amber"><i class="fa-solid fa-award"></i></div>
+            <div><div class="db-stat-val" style="color:#d97706">@certs</div><div class="db-stat-lbl">Certificates</div></div>
+        </div>
+        <div class="db-stat">
+            <div class="db-stat-ico ico-orange"><i class="fa-solid fa-fire"></i></div>
+            <div><div class="db-stat-val" style="color:#ea580c">@streak</div><div class="db-stat-lbl">Day Streak</div></div>
+        </div>
+    </div>
+
+    <!-- ── STAT ROW 2 (3 cols) ── -->
+    <div class="db-stats-2">
+        <div class="db-stat">
+            <div class="db-stat-ico ico-purple"><i class="fa-solid fa-star"></i></div>
+            <div><div class="db-stat-val" style="color:var(--g2)">@points</div><div class="db-stat-lbl">Points Earned</div></div>
+        </div>
+        <div class="db-stat">
+            <div class="db-stat-ico ico-blue"><i class="fa-solid fa-ranking-star"></i></div>
+            <div><div class="db-stat-val" style="color:#2563eb">@(rank > 0 ? "#"+rank : "—")</div><div class="db-stat-lbl">Leaderboard</div></div>
+        </div>
+        <div class="db-stat">
+            <div class="db-stat-ico ico-gold"><i class="fa-solid fa-medal"></i></div>
+            <div><div class="db-stat-val" style="color:#ca8a04">@badges</div><div class="db-stat-lbl">Badges</div></div>
+        </div>
+    </div>
+
+    <!-- ── MAIN GRID ── -->
+    <div class="db-grid">
+
+        <!-- LEFT column -->
+        <div style="display:flex;flex-direction:column;gap:18px;">
+
+            <!-- Continue Learning -->
+            <div class="db-card">
+                <div class="db-card-head">
+                    <h2 class="db-card-title"><i class="fa-solid fa-play-circle" style="color:var(--g2);"></i>Continue Learning</h2>
+                    <a asp-controller="Courses" asp-action="List" class="db-link">All courses</a>
+                </div>
+                <div class="db-card-body">
+                    <div class="course-list">
+                        @{
+                            var icons = new[]{"📖","🎬","💻","🧮","🎨","🔬","🌐","📐","🎵","🏛️"};
+                            int ci = 0;
+                        }
+                        @if (pending.Any())
+                        {
+                            @foreach (var item in pending.Take(5))
+                            {
+                                var title    = item["CourseTitle"]?.ToString() ?? item["courseTitle"]?.ToString() ?? "Course";
+                                var tutor    = item["TutorName"]?.ToString()   ?? item["tutorName"]?.ToString()   ?? "";
+                                var prog     = item["Progress"]?.Value<int>()  ?? item["progress"]?.Value<int>()  ?? 0;
+                                var cid      = item["CourseID"]?.ToString()    ?? item["courseID"]?.ToString()    ?? "0";
+                                <div class="course-row">
+                                    <div class="c-thumb">@icons[ci % icons.Length]</div>
+                                    <div class="c-info">
+                                        <div class="c-title">@title</div>
+                                        @if (!string.IsNullOrEmpty(tutor)) { <div class="c-tutor"><i class="fa-solid fa-chalkboard-user" style="font-size:.62rem;margin-right:3px;"></i>@tutor</div> }
+                                        <div class="c-prog-wrap"><div class="c-prog-fill" style="width:@prog%;"></div></div>
+                                        <div class="c-prog-txt">@prog%</div>
+                                    </div>
+                                    <a asp-controller="Learning" asp-action="Play" asp-route-id="@cid" class="db-play"><i class="fa-solid fa-play"></i></a>
+                                </div>
+                                ci++;
+                            }
+                        }
+                        else
+                        {
+                            <div class="empty-state">
+                                <div class="ei">📚</div>
+                                <p style="font-weight:600;color:var(--ink);margin-bottom:6px;">No courses yet!</p>
+                                <p style="margin-bottom:14px;">Explore the catalog and enroll today.</p>
+                                <a asp-controller="Courses" asp-action="Browse" class="db-cta db-cta--white" style="display:inline-flex;background:var(--g2);color:#fff;font-size:.8rem;padding:9px 18px;">
+                                    <i class="fa-solid fa-compass"></i> Browse Courses
+                                </a>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Weekly Activity Chart -->
+            <div class="db-card">
+                <div class="db-card-head">
+                    <h2 class="db-card-title"><i class="fa-solid fa-chart-bar" style="color:#2563eb;"></i>Weekly Activity</h2>
+                    <span style="font-size:.73rem;color:var(--muted);">Lessons completed</span>
+                </div>
+                <div class="db-card-body">
+                    <div class="chart-wrap"><canvas id="learningChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Recommended -->
+            <div class="db-card">
+                <div class="db-card-head">
+                    <h2 class="db-card-title"><i class="fa-solid fa-wand-magic-sparkles" style="color:#db2777;"></i>Recommended For You</h2>
+                    <a asp-controller="Courses" asp-action="Browse" class="db-link">See all</a>
+                </div>
+                <div class="db-card-body">
+                    <div class="rec-row" id="recCourses">
+                        <div style="color:var(--muted);font-size:.82rem;padding:8px;"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT column -->
+        <div style="display:flex;flex-direction:column;gap:18px;">
+
+            <!-- Streak Calendar -->
+            <div class="db-card">
+                <div class="db-card-head">
+                    <h2 class="db-card-title"><i class="fa-solid fa-fire" style="color:#ea580c;"></i>Study Streak</h2>
+                    <span style="font-size:.74rem;color:var(--muted);font-weight:600;">@now.ToString("MMMM yyyy")</span>
+                </div>
+                <div class="db-card-body">
+                    <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px;">
+                        <div style="font-size:2.4rem;">🔥</div>
+                        <div>
+                            <div style="font-size:2rem;font-weight:900;color:var(--g2);line-height:1;">@streak</div>
+                            <div style="font-size:.73rem;color:var(--muted);font-weight:600;">Day streak</div>
+                        </div>
+                    </div>
+                    <div class="streak-day-labels">
+                        @foreach (var d in new[]{"Su","Mo","Tu","We","Th","Fr","Sa"}) { <span>@d</span> }
+                    </div>
+                    <div class="streak-cal" id="streakCal"></div>
+                    <div style="display:flex;gap:12px;font-size:.68rem;color:var(--muted);margin-top:10px;flex-wrap:wrap;">
+                        <span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:3px;background:#7B2CBF;display:inline-block;"></span>Studied</span>
+                        <span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:3px;background:#fee2e2;display:inline-block;"></span>Missed</span>
+                        <span style="display:flex;align-items:center;gap:4px;"><span style="width:9px;height:9px;border-radius:3px;background:#f8f5ff;display:inline-block;"></span>Upcoming</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Upcoming Deadlines -->
+            <div class="db-card">
+                <div class="db-card-head">
+                    <h2 class="db-card-title"><i class="fa-solid fa-clock" style="color:#d97706;"></i>Upcoming Deadlines</h2>
+                    <a asp-controller="Assignments" asp-action="MyAssignments" class="db-link">View all</a>
+                </div>
+                <div class="db-card-body" id="deadlinesList">
+                    <div style="text-align:center;padding:18px;color:var(--muted);font-size:.82rem;"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                </div>
+            </div>
+
+            <!-- Achievements -->
+            <div class="db-card">
+                <div class="db-card-head">
+                    <h2 class="db-card-title"><i class="fa-solid fa-medal" style="color:#f59e0b;"></i>Achievements</h2>
+                    <a asp-controller="Gamification" asp-action="MyBadges" class="db-link">All badges</a>
+                </div>
+                <div class="db-card-body">
+                    <div class="badges-grid">
+                        @{
+                            var allBadges = new[]{
+                                ("🎯","First Enroll",  enrolled > 0),
+                                ("🔥","7-Day Streak",  streak >= 7),
+                                ("📚","Book Worm",     completed >= 3),
+                                ("⭐","High Scorer",   points >= 100),
+                                ("🏆","Top 10",        rank > 0 && rank <= 10),
+                                ("🎓","Graduate",      certs > 0),
+                                ("💪","Consistent",    streak >= 14),
+                                ("🌟","Star Learner",  points >= 500)
+                            };
+                        }
+                        @foreach (var (ico, nm, earned) in allBadges)
+                        {
+                            <div class="badge-chip @(!earned ? "locked" : "")" title="@(earned ? "Earned!" : "Not yet earned")">
+                                <span class="bi">@ico</span>
+                                <span class="bn">@nm</span>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+
+            <!-- Leaderboard -->
+            <div class="db-card">
+                <div class="db-card-head">
+                    <h2 class="db-card-title"><i class="fa-solid fa-ranking-star" style="color:var(--g2);"></i>Leaderboard</h2>
+                    <a asp-controller="Gamification" asp-action="Leaderboard" class="db-link">Full board</a>
+                </div>
+                <div class="db-card-body" id="leaderboard">
+                    <div style="text-align:center;padding:18px;color:var(--muted);font-size:.82rem;"><i class="fa-solid fa-spinner fa-spin"></i></div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function(){
+    const STREAK     = @streak;
+    const TODAY_D    = @now.Day;
+    const DAYS_MONTH = @daysInMonth;
+    const FIRST_DOW  = @firstDow;
+    const NOW_DOW    = @todayDow;
+
+    /* ── Streak Calendar ── */
+    (function(){
+        const g = document.getElementById('streakCal');
+        if(!g) return;
+        let h = '';
+        for(let i=0;i<FIRST_DOW;i++) h+='<div></div>';
+        for(let d=1;d<=DAYS_MONTH;d++){
+            const ago = TODAY_D - d;
+            let cls = 's-future';
+            if(d === TODAY_D) cls = 's-today';
+            else if(d < TODAY_D) cls = (ago < STREAK) ? 's-done' : 's-miss';
+            h += `<div class="s-day ${cls}">${d}</div>`;
+        }
+        g.innerHTML = h;
+    })();
+
+    /* ── Weekly Bar Chart ── */
+    (function(){
+        const el = document.getElementById('learningChart');
+        if(!el) return;
+        const labels = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        function render(data){
+            new Chart(el,{
+                type:'bar',
+                data:{ labels, datasets:[{
+                    label:'Lessons',
+                    data: Array.isArray(data) ? data : labels.map((_,i)=>data[i]||0),
+                    backgroundColor: labels.map((_,i) => i===NOW_DOW ? '#7B2CBF' : '#ede9fe'),
+                    hoverBackgroundColor: labels.map((_,i) => i===NOW_DOW ? '#4C1864' : '#c4b5fd'),
+                    borderRadius: 7, borderSkipped: false
+                }]},
+                options:{
+                    responsive:true, maintainAspectRatio:false,
+                    plugins:{
+                        legend:{display:false},
+                        tooltip:{
+                            backgroundColor:'#fff', titleColor:'#1a1523', bodyColor:'#64748b',
+                            borderColor:'#ede9fe', borderWidth:1, padding:10,
+                            callbacks:{ label: ctx => ` ${ctx.parsed.y} lesson${ctx.parsed.y!==1?'s':''}`}
+                        }
+                    },
+                    scales:{
+                        x:{grid:{display:false}, ticks:{color:'#94a3b8',font:{size:11,family:'Plus Jakarta Sans'}}},
+                        y:{grid:{color:'#f1eef7'}, ticks:{color:'#94a3b8',font:{size:11},stepSize:1}, beginAtZero:true}
+                    }
+                }
+            });
+        }
+        fetch('/StudentDashboard/WeeklyActivity').then(r=>r.json()).then(render).catch(()=>render([0,0,0,0,0,0,0]));
+    })();
+
+    /* ── Deadlines ── */
+    (function(){
+        const el = document.getElementById('deadlinesList');
+        fetch('/Assignments/UpcomingDeadlines?limit=5').then(r=>r.json()).then(items=>{
+            if(!items||!items.length){
+                el.innerHTML='<div style="text-align:center;padding:20px;"><i class="fa-solid fa-check-circle" style="font-size:24px;color:#22c55e;display:block;margin-bottom:8px;"></i><p style="font-size:.82rem;color:#94a3b8;margin:0;">No upcoming deadlines!</p></div>';
+                return;
+            }
+            el.innerHTML = items.map(d=>{
+                const due=new Date(d.dueDate||d.DueDate);
+                const days=Math.ceil((due-Date.now())/86400000);
+                let cls='dl-ok',cd='cd-ok',lbl=days+' days left';
+                if(days<=0){cls='dl-urgent';cd='cd-u';lbl='Overdue!';}
+                else if(days<=1){cls='dl-urgent';cd='cd-u';lbl='Due tomorrow!';}
+                else if(days<=3){cls='dl-soon';cd='cd-s';lbl='In '+days+' days';}
+                const ic=(d.type||d.Type)==='Exam'?'fa-clipboard-list':'fa-file-alt';
+                return `<div class="dl-item"><div class="dl-ic ${cls}"><i class="fa-solid ${ic}"></i></div><div style="flex:1"><div class="dl-t">${esc(d.title||d.Title||'Task')}</div><div class="dl-m">${esc(d.courseName||d.CourseName||'')}</div><div class="dl-cd ${cd}"><i class="fa-regular fa-clock"></i> ${lbl}</div></div></div>`;
+            }).join('');
+        }).catch(()=>{ el.innerHTML='<div style="text-align:center;padding:16px;color:#94a3b8;font-size:.82rem;">No deadlines found.</div>'; });
+    })();
+
+    /* ── Recommended ── */
+    (function(){
+        const el=document.getElementById('recCourses');
+        const emojis=['🎬','📐','💻','🌐','🧮','🎨','🔬','🏛️'];
+        fetch('/Courses/Recommended?limit=8').then(r=>r.json()).then(data=>{
+            if(!data||!data.length){ el.innerHTML='<div style="font-size:.8rem;color:var(--muted);padding:10px;">No recommendations yet.</div>'; return; }
+            el.innerHTML = data.map((c,i)=>{
+                const price=c.price||c.Price||c.sellingPrice||c.SellingPrice||0;
+                const cid=c.courseID||c.CourseID||0;
+                return `<a href="/Courses/Details/${cid}" class="rec-c"><div class="rec-c-thumb">${emojis[i%emojis.length]}</div><div class="rec-c-body"><div class="rec-c-title">${esc(c.courseTitle||c.CourseTitle||'Course')}</div><div class="rec-c-price">${price>0?'₹'+price:'Free'}</div></div></a>`;
+            }).join('');
+        }).catch(()=>{ el.innerHTML='<div style="font-size:.8rem;color:var(--muted);padding:10px;">Browse our catalog.</div>'; });
+    })();
+
+    /* ── Leaderboard ── */
+    (function(){
+        const el=document.getElementById('leaderboard');
+        const colors=['#7B2CBF','#2563eb','#16a34a','#d97706','#dc2626'];
+        fetch('/Gamification/TopLearners?limit=5').then(r=>r.json()).then(data=>{
+            if(!data||!data.length){ el.innerHTML='<div style="text-align:center;padding:18px;color:#94a3b8;font-size:.82rem;">No leaderboard data yet.</div>'; return; }
+            el.innerHTML = data.map((u,i)=>{
+                const rnk=u.rank||u.Rank||(i+1);
+                const nm =u.studentName||u.StudentName||u.name||u.Name||'Learner';
+                const pts=u.totalPoints||u.TotalPoints||u.points||u.Points||0;
+                const init=(nm.trim()[0]||'?').toUpperCase();
+                const isMe=u.isCurrentUser||u.IsCurrentUser||false;
+                const medal=rnk===1?'🥇':rnk===2?'🥈':rnk===3?'🥉':'';
+                return `<div class="lb-row"><div class="lb-rk">${medal||rnk}</div><div class="lb-av" style="background:${colors[i%colors.length]};">${init}</div><div class="lb-nm">${esc(nm)}${isMe?'<span style="font-size:.6rem;background:#ede9fe;color:#7B2CBF;border-radius:4px;padding:1px 5px;margin-left:4px;">You</span>':''}</div><div class="lb-pts">${pts} pts</div></div>`;
+            }).join('');
+        }).catch(()=>{ el.innerHTML='<div style="text-align:center;padding:18px;color:#94a3b8;font-size:.82rem;">Leaderboard unavailable.</div>'; });
+    })();
+
+    function esc(s){ return (s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+})();
+</script>
+}

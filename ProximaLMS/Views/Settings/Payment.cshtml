@@ -1,0 +1,251 @@
+@*  /Views/Settings/Payment.cshtml
+    FIX: SystemSettingsController returns camelCase JSON properties
+         (settingKey, settingValue, isEncrypted). All field accesses
+         updated from PascalCase to camelCase to match. *@
+@model ProximaLMS.Models.SettingsPageVM
+@{
+    Layout = "_Layout"; ViewData["Title"] = Model.Title;
+}
+
+<div class="as-wrap">
+    <div class="as-head">
+        <h1><span class="ico"><i class="fa-solid fa-credit-card"></i></span> Payment Gateway</h1>
+        <div class="as-crumb">
+            <a asp-action="Index">Settings</a> &rsaquo; Payment Gateway
+        </div>
+    </div>
+
+    <div class="as-card">
+        <div class="as-card-head">
+            <div class="as-card-title">
+                <i class="fa-solid fa-shield-halved" style="color:var(--as-primary);margin-right:6px"></i>
+                Razorpay configuration
+            </div>
+            <button class="as-btn" id="btnSave">
+                <i class="fa-solid fa-floppy-disk"></i> Save changes
+            </button>
+        </div>
+
+        <div class="as-card-body" id="loadingMsg">
+            <div class="as-empty">Loading…</div>
+        </div>
+
+        <div class="as-card-body d-none" id="formBody">
+
+            @* ── MODE TOGGLE ────────────────────────── *@
+            <div style="background:var(--as-bg);border-radius:12px;padding:18px;margin-bottom:22px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;
+                            gap:18px;flex-wrap:wrap;">
+                    <div>
+                        <div style="font-weight:700;font-size:14px;color:var(--as-ink);">Mode</div>
+                        <div style="font-size:12.5px;color:var(--as-ink2);margin-top:2px;">
+                            Test mode uses sandbox keys and won't charge real cards.
+                        </div>
+                    </div>
+                    <div class="mode-toggle">
+                        <button type="button" class="mt-btn" data-mode="test" id="modeTest">
+                            <i class="fa-solid fa-flask"></i> Test
+                        </button>
+                        <button type="button" class="mt-btn" data-mode="live" id="modeLive">
+                            <i class="fa-solid fa-circle-check"></i> Live
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            @* ── KEY FIELDS ────────────────────────── *@
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="as-label">Test Key ID</label>
+                    <input id="keyTest" class="as-input" placeholder="rzp_test_..." autocomplete="off" />
+                </div>
+                <div class="col-md-6">
+                    <label class="as-label">Test Key Secret</label>
+                    <div class="pw-wrap">
+                        <input id="secTest" class="as-input" type="password" autocomplete="off" />
+                        <span class="pw-toggle" data-target="secTest"><i class="fa-solid fa-eye"></i></span>
+                    </div>
+                    <div class="as-hint">
+                        <i class="fa-solid fa-lock"></i>
+                        Stored encrypted with AES-GCM. Saved values won't be revealed in the API list.
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="as-label">Live Key ID</label>
+                    <input id="keyLive" class="as-input" placeholder="rzp_live_..." autocomplete="off" />
+                </div>
+                <div class="col-md-6">
+                    <label class="as-label">Live Key Secret</label>
+                    <div class="pw-wrap">
+                        <input id="secLive" class="as-input" type="password" autocomplete="off" />
+                        <span class="pw-toggle" data-target="secLive"><i class="fa-solid fa-eye"></i></span>
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="as-label">Webhook URL</label>
+                    <input id="webhook" class="as-input" placeholder="https://yoursite.com/api/payment/webhook" />
+                </div>
+                <div class="col-md-6">
+                    <label class="as-label">Webhook Secret</label>
+                    <div class="pw-wrap">
+                        <input id="webhookSec" class="as-input" type="password" autocomplete="off" />
+                        <span class="pw-toggle" data-target="webhookSec"><i class="fa-solid fa-eye"></i></span>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <label class="as-label">Currency</label>
+                    <select id="ccy" class="as-select">
+                        <option value="INR">INR (₹)</option>
+                        <option value="USD">USD ($)</option>
+                        <option value="EUR">EUR (€)</option>
+                        <option value="GBP">GBP (£)</option>
+                    </select>
+                </div>
+
+                <div class="col-md-8">
+                    <label class="as-label">&nbsp;</label>
+                    <div class="d-flex align-items-center" style="gap:10px;height:42px;">
+                        <label class="as-switch m-0">
+                            <input id="capture" type="checkbox" checked />
+                            <span class="slider"></span>
+                        </label>
+                        <span style="font-size:13px;color:var(--as-ink);">
+                            Auto-capture payments
+                        </span>
+                        <span style="font-size:12px;color:var(--as-ink2);margin-left:8px;">
+                            (charges card immediately on order; off = manual capture later)
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="modeBanner" class="mode-banner mt-4"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    (function () {
+        let mode = 'test';
+        let originalSecrets = {};
+
+        async function load() {
+            try {
+                const r = await fetch('@Url.Action("PaymentLoad", "Settings")');
+                const d = await r.json();
+                const map = {};
+                // API returns camelCase: settingKey, settingValue, isEncrypted
+                (d.data || []).forEach(s => { map[s.settingKey] = s; });
+                populate(map);
+            } catch {
+                document.getElementById('loadingMsg').innerHTML =
+                    '<div class="as-empty">Could not load.</div>';
+            }
+        }
+
+        function populate(m) {
+            // Use camelCase property names that match the API response
+            function val(k, def = '') { return m[k]?.settingValue ?? def; }
+            function masked(k) { return (m[k]?.isEncrypted && val(k)) ? '••••••••' : ''; }
+
+            document.getElementById('keyTest').value    = val('PAYMENT_RAZORPAY_KEY_TEST');
+            document.getElementById('secTest').value    = masked('PAYMENT_RAZORPAY_SECRET_TEST');
+            document.getElementById('keyLive').value    = val('PAYMENT_RAZORPAY_KEY_LIVE');
+            document.getElementById('secLive').value    = masked('PAYMENT_RAZORPAY_SECRET_LIVE');
+            document.getElementById('webhook').value    = val('PAYMENT_RAZORPAY_WEBHOOK_URL');
+            document.getElementById('webhookSec').value = masked('PAYMENT_RAZORPAY_WEBHOOK_SECRET');
+            document.getElementById('ccy').value        = val('PAYMENT_DEFAULT_CURRENCY', 'INR');
+            document.getElementById('capture').checked  = (val('PAYMENT_AUTO_CAPTURE', '1') === '1');
+
+            mode = (val('PAYMENT_MODE', 'test') === 'live') ? 'live' : 'test';
+            setMode(mode);
+
+            originalSecrets = {
+                test:    !!m['PAYMENT_RAZORPAY_SECRET_TEST']?.settingValue,
+                live:    !!m['PAYMENT_RAZORPAY_SECRET_LIVE']?.settingValue,
+                webhook: !!m['PAYMENT_RAZORPAY_WEBHOOK_SECRET']?.settingValue
+            };
+
+            document.getElementById('loadingMsg').classList.add('d-none');
+            document.getElementById('formBody').classList.remove('d-none');
+        }
+
+        function setMode(m) {
+            mode = m;
+            document.getElementById('modeTest').classList.toggle('is-active', m === 'test');
+            document.getElementById('modeLive').classList.toggle('is-active', m === 'live');
+            const banner = document.getElementById('modeBanner');
+            if (m === 'live') {
+                banner.className = 'mode-banner live';
+                banner.innerHTML = '<i class="fa-solid fa-circle-exclamation"></i> <strong>Live mode is on.</strong> Real cards will be charged. Make sure both live keys are correct.';
+            } else {
+                banner.className = 'mode-banner test';
+                banner.innerHTML = '<i class="fa-solid fa-flask"></i> <strong>Test mode is on.</strong> Use sandbox cards from <a href="https://razorpay.com/docs/payments/payments/test-card-details/" target="_blank">Razorpay docs</a> for testing.';
+            }
+        }
+
+        document.getElementById('modeTest').addEventListener('click', () => setMode('test'));
+        document.getElementById('modeLive').addEventListener('click', () => setMode('live'));
+
+        document.querySelectorAll('.pw-toggle').forEach(el => {
+            el.addEventListener('click', () => {
+                const t = document.getElementById(el.dataset.target);
+                if (!t) return;
+                t.type = t.type === 'password' ? 'text' : 'password';
+                el.querySelector('i').classList.toggle('fa-eye');
+                el.querySelector('i').classList.toggle('fa-eye-slash');
+            });
+        });
+
+        document.getElementById('btnSave').addEventListener('click', async function () {
+            if (mode === 'live') {
+                const res = await Swal.fire({
+                    icon: 'warning',
+                    title: 'Switch to LIVE mode?',
+                    text: 'Real payments will be charged. Confirm both live keys are correct.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Yes, save in LIVE mode',
+                    confirmButtonColor: '#dc2626'
+                });
+                if (!res.isConfirmed) return;
+            }
+
+            function isMask(s) { return s === '••••••••'; }
+
+            const settings = [
+                { SettingKey: 'PAYMENT_MODE',                SettingValue: mode },
+                { SettingKey: 'PAYMENT_DEFAULT_CURRENCY',    SettingValue: document.getElementById('ccy').value },
+                { SettingKey: 'PAYMENT_AUTO_CAPTURE',        SettingValue: document.getElementById('capture').checked ? '1' : '0' },
+                { SettingKey: 'PAYMENT_RAZORPAY_KEY_TEST',   SettingValue: document.getElementById('keyTest').value.trim() },
+                { SettingKey: 'PAYMENT_RAZORPAY_KEY_LIVE',   SettingValue: document.getElementById('keyLive').value.trim() },
+                { SettingKey: 'PAYMENT_RAZORPAY_WEBHOOK_URL', SettingValue: document.getElementById('webhook').value.trim() }
+            ];
+
+            const secTestVal = document.getElementById('secTest').value;
+            if (!isMask(secTestVal)) settings.push({ SettingKey: 'PAYMENT_RAZORPAY_SECRET_TEST', SettingValue: secTestVal });
+
+            const secLiveVal = document.getElementById('secLive').value;
+            if (!isMask(secLiveVal)) settings.push({ SettingKey: 'PAYMENT_RAZORPAY_SECRET_LIVE', SettingValue: secLiveVal });
+
+            const wsVal = document.getElementById('webhookSec').value;
+            if (!isMask(wsVal)) settings.push({ SettingKey: 'PAYMENT_RAZORPAY_WEBHOOK_SECRET', SettingValue: wsVal });
+
+            this.disabled = true;
+            const r = await fetch('@Url.Action("PaymentSave", "Settings")', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ Group: 'PAYMENT', Settings: settings })
+            });
+            const d = await r.json();
+            this.disabled = false;
+            if (d.success) {
+                Swal.fire({ icon: 'success', title: 'Saved', timer: 1200, showConfirmButton: false });
+                load();
+            } else Swal.fire({ icon: 'error', title: 'Failed', text: d.message || '' });
+        });
+
+        load();
+    })();
+</script>

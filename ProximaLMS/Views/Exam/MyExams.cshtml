@@ -1,0 +1,483 @@
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+@{
+    ViewData["Title"] = "My Exams";
+    Layout = "_Layout";
+    var userId = HttpContextAccessor.HttpContext?.Session.GetInt32("RoleID");
+}
+
+<style>
+    :root {
+        --grape: #4C1864;
+        --grape-2: #7B2CBF;
+        --grape-3: #9D4EDD;
+        --ink: #1a1523;
+        --muted: #64748b;
+        --border: #ede9fe;
+        --bg: #f8f5ff;
+        --card: #fff;
+    }
+
+    .me-page { display: flex; flex-direction: column; gap: 24px; }
+
+    /* ── Hero ── */
+    .me-hero {
+        background: linear-gradient(135deg, #3b0764 0%, #4C1864 35%, #7B2CBF 70%, #9D4EDD 100%);
+        border-radius: 20px;
+        padding: 32px 36px;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 20px;
+    }
+    .me-hero::before { content:''; position:absolute; top:-80px; right:-80px; width:300px; height:300px; border-radius:50%; background:rgba(255,255,255,.06); pointer-events:none; }
+    .me-hero::after  { content:''; position:absolute; bottom:-60px; left:30%; width:180px; height:180px; border-radius:50%; background:rgba(232,121,249,.13); pointer-events:none; }
+    .me-hero-left { position:relative; z-index:1; }
+    .me-hero-eyebrow { font-size:.75rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; opacity:.7; margin:0 0 6px; }
+    .me-hero-title { font-size:1.8rem; font-weight:800; margin:0 0 8px; line-height:1.15; }
+    .me-hero-sub { font-size:.88rem; opacity:.85; margin:0; }
+    .me-hero-icon {
+        position: relative; z-index:1;
+        width:80px; height:80px; border-radius:20px;
+        background:rgba(255,255,255,.15);
+        backdrop-filter:blur(12px);
+        display:flex; align-items:center; justify-content:center;
+        font-size:36px;
+    }
+
+    /* ── Stats bar ── */
+    .me-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+    }
+    @@media (max-width: 768px) { .me-stats { grid-template-columns: repeat(2,1fr); } }
+    .me-stat-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px 20px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        box-shadow: 0 2px 12px rgba(76,24,100,.06);
+        transition: transform .15s, box-shadow .15s;
+    }
+    .me-stat-card:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(76,24,100,.1); }
+    .me-stat-icon {
+        width: 46px; height: 46px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px; flex-shrink:0;
+    }
+    .me-stat-icon.purple { background:#ede9fe; color:#7B2CBF; }
+    .me-stat-icon.green  { background:#dcfce7; color:#16a34a; }
+    .me-stat-icon.amber  { background:#fef3c7; color:#d97706; }
+    .me-stat-icon.rose   { background:#ffe4e6; color:#e11d48; }
+    .me-stat-val { font-size:1.5rem; font-weight:800; color:var(--ink); line-height:1; }
+    .me-stat-lbl { font-size:.75rem; color:var(--muted); margin-top:3px; font-weight:500; }
+
+    /* ── Filter bar ── */
+    .me-filters {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+    .me-filter-btn {
+        padding: 8px 18px;
+        border-radius: 20px;
+        border: 1.5px solid var(--border);
+        background: var(--card);
+        color: var(--muted);
+        font-size: .82rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all .15s;
+    }
+    .me-filter-btn:hover, .me-filter-btn.active {
+        background: var(--grape-2);
+        border-color: var(--grape-2);
+        color: #fff;
+    }
+    .me-search {
+        margin-left: auto;
+        position: relative;
+    }
+    .me-search input {
+        padding: 8px 14px 8px 36px;
+        border: 1.5px solid var(--border);
+        border-radius: 10px;
+        font-size: .85rem;
+        outline: none;
+        width: 220px;
+        background: var(--card);
+        color: var(--ink);
+        transition: border-color .15s;
+    }
+    .me-search input:focus { border-color: var(--grape-2); }
+    .me-search i { position:absolute; left:10px; top:50%; transform:translateY(-50%); color:var(--muted); font-size:13px; }
+
+    /* ── Course section ── */
+    .me-course-section { display: flex; flex-direction: column; gap: 14px; }
+    .me-course-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 18px;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 2px 8px rgba(76,24,100,.04);
+    }
+    .me-course-thumb {
+        width: 42px; height: 42px; border-radius: 10px;
+        background: linear-gradient(135deg, var(--grape), var(--grape-3));
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 17px; flex-shrink:0;
+    }
+    .me-course-name { font-size: .95rem; font-weight: 700; color: var(--ink); }
+    .me-course-meta { font-size: .75rem; color: var(--muted); margin-top: 2px; }
+
+    /* ── Exam cards grid ── */
+    .me-exam-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 14px;
+        padding-left: 8px;
+    }
+
+    /* ── Exam card ── */
+    .me-exam-card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        box-shadow: 0 2px 12px rgba(76,24,100,.05);
+        transition: transform .18s, box-shadow .18s, border-color .18s;
+        position: relative;
+        overflow: hidden;
+    }
+    .me-exam-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 3px;
+        background: linear-gradient(90deg, var(--grape-2), var(--grape-3));
+        opacity: 0;
+        transition: opacity .18s;
+    }
+    .me-exam-card:hover { transform:translateY(-3px); box-shadow:0 8px 28px rgba(76,24,100,.12); border-color:#c4b5fd; }
+    .me-exam-card:hover::before { opacity:1; }
+
+    .me-exam-top { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+    .me-exam-title { font-size:.95rem; font-weight:700; color:var(--ink); line-height:1.3; flex:1; }
+    .me-exam-badge {
+        flex-shrink:0;
+        padding:3px 10px; border-radius:20px;
+        font-size:.68rem; font-weight:700;
+        text-transform:uppercase; letter-spacing:.05em;
+    }
+    .badge-active    { background:#dcfce7; color:#15803d; }
+    .badge-attempted { background:#ede9fe; color:#7B2CBF; }
+    .badge-passed    { background:#fef3c7; color:#b45309; }
+    .badge-failed    { background:#ffe4e6; color:#be123c; }
+
+    .me-exam-info { display:flex; flex-wrap:wrap; gap:8px; }
+    .me-exam-chip {
+        display:inline-flex; align-items:center; gap:5px;
+        padding:4px 10px; border-radius:8px;
+        background:#f8f5ff; border:1px solid #ede9fe;
+        font-size:.75rem; color:var(--muted); font-weight:500;
+    }
+    .me-exam-chip i { font-size:11px; color:var(--grape-2); }
+
+    .me-exam-footer { display:flex; align-items:center; justify-content:space-between; margin-top:auto; }
+    .me-exam-attempts { font-size:.75rem; color:var(--muted); }
+    .me-exam-attempts strong { color:var(--ink); }
+    .me-btn {
+        display:inline-flex; align-items:center; gap:6px;
+        padding:9px 18px; border-radius:10px;
+        font-size:.82rem; font-weight:700;
+        border:none; cursor:pointer;
+        text-decoration:none !important;
+        transition:all .15s;
+    }
+    .me-btn-primary { background:linear-gradient(135deg, #4C1864, #7B2CBF); color:#fff; box-shadow:0 3px 10px rgba(123,44,191,.3); }
+    .me-btn-primary:hover { box-shadow:0 6px 18px rgba(123,44,191,.45); transform:translateY(-1px); color:#fff !important; }
+    .me-btn-outline { background:#f8f5ff; border:1.5px solid #c4b5fd; color:var(--grape-2); }
+    .me-btn-outline:hover { background:var(--grape-2); color:#fff !important; }
+    .me-btn-disabled { background:#f1f5f9; color:#94a3b8; cursor:not-allowed; }
+
+    /* ── Empty state ── */
+    .me-empty {
+        text-align:center; padding:60px 20px;
+        background:var(--card); border:1px solid var(--border); border-radius:16px;
+    }
+    .me-empty-icon { font-size:52px; color:#c4b5fd; margin-bottom:16px; }
+    .me-empty h3 { font-size:1.1rem; font-weight:700; color:var(--ink); margin:0 0 8px; }
+    .me-empty p { font-size:.88rem; color:var(--muted); margin:0; }
+
+    /* ── Skeleton loader ── */
+    .skeleton { background:linear-gradient(90deg,#f0ebf8 25%,#e8e0f0 50%,#f0ebf8 75%); background-size:200% 100%; animation:shimmer 1.4s infinite; border-radius:8px; }
+    @@keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+</style>
+
+<div class="me-page">
+
+    <!-- Hero -->
+    <div class="me-hero">
+        <div class="me-hero-left">
+            <p class="me-hero-eyebrow">Assessment Centre</p>
+            <h1 class="me-hero-title">My Exams</h1>
+            <p class="me-hero-sub">Track your progress, attempt exams and review your results</p>
+        </div>
+        <div class="me-hero-icon">📋</div>
+    </div>
+
+    <!-- Stats -->
+    <div class="me-stats" id="statsBar">
+        <div class="me-stat-card">
+            <div class="me-stat-icon purple"><i class="fa-solid fa-clipboard-list"></i></div>
+            <div><div class="me-stat-val" id="statTotal">—</div><div class="me-stat-lbl">Total Exams</div></div>
+        </div>
+        <div class="me-stat-card">
+            <div class="me-stat-icon green"><i class="fa-solid fa-circle-check"></i></div>
+            <div><div class="me-stat-val" id="statPassed">—</div><div class="me-stat-lbl">Passed</div></div>
+        </div>
+        <div class="me-stat-card">
+            <div class="me-stat-icon amber"><i class="fa-solid fa-clock-rotate-left"></i></div>
+            <div><div class="me-stat-val" id="statAttempted">—</div><div class="me-stat-lbl">Attempted</div></div>
+        </div>
+        <div class="me-stat-card">
+            <div class="me-stat-icon rose"><i class="fa-solid fa-hourglass-start"></i></div>
+            <div><div class="me-stat-val" id="statPending">—</div><div class="me-stat-lbl">Pending</div></div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="me-filters">
+        <button class="me-filter-btn active" onclick="filterExams('all', this)">All</button>
+        <button class="me-filter-btn" onclick="filterExams('active', this)">Available</button>
+        <button class="me-filter-btn" onclick="filterExams('attempted', this)">Attempted</button>
+        <button class="me-filter-btn" onclick="filterExams('passed', this)">Passed</button>
+        <div class="me-search">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="examSearch" placeholder="Search exams…" oninput="searchExams(this.value)">
+        </div>
+    </div>
+
+    <!-- Exam list container -->
+    <div id="examContainer">
+        <div class="me-empty">
+            <div class="me-empty-icon"><i class="fa-solid fa-spinner fa-spin"></i></div>
+            <h3>Loading your exams…</h3>
+            <p>Fetching enrolled courses and available exams</p>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+<script>
+var ALL_EXAMS = []; // flat list of {exam, courseTitle, courseId, status, lastAttemptId}
+var currentFilter = 'all';
+
+async function loadExams() {
+    try {
+        // 1. Get enrolled courses
+        const cr = await fetch('/Exam/StudentCourses');
+        if (!cr.ok) throw new Error('Could not load courses');
+        const courses = await cr.json();
+        const list = Array.isArray(courses) ? courses : (courses.courses || courses.data || []);
+
+        if (!list.length) {
+            showEmpty('No enrolled courses found.', 'Enrol in a course to access its exams.');
+            updateStats([]);
+            return;
+        }
+
+        // 2. Fetch exams for each course in parallel
+        const promises = list.map(c => {
+            const cid = c.CourseID || c.courseID || c.courseId;
+            const ctitle = c.CourseName || c.courseName || c.title || c.CourseTitle || ('Course #' + cid);
+            return fetch('/Exam/List?courseId=' + cid)
+                .then(r => r.json())
+                .then(data => {
+                    const exams = data.exams || data.Exams || (Array.isArray(data) ? data : []);
+                    return exams.filter(e => (e.isActive || e.IsActive) == true).map(e => ({
+                        exam: e,
+                        courseTitle: ctitle,
+                        courseId: cid,
+                        examId: e.examID || e.ExamID,
+                        title: e.title || e.Title || e.examTitle || e.ExamTitle || 'Untitled Exam',
+                        duration: e.durationMinutes || e.DurationMinutes || 0,
+                        passPercent: e.passingPercent || e.PassingPercent || 50,
+                        maxAttempts: e.maxAttempts || e.MaxAttempts || 1,
+                        attemptsUsed: e.attemptsUsed || e.AttemptsUsed || 0,
+                        lastScore: e.lastScore || e.LastScore || null,
+                        lastAttemptId: e.lastAttemptId || e.LastAttemptID || null,
+                        lastStatus: e.lastStatus || e.LastStatus || null
+                    }));
+                })
+                .catch(() => []);
+        });
+
+        const results = await Promise.all(promises);
+        ALL_EXAMS = results.flat();
+        updateStats(ALL_EXAMS);
+        renderExams(ALL_EXAMS);
+    } catch(e) {
+        showEmpty('Failed to load exams', e.message);
+    }
+}
+
+function getExamStatus(ex) {
+    if (!ex.lastStatus && ex.attemptsUsed === 0) return 'active';
+    if (ex.lastStatus === 'Submitted' || ex.lastStatus === 'Graded') {
+        if (ex.lastScore !== null && ex.lastScore >= ex.passPercent) return 'passed';
+        return 'failed';
+    }
+    if (ex.attemptsUsed > 0) return 'attempted';
+    return 'active';
+}
+
+function updateStats(exams) {
+    const total = exams.length;
+    const passed = exams.filter(e => getExamStatus(e) === 'passed').length;
+    const attempted = exams.filter(e => ['attempted','failed'].includes(getExamStatus(e))).length;
+    const pending = exams.filter(e => getExamStatus(e) === 'active').length;
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statPassed').textContent = passed;
+    document.getElementById('statAttempted').textContent = attempted;
+    document.getElementById('statPending').textContent = pending;
+}
+
+function filterExams(filter, btn) {
+    currentFilter = filter;
+    document.querySelectorAll('.me-filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const q = document.getElementById('examSearch').value.toLowerCase();
+    renderExams(applyFilters(ALL_EXAMS, filter, q));
+}
+
+function searchExams(q) {
+    renderExams(applyFilters(ALL_EXAMS, currentFilter, q.toLowerCase()));
+}
+
+function applyFilters(exams, filter, q) {
+    return exams.filter(e => {
+        const s = getExamStatus(e);
+        const matchFilter = filter === 'all' ? true
+            : filter === 'active' ? s === 'active'
+            : filter === 'attempted' ? ['attempted','failed'].includes(s)
+            : filter === 'passed' ? s === 'passed'
+            : true;
+        const matchQ = !q || e.title.toLowerCase().includes(q) || e.courseTitle.toLowerCase().includes(q);
+        return matchFilter && matchQ;
+    });
+}
+
+function renderExams(exams) {
+    const container = document.getElementById('examContainer');
+    if (!exams.length) {
+        container.innerHTML = `
+            <div class="me-empty">
+                <div class="me-empty-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+                <h3>No exams found</h3>
+                <p>Try a different filter or search term.</p>
+            </div>`;
+        return;
+    }
+
+    // Group by course
+    const byCourse = {};
+    exams.forEach(e => {
+        const key = e.courseId;
+        if (!byCourse[key]) byCourse[key] = { title: e.courseTitle, exams: [] };
+        byCourse[key].exams.push(e);
+    });
+
+    let html = '';
+    Object.values(byCourse).forEach(group => {
+        html += `<div class="me-course-section">
+            <div class="me-course-header">
+                <div class="me-course-thumb"><i class="fa-solid fa-book-open"></i></div>
+                <div>
+                    <div class="me-course-name">${esc(group.title)}</div>
+                    <div class="me-course-meta">${group.exams.length} exam${group.exams.length!==1?'s':''} available</div>
+                </div>
+            </div>
+            <div class="me-exam-grid">`;
+
+        group.exams.forEach(e => {
+            const status = getExamStatus(e);
+            const remainingAttempts = Math.max(0, e.maxAttempts - e.attemptsUsed);
+            const canAttempt = remainingAttempts > 0 && status !== 'passed';
+
+            const badgeMap = { active:'badge-active', attempted:'badge-attempted', passed:'badge-passed', failed:'badge-failed' };
+            const labelMap = { active:'Available', attempted:'Attempted', passed:'Passed', failed:'Failed' };
+
+            const scoreChip = e.lastScore !== null ? `<span class="me-exam-chip"><i class="fa-solid fa-star"></i> Last: ${e.lastScore}%</span>` : '';
+            const viewResultBtn = e.lastAttemptId
+                ? `<a href="/Exam/Result?attemptId=${e.lastAttemptId}" class="me-btn me-btn-outline"><i class="fa-solid fa-chart-bar"></i> View Result</a>`
+                : '';
+
+            let actionBtn = '';
+            if (canAttempt) {
+                actionBtn = `<a href="/Exam/Take?examId=${e.examId}" class="me-btn me-btn-primary"><i class="fa-solid fa-play"></i> ${e.attemptsUsed > 0 ? 'Retry' : 'Start'}</a>`;
+            } else if (!canAttempt && status !== 'passed') {
+                actionBtn = `<span class="me-btn me-btn-disabled"><i class="fa-solid fa-lock"></i> No Attempts</span>`;
+            } else {
+                actionBtn = `<a href="/Exam/Take?examId=${e.examId}" class="me-btn me-btn-primary"><i class="fa-solid fa-rotate-right"></i> Review</a>`;
+            }
+
+            html += `
+            <div class="me-exam-card" data-status="${status}">
+                <div class="me-exam-top">
+                    <div class="me-exam-title">${esc(e.title)}</div>
+                    <span class="me-exam-badge ${badgeMap[status]}">${labelMap[status]}</span>
+                </div>
+                <div class="me-exam-info">
+                    ${e.duration > 0 ? `<span class="me-exam-chip"><i class="fa-solid fa-clock"></i> ${e.duration} min</span>` : ''}
+                    <span class="me-exam-chip"><i class="fa-solid fa-bullseye"></i> Pass: ${e.passPercent}%</span>
+                    ${scoreChip}
+                </div>
+                <div class="me-exam-footer">
+                    <div class="me-exam-attempts">Attempts: <strong>${e.attemptsUsed}/${e.maxAttempts}</strong></div>
+                    <div style="display:flex;gap:8px;align-items:center">
+                        ${viewResultBtn}
+                        ${actionBtn}
+                    </div>
+                </div>
+            </div>`;
+        });
+
+        html += `</div></div>`;
+    });
+
+    container.innerHTML = html;
+}
+
+function showEmpty(title, msg) {
+    document.getElementById('examContainer').innerHTML = `
+        <div class="me-empty">
+            <div class="me-empty-icon"><i class="fa-solid fa-clipboard-list"></i></div>
+            <h3>${esc(title)}</h3>
+            <p>${esc(msg)}</p>
+        </div>`;
+}
+
+function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+loadExams();
+</script>
+}

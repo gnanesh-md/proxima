@@ -1,0 +1,352 @@
+@model ProximaLMS.Models.BulkAssignPageViewModel
+@{
+    ViewData["Title"] = "Assignment Completion Report";
+    Layout = "_Layout";
+}
+
+<style>
+    :root {
+        --grape:#4C1864; --grape-2:#7B2CBF; --ink:#1f1d2b;
+        --muted:#6b7280; --border:#e7e5ee; --ok:#16a34a; --amber:#d97706; --red:#dc2626;
+    }
+    .rp-wrap { max-width:1180px; margin:0 auto; }
+
+    .rp-head {
+        display:flex; align-items:center; gap:14px; margin-bottom:20px;
+        background:linear-gradient(120deg,var(--grape),var(--grape-2));
+        color:#fff; border-radius:14px; padding:18px 24px;
+        box-shadow:0 12px 30px rgba(76,24,100,.25);
+    }
+    .rp-head h1 { font-size:1.3rem; font-weight:800; margin:0; }
+    .rp-head .sub { opacity:.9; font-size:.85rem; margin-top:3px; }
+    .rp-actions { margin-left:auto; display:flex; gap:8px; }
+    .rp-btn { background:rgba(255,255,255,.18); color:#fff; text-decoration:none; font-weight:700; font-size:.82rem; padding:8px 16px; border-radius:9px; border:1px solid rgba(255,255,255,.3); cursor:pointer; }
+    .rp-btn:hover { background:rgba(255,255,255,.28); color:#fff; }
+
+    .rp-tiles { display:grid; grid-template-columns:repeat(5,1fr); gap:12px; margin-bottom:22px; }
+    @@media (max-width:900px){ .rp-tiles { grid-template-columns:repeat(2,1fr); } }
+    .rp-tile { background:#fff; border:1px solid var(--border); border-radius:13px; padding:14px 16px; box-shadow:0 4px 14px rgba(10,20,40,.04); }
+    .rp-tile .n { font-size:1.55rem; font-weight:800; line-height:1; }
+    .rp-tile .l { color:var(--muted); font-size:.78rem; margin-top:5px; }
+    .rp-tile.total .n   { color:var(--grape); }
+    .rp-tile.done .n    { color:var(--ok); }
+    .rp-tile.due .n     { color:var(--amber); }
+    .rp-tile.over .n    { color:var(--red); }
+    .rp-tile.mand .n    { color:var(--ink); }
+
+    .rp-filters {
+        background:#fff; border:1px solid var(--border); border-radius:12px;
+        padding:10px 14px; margin-bottom:14px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+        box-shadow:0 4px 14px rgba(10,20,40,.04);
+    }
+    .rp-filters .pill {
+        cursor:pointer; user-select:none; font-size:.78rem; font-weight:700;
+        padding:6px 13px; border-radius:999px; border:1px solid var(--border); color:var(--ink); background:#fff;
+    }
+    .rp-filters .pill.on { background:linear-gradient(90deg,var(--grape),var(--grape-2)); color:#fff; border-color:transparent; }
+    .rp-search {
+        margin-left:auto; padding:7px 11px 7px 30px; border:1.5px solid #ede9f8; border-radius:9px; font-size:.85rem; min-width:220px;
+        background:#faf9fc url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2398a2b3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>") no-repeat 10px center;
+        background-size:13px; outline:none;
+    }
+    .rp-search:focus { border-color:var(--grape-2); background-color:#fff; }
+
+    .rp-panel { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 6px 18px rgba(10,20,40,.05); overflow:hidden; }
+
+    .emp-row {
+        cursor:pointer; padding:14px 18px; border-bottom:1px solid var(--border);
+        display:flex; align-items:center; gap:14px; transition:.12s;
+    }
+    .emp-row:hover { background:#faf9fc; }
+    .emp-row.open { background:#f4f1fa; }
+    .emp-chev { font-size:.72rem; color:var(--muted); transition:transform .15s; }
+    .emp-row.open .emp-chev { transform:rotate(90deg); color:var(--grape); }
+    .emp-name { font-weight:700; color:var(--ink); font-size:.95rem; }
+    .emp-stats { margin-left:auto; display:flex; gap:8px; font-size:.74rem; font-weight:700; }
+    .emp-stats .chip { padding:3px 10px; border-radius:999px; }
+    .chip-total { background:#f4f1fa; color:var(--grape); }
+    .chip-done  { background:#d1fae5; color:#15803d; }
+    .chip-over  { background:#fee2e2; color:#b91c1c; }
+
+    .emp-detail { display:none; padding:0 18px 14px; background:#fafafa; border-bottom:1px solid var(--border); }
+    .emp-row.open + .emp-detail { display:block; }
+
+    table.det { width:100%; border-collapse:collapse; background:#fff; border:1px solid var(--border); border-radius:10px; overflow:hidden; margin-top:10px; }
+    .det th { text-align:left; font-size:.7rem; text-transform:uppercase; letter-spacing:.04em; color:var(--muted); padding:10px 12px; background:#faf9fc; border-bottom:1px solid var(--border); }
+    .det th.num, .det td.num { text-align:right; }
+    .det td { padding:10px 12px; border-bottom:1px solid #f1eef7; font-size:.86rem; color:var(--ink); }
+    .det tr:last-child td { border-bottom:none; }
+
+    .prog { display:flex; align-items:center; gap:9px; min-width:160px; }
+    .prog .track { flex:1; height:7px; background:#eee7f5; border-radius:999px; overflow:hidden; }
+    .prog .fill { height:100%; border-radius:999px; }
+    .prog .pct { font-weight:800; font-size:.78rem; width:38px; text-align:right; }
+
+    .badge {
+        font-size:.68rem; font-weight:700; padding:3px 9px; border-radius:999px;
+    }
+    .b-overdue   { background:#fee2e2; color:#b91c1c; }
+    .b-duesoon   { background:#fef3c7; color:#92400e; }
+    .b-ontrack   { background:#dbeafe; color:#1e40af; }
+    .b-nodue     { background:#f1f5f9; color:#475569; }
+    .b-done      { background:#d1fae5; color:#15803d; }
+    .b-mandatory { background:#fde2e7; color:#9d174d; margin-left:5px; }
+
+    .rp-empty {
+        padding:50px 30px; text-align:center; color:var(--muted);
+        background:#fff; border:1px dashed var(--border); border-radius:14px;
+    }
+    .rp-empty i { font-size:36px; color:#d6cfe6; }
+</style>
+
+<div class="rp-wrap">
+    <div class="rp-head">
+        <div>
+            <h1><i class="fa-solid fa-chart-line"></i> Assignment Completion Report</h1>
+            <div class="sub">
+                @if (Model.IsManager)
+                {
+                    <span>Progress across your team of @Model.TeamSize</span>
+                }
+                else if (Model.IsAdminView)
+                {
+                    <span>Admin view · completion across all course assignments</span>
+                }
+                else
+                {
+                    <span>No team configured. Set up your team in the admin panel to see report data here.</span>
+                }
+            </div>
+        </div>
+        <div class="rp-actions">
+            <a class="rp-btn" href="@Url.Action("Bulk","CourseAssignment")"><i class="fa-solid fa-plus"></i> Assign more</a>
+            <button class="rp-btn" type="button" onclick="exportCsv()"><i class="fa-solid fa-file-arrow-down"></i> Export CSV</button>
+        </div>
+    </div>
+
+    @if (!Model.IsManager && !Model.IsAdminView)
+    {
+        <div class="rp-empty">
+            <i class="fa-solid fa-people-group"></i>
+            <h5 style="color:var(--ink);font-weight:800;margin-top:10px;">Manager mode is not active</h5>
+            <p>You're seeing this page in admin mode. Add team members to a manager via the Manager Team admin to see completion data here.</p>
+        </div>
+    }
+    else
+    {
+        <div class="rp-tiles">
+            <div class="rp-tile total"><div class="n" id="tTotal">0</div><div class="l">Assignments</div></div>
+            <div class="rp-tile done"><div class="n"  id="tDone">0</div><div class="l">Completed</div></div>
+            <div class="rp-tile due"><div class="n"   id="tDueSoon">0</div><div class="l">Due Soon (≤7d)</div></div>
+            <div class="rp-tile over"><div class="n"  id="tOverdue">0</div><div class="l">Overdue</div></div>
+            <div class="rp-tile mand"><div class="n"  id="tMand">0</div><div class="l">Mandatory</div></div>
+        </div>
+
+        <div class="rp-filters">
+            <span class="pill on" data-flt="all">All</span>
+            <span class="pill"    data-flt="overdue">Overdue</span>
+            <span class="pill"    data-flt="duesoon">Due soon</span>
+            <span class="pill"    data-flt="done">Completed</span>
+            <span class="pill"    data-flt="mandatory">Mandatory only</span>
+            <input id="search" class="rp-search" placeholder="Search employee or course…" />
+        </div>
+
+        <div class="rp-panel" id="grouped">
+            <div class="rp-empty" style="border:none;box-shadow:none;">Loading report…</div>
+        </div>
+    }
+</div>
+
+@section Scripts {
+    <script>
+        const URL_REPORT = '@(Model.IsAdminView ? Url.Action("AllCompletion","CourseAssignment") : Url.Action("TeamCompletion","CourseAssignment"))';
+        const esc = s => (s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+        const truthy = v => v===true||v===1||v==='1';
+        const fmtDate = d => d ? new Date(d).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '—';
+
+        let ROWS = [];
+        let FILTER = 'all';
+        let QUERY = '';
+
+        // API returns Dapper rows with PascalCase keys; the render code reads
+        // camelCase. Lower-case the first letter of every key so both match.
+        const camelRow = o => {
+            if (!o || typeof o !== 'object') return o;
+            const out = {};
+            for (const k in o) out[k.charAt(0).toLowerCase() + k.slice(1)] = o[k];
+            return out;
+        };
+
+        async function load() {
+            try {
+                const res = await fetch(URL_REPORT).then(r => r.json());
+                ROWS = (Array.isArray(res) ? res : []).map(camelRow);
+                renderTiles();
+                render();
+            } catch (e) {
+                document.getElementById('grouped').innerHTML =
+                    '<div class="rp-empty" style="border:none;box-shadow:none;color:#b91c1c;">Could not load report: ' + esc(e.message) + '</div>';
+            }
+        }
+
+        function rowMatchesFilter(r) {
+            const isDone = r.progressPercent >= 100;
+            switch (FILTER) {
+                case 'overdue':   return r.dueStatus === 'Overdue' && !isDone;
+                case 'duesoon':   return r.dueStatus === 'DueSoon' && !isDone;
+                case 'done':      return isDone;
+                case 'mandatory': return truthy(r.isMandatory);
+                default:          return true;
+            }
+        }
+        function rowMatchesQuery(r) {
+            if (!QUERY) return true;
+            return (r.employeeEmail || '').toLowerCase().includes(QUERY)
+                || (r.courseTitle || '').toLowerCase().includes(QUERY);
+        }
+        function visible() {
+            return ROWS.filter(r => rowMatchesFilter(r) && rowMatchesQuery(r));
+        }
+
+        function renderTiles() {
+            const total = ROWS.length;
+            const done  = ROWS.filter(r => r.progressPercent >= 100).length;
+            const soon  = ROWS.filter(r => r.dueStatus === 'DueSoon' && r.progressPercent < 100).length;
+            const over  = ROWS.filter(r => r.dueStatus === 'Overdue' && r.progressPercent < 100).length;
+            const mand  = ROWS.filter(r => truthy(r.isMandatory)).length;
+            document.getElementById('tTotal').textContent   = total;
+            document.getElementById('tDone').textContent    = done;
+            document.getElementById('tDueSoon').textContent = soon;
+            document.getElementById('tOverdue').textContent = over;
+            document.getElementById('tMand').textContent    = mand;
+        }
+
+        function statusBadge(r) {
+            if (r.progressPercent >= 100) return '<span class="badge b-done">✓ Completed</span>';
+            switch (r.dueStatus) {
+                case 'Overdue':   return '<span class="badge b-overdue">Overdue</span>';
+                case 'DueSoon':   return '<span class="badge b-duesoon">Due soon</span>';
+                case 'OnTrack':   return '<span class="badge b-ontrack">On track</span>';
+                default:          return '<span class="badge b-nodue">No due date</span>';
+            }
+        }
+
+        function progressBar(pct) {
+            const col = pct >= 100 ? '#16a34a' : pct >= 50 ? '#7B2CBF' : pct > 0 ? '#d97706' : '#cbd5e1';
+            return `<div class="prog">
+                <div class="track"><div class="fill" style="width:${pct}%;background:${col};"></div></div>
+                <span class="pct" style="color:${col};">${pct}%</span>
+            </div>`;
+        }
+
+        function render() {
+            const rows = visible();
+            const box  = document.getElementById('grouped');
+
+            if (rows.length === 0) {
+                box.innerHTML = '<div class="rp-empty" style="border:none;box-shadow:none;">No assignments match the current filter.</div>';
+                return;
+            }
+
+            // group by employee email
+            const groups = {};
+            rows.forEach(r => {
+                const key = r.employeeEmail || ('user_' + r.employeeID);
+                (groups[key] = groups[key] || { email: r.employeeEmail, id: r.employeeID, items: [] }).items.push(r);
+            });
+
+            const order = Object.values(groups)
+                .sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+
+            box.innerHTML = order.map(g => {
+                const items = g.items;
+                const total = items.length;
+                const done  = items.filter(r => r.progressPercent >= 100).length;
+                const over  = items.filter(r => r.dueStatus === 'Overdue' && r.progressPercent < 100).length;
+
+                return `
+                <div>
+                    <div class="emp-row" onclick="this.classList.toggle('open')">
+                        <div class="emp-chev">▶</div>
+                        <div>
+                            <div class="emp-name">${esc(g.email || ('Employee #' + g.id))}</div>
+                        </div>
+                        <div class="emp-stats">
+                            <span class="chip chip-total">${total} assigned</span>
+                            <span class="chip chip-done">${done} done</span>
+                            ${over > 0 ? `<span class="chip chip-over">${over} overdue</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="emp-detail">
+                        <table class="det">
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>Assigned</th>
+                                    <th>Due</th>
+                                    <th>Status</th>
+                                    <th class="num">Lessons</th>
+                                    <th style="width:200px;">Progress</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${items.map(r => `
+                                <tr>
+                                    <td>${esc(r.courseTitle)}${truthy(r.isMandatory) ? '<span class="badge b-mandatory">Mandatory</span>' : ''}</td>
+                                    <td>${fmtDate(r.assignedDate)}</td>
+                                    <td>${fmtDate(r.dueDate)}</td>
+                                    <td>${statusBadge(r)}</td>
+                                    <td class="num">${r.completedContents} / ${r.totalContents}</td>
+                                    <td>${progressBar(r.progressPercent)}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        // ── filter pill clicks
+        document.querySelectorAll('.rp-filters .pill').forEach(p => {
+            p.addEventListener('click', function () {
+                document.querySelectorAll('.rp-filters .pill').forEach(x => x.classList.remove('on'));
+                this.classList.add('on');
+                FILTER = this.dataset.flt;
+                render();
+            });
+        });
+        // ── search
+        const searchEl = document.getElementById('search');
+        if (searchEl) searchEl.addEventListener('input', e => { QUERY = e.target.value.toLowerCase().trim(); render(); });
+
+        // ── CSV export of the currently visible rows
+        function exportCsv() {
+            const rows = visible();
+            if (rows.length === 0) { alert('Nothing to export.'); return; }
+            const header = ['Employee','Course','Assigned','Due','Mandatory','Status','Completed','Total','Progress%'];
+            const csv = [header.join(',')].concat(rows.map(r => [
+                JSON.stringify(r.employeeEmail || ''),
+                JSON.stringify(r.courseTitle || ''),
+                r.assignedDate || '',
+                r.dueDate || '',
+                truthy(r.isMandatory) ? 'Yes' : 'No',
+                r.progressPercent >= 100 ? 'Completed' : (r.dueStatus || ''),
+                r.completedContents,
+                r.totalContents,
+                r.progressPercent
+            ].join(','))).join('\n');
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'completion-report-' + new Date().toISOString().slice(0,10) + '.csv';
+            link.click();
+        }
+        window.exportCsv = exportCsv;
+
+        @if (Model.IsManager || Model.IsAdminView)
+        {
+            <text>load();</text>
+        }
+    </script>
+}

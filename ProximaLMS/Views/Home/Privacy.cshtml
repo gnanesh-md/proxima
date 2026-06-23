@@ -1,0 +1,80 @@
+﻿@*
+    /Views/Home/Privacy.cshtml
+    ─────────────────────────────────────────────────────────────────
+    Refactored to use Proxima Design System v1.0
+    Pattern: HERO (quiet) + single CONTENT CARD with prose.
+    Template for: Privacy, Policy, Error, Deactivated, any read-only screen.
+    ─────────────────────────────────────────────────────────────────
+*@
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Privacy Policy";
+}
+
+<div class="px-page">
+
+    <header class="px-hero px-hero--quiet">
+        <div class="px-hero__inner">
+            <div>
+                <p class="px-hero__eyebrow">Legal</p>
+                <h1 class="px-hero__title">Privacy Policy</h1>
+                <p class="px-hero__sub">Last updated @DateTime.Today.ToString("MMMM yyyy")</p>
+            </div>
+            <div class="px-hero__actions">
+                <a href="javascript:window.print()" class="px-btn px-btn--ghost">
+                    <i class="fa-solid fa-print"></i> Print
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <div class="px-body px-body--flat">
+        <div class="px-card" style="max-width: 820px; margin: 0 auto;">
+            <div class="px-card__body" style="padding: 36px 44px; line-height: 1.7; color: var(--px-ink-2); font-size: 14.5px;">
+
+                <p style="font-size: 15.5px; color: var(--px-ink); margin-top: 0;">
+                    ProximaLMS is committed to protecting the privacy of every learner, tutor,
+                    and administrator who uses our platform. This policy explains what we
+                    collect, why, and the choices you have.
+                </p>
+
+                <h2 style="font-family: var(--px-font-display); font-size: 20px; color: var(--px-grape); margin: 28px 0 10px;">
+                    Information we collect
+                </h2>
+                <p>
+                    We collect the minimum data needed to operate the platform: your name,
+                    email, role, course progress, and the events that produce an audit trail.
+                    We never sell personal data to third parties.
+                </p>
+
+                <h2 style="font-family: var(--px-font-display); font-size: 20px; color: var(--px-grape); margin: 28px 0 10px;">
+                    How we use it
+                </h2>
+                <p>
+                    To deliver learning experiences, track progress, issue certificates,
+                    process payments, and improve the product. Aggregate analytics are
+                    de-identified.
+                </p>
+
+                <h2 style="font-family: var(--px-font-display); font-size: 20px; color: var(--px-grape); margin: 28px 0 10px;">
+                    Your choices
+                </h2>
+                <p>
+                    You can request a copy of your data, correct any inaccuracies, or ask
+                    for deletion of your account. Email
+                    <a href="mailto:privacy@proximalms.com" style="color: var(--px-violet);">privacy@proximalms.com</a>
+                    and we'll respond within 30 days.
+                </p>
+
+                <div class="px-alert px-alert--info" style="margin-top: 32px;">
+                    <i class="fa-solid fa-circle-info px-alert__icon"></i>
+                    <div class="px-alert__body">
+                        This is a sample policy. Replace with text approved by your legal team
+                        before going live.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>

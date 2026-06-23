@@ -1,0 +1,457 @@
+@*
+    ProximaLMS/Views/Profile/Index.cshtml
+    -------------------------------------------------------------
+    My Profile page:
+      • Read-only identity card (name, email, role, member-since)
+      • Profile completion bar
+      • Editable extras (bio, interests, location, social links)
+      • Danger Zone — self-service deactivation
+    -------------------------------------------------------------
+*@
+@model ProximaLMS.Models.ProfileViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "My Profile";
+
+    var initial = string.IsNullOrEmpty(Model.FullName) ? "?" : Model.FullName.Substring(0, 1).ToUpper();
+    var memberSince = Model.CreatedDate.HasValue
+        ? Model.CreatedDate.Value.ToString("MMM yyyy")
+        : "—";
+}
+
+<style>
+    :root {
+        --pf-primary: #4C1864;
+        --pf-primary-2: #7B2CBF;
+        --pf-ink: #1f1d2b;
+        --pf-ink2: #6b7280;
+        --pf-bg: #f5f3fa;
+        --pf-surface: #ffffff;
+        --pf-border: #e7e5ee;
+        --pf-rose: #ef4444;
+        --pf-rose-d: #b91c1c;
+        --pf-rose-bg: #fef2f2;
+        --pf-ok: #16a34a;
+    }
+
+    .pf-wrap {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 24px 14px 60px;
+    }
+
+    /* ── HERO ── */
+    .pf-hero {
+        background: linear-gradient(135deg, var(--pf-primary), var(--pf-primary-2));
+        color: #fff;
+        border-radius: 20px;
+        padding: 28px 30px;
+        display: flex;
+        align-items: center;
+        gap: 22px;
+        margin-bottom: 24px;
+    }
+
+    .pf-avatar {
+        width: 92px; height: 92px;
+        border-radius: 50%;
+        background: rgba(255,255,255,.15);
+        border: 3px solid rgba(255,255,255,.3);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 36px; font-weight: 800;
+        overflow: hidden;
+        flex-shrink: 0;
+    }
+
+    .pf-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .pf-hero-name { font-size: 24px; font-weight: 800; margin: 0; }
+    .pf-hero-meta { font-size: 14px; opacity: .85; margin: 4px 0 0; }
+    .pf-hero-role {
+        display: inline-block;
+        background: rgba(255,255,255,.2);
+        padding: 4px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        margin-top: 8px;
+    }
+
+    /* ── COMPLETION ── */
+    .pf-complete {
+        background: var(--pf-surface);
+        border: 1px solid var(--pf-border);
+        border-radius: 14px;
+        padding: 18px 22px;
+        margin-bottom: 22px;
+        display: flex;
+        align-items: center;
+        gap: 18px;
+    }
+
+    .pf-complete-ico {
+        width: 44px; height: 44px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, var(--pf-primary), var(--pf-primary-2));
+        color: #fff;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    .pf-complete-body { flex: 1; }
+    .pf-complete-label {
+        font-size: 13px; color: var(--pf-ink2); font-weight: 600;
+        margin-bottom: 6px;
+    }
+
+    .pf-bar { background: #eef0f5; height: 8px; border-radius: 999px; overflow: hidden; }
+    .pf-bar-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--pf-primary), var(--pf-primary-2));
+        transition: width .4s;
+    }
+    .pf-complete-pct { font-weight: 800; font-size: 22px; color: var(--pf-primary); }
+
+    /* ── CARDS ── */
+    .pf-card {
+        background: var(--pf-surface);
+        border: 1px solid var(--pf-border);
+        border-radius: 16px;
+        padding: 24px 26px;
+        margin-bottom: 22px;
+    }
+
+    .pf-card h3 {
+        font-size: 17px;
+        font-weight: 700;
+        margin: 0 0 4px;
+        color: var(--pf-ink);
+    }
+
+    .pf-card .pf-card-sub {
+        color: var(--pf-ink2);
+        font-size: 13px;
+        margin: 0 0 18px;
+    }
+
+    .pf-label {
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: var(--pf-ink2);
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .pf-val {
+        font-size: 15px;
+        color: var(--pf-ink);
+        font-weight: 500;
+    }
+
+    .pf-input, .pf-select {
+        width: 100%;
+        border: 1.5px solid var(--pf-border);
+        border-radius: 10px;
+        padding: 10px 13px;
+        font-size: 14px;
+        font-family: inherit;
+        transition: border-color .15s, box-shadow .15s;
+    }
+
+    .pf-input:focus, .pf-select:focus {
+        outline: none;
+        border-color: var(--pf-primary-2);
+        box-shadow: 0 0 0 4px rgba(123, 44, 191, .12);
+    }
+
+    .pf-btn {
+        background: linear-gradient(135deg, var(--pf-primary), var(--pf-primary-2));
+        color: #fff; border: none;
+        padding: 11px 22px;
+        border-radius: 10px;
+        font-weight: 700; font-size: 14px;
+        cursor: pointer;
+        display: inline-flex; align-items: center; gap: 7px;
+        transition: transform .1s, box-shadow .15s;
+    }
+    .pf-btn:hover { transform: translateY(-1px); box-shadow: 0 8px 22px rgba(76, 24, 100, .3); }
+    .pf-btn:disabled { opacity: .5; cursor: not-allowed; }
+
+    /* ── DANGER ZONE ── */
+    .pf-danger {
+        background: var(--pf-rose-bg);
+        border: 2px solid #fecaca;
+        border-radius: 16px;
+        padding: 22px 26px;
+    }
+
+    .pf-danger h3 {
+        color: var(--pf-rose-d);
+        font-size: 17px;
+        font-weight: 700;
+        margin: 0 0 4px;
+        display: flex; align-items: center; gap: 8px;
+    }
+
+    .pf-danger p {
+        color: var(--pf-rose-d);
+        font-size: 13px;
+        margin: 0 0 16px;
+        opacity: .85;
+    }
+
+    .pf-btn-danger {
+        background: #fff;
+        color: var(--pf-rose-d);
+        border: 1.5px solid var(--pf-rose);
+        padding: 10px 18px;
+        border-radius: 10px;
+        font-weight: 700; font-size: 13px;
+        cursor: pointer;
+        display: inline-flex; align-items: center; gap: 7px;
+        transition: background .15s, color .15s;
+    }
+    .pf-btn-danger:hover { background: var(--pf-rose); color: #fff; }
+</style>
+
+<div class="pf-wrap">
+
+    <!-- ── HERO ── -->
+    <div class="pf-hero">
+        <div class="pf-avatar">
+            @if (!string.IsNullOrEmpty(Model.ProfilePhoto))
+            {
+                <img src="@Model.ProfilePhoto" alt="@Model.FullName" onerror="this.outerHTML='@initial';" />
+            }
+            else
+            {
+                <span>@initial</span>
+            }
+        </div>
+        <div style="flex:1;min-width:0;">
+            <h1 class="pf-hero-name">@(string.IsNullOrEmpty(Model.FullName) ? "Your profile" : Model.FullName)</h1>
+            <div class="pf-hero-meta">
+                <i class="fa-solid fa-envelope" style="opacity:.7;"></i> @Model.Email
+                &nbsp;·&nbsp;
+                <i class="fa-solid fa-calendar-days" style="opacity:.7;"></i> Member since @memberSince
+            </div>
+            <span class="pf-hero-role">@Model.RoleLabel</span>
+        </div>
+    </div>
+
+    <!-- ── COMPLETION ── -->
+    <div class="pf-complete">
+        <div class="pf-complete-ico"><i class="fa-solid fa-circle-check"></i></div>
+        <div class="pf-complete-body">
+            <div class="pf-complete-label">Profile completion</div>
+            <div class="pf-bar"><div class="pf-bar-fill" style="width:@Model.CompletionPercent%"></div></div>
+        </div>
+        <div class="pf-complete-pct">@Model.CompletionPercent%</div>
+    </div>
+
+    <!-- ── ACCOUNT INFO (read-only) ── -->
+    <div class="pf-card">
+        <h3>Account Information</h3>
+        <p class="pf-card-sub">These fields require contacting an administrator to change.</p>
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="pf-label">Full Name</div>
+                <div class="pf-val">@(string.IsNullOrEmpty(Model.FullName) ? "—" : Model.FullName)</div>
+            </div>
+            <div class="col-md-6">
+                <div class="pf-label">Email</div>
+                <div class="pf-val">@Model.Email</div>
+            </div>
+            <div class="col-md-6">
+                <div class="pf-label">Mobile</div>
+                <div class="pf-val">@(string.IsNullOrEmpty(Model.MobileNumber) ? "—" : Model.MobileNumber)</div>
+            </div>
+            <div class="col-md-6">
+                <div class="pf-label">Gender</div>
+                <div class="pf-val">@(string.IsNullOrEmpty(Model.Gender) ? "—" : Model.Gender)</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── PROFILE EXTRAS (editable) ── -->
+    <div class="pf-card">
+        <h3>About You</h3>
+        <p class="pf-card-sub">A few extras so other learners and instructors get to know you.</p>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <label class="pf-label" for="bio">Bio</label>
+                <textarea id="bio" class="pf-input" rows="3" maxlength="500">@Model.Bio</textarea>
+            </div>
+            <div class="col-md-6">
+                <label class="pf-label" for="loc">Location</label>
+                <input id="loc" type="text" class="pf-input" value="@Model.Location" placeholder="City, Country" />
+            </div>
+            <div class="col-md-6">
+                <label class="pf-label" for="lang">Preferred language</label>
+                <select id="lang" class="pf-select">
+                    <option value="">No preference</option>
+                    @foreach (var l in new[] { "English", "Hindi", "Telugu", "Tamil" })
+                    {
+                        <option value="@l" selected="@(string.Equals(Model.PreferredLanguage, l, StringComparison.OrdinalIgnoreCase))">@l</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-6">
+                <label class="pf-label" for="linkedin">LinkedIn URL</label>
+                <input id="linkedin" type="url" class="pf-input" value="@Model.LinkedInUrl" placeholder="https://linkedin.com/in/…" />
+            </div>
+            <div class="col-md-6">
+                <label class="pf-label" for="website">Website</label>
+                <input id="website" type="url" class="pf-input" value="@Model.WebsiteUrl" placeholder="https://…" />
+            </div>
+            <div class="col-12">
+                <label class="pf-label" for="interests">Interests <span style="text-transform:none;color:#9aa0ac;">(comma-separated)</span></label>
+                <input id="interests" type="text" class="pf-input" value="@Model.Interests"
+                       placeholder="Web Development, AI & ML, Cloud" />
+            </div>
+        </div>
+
+        <div class="mt-3">
+            <button class="pf-btn" id="btnSaveProfile">
+                <i class="fa-solid fa-floppy-disk"></i> Save changes
+            </button>
+        </div>
+    </div>
+
+    <!-- ── DANGER ZONE ── -->
+    <div class="pf-danger">
+        <h3><i class="fa-solid fa-triangle-exclamation"></i> Danger Zone</h3>
+        <p>
+            Deactivating your account immediately signs you out of every device and hides your
+            profile. Your enrollments and progress are preserved — an administrator can
+            reactivate you later.
+        </p>
+        <button class="pf-btn-danger" id="btnDeactivate">
+            <i class="fa-solid fa-user-slash"></i> Deactivate my account
+        </button>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function () {
+
+    // ── Save profile extras ─────────────────────────────
+    document.getElementById('btnSaveProfile').addEventListener('click', async function () {
+        const btn = this;
+        btn.disabled = true;
+        const old = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
+
+        try {
+            const r = await fetch('@Url.Action("Save", "Profile")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    Bio:               document.getElementById('bio').value.trim(),
+                    Location:          document.getElementById('loc').value.trim(),
+                    PreferredLanguage: document.getElementById('lang').value,
+                    LinkedInUrl:       document.getElementById('linkedin').value.trim(),
+                    WebsiteUrl:        document.getElementById('website').value.trim(),
+                    Interests:         document.getElementById('interests').value.trim()
+                })
+            });
+            const d = await r.json();
+            if (d.success) {
+                Swal.fire({ icon: 'success', title: 'Saved', timer: 1400, showConfirmButton: false })
+                    .then(() => window.location.reload());
+            } else {
+                Swal.fire({ icon: 'error', title: 'Could not save', text: d.message || 'Try again.' });
+            }
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'Network error', text: e.message });
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = old;
+        }
+    });
+
+    // ── Deactivate account ──────────────────────────────
+    document.getElementById('btnDeactivate').addEventListener('click', async function () {
+
+        // Step 1 — explain + collect reason
+        const reasonResult = await Swal.fire({
+            icon: 'warning',
+            title: 'Deactivate your account?',
+            html: `
+                <p style="text-align:left;font-size:14px;color:#4b5563;">
+                    You'll be signed out everywhere immediately. Your courses, progress and
+                    purchases are kept; an administrator can reactivate you later.
+                </p>
+                <label style="display:block;text-align:left;font-size:13px;font-weight:600;margin-top:14px;">
+                    Reason <span style="color:#9aa0ac;">(optional)</span>
+                </label>
+                <select id="dRsn" class="swal2-input" style="width:100%;margin:6px 0 0;">
+                    <option value="">Choose one…</option>
+                    <option>I'm taking a break from learning</option>
+                    <option>I'm using a different platform</option>
+                    <option>Privacy concerns</option>
+                    <option>The platform isn't useful to me</option>
+                    <option>Other</option>
+                </select>`,
+            confirmButtonText: 'Continue',
+            cancelButtonText: 'Cancel',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626'
+        });
+
+        if (!reasonResult.isConfirmed) return;
+        const reason = document.getElementById('dRsn')?.value || '';
+
+        // Step 2 — password confirmation
+        const pwResult = await Swal.fire({
+            icon: 'question',
+            title: 'Confirm with your password',
+            html: `
+                <p style="text-align:left;font-size:13px;color:#4b5563;">
+                    For security, please re-enter your password to confirm.
+                </p>
+                <input id="dPw" type="password" autocomplete="current-password"
+                       class="swal2-input" placeholder="Current password" style="margin:8px 0 0;"/>`,
+            confirmButtonText: 'Deactivate my account',
+            cancelButtonText: 'Cancel',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            focusConfirm: false,
+            preConfirm: () => {
+                const v = document.getElementById('dPw').value;
+                if (!v) { Swal.showValidationMessage('Please enter your password.'); return false; }
+                return v;
+            }
+        });
+
+        if (!pwResult.isConfirmed) return;
+
+        // Step 3 — call API
+        try {
+            Swal.fire({ title: 'Deactivating…', didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+
+            const r = await fetch('@Url.Action("Deactivate", "Profile")', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ CurrentPassword: pwResult.value, Reason: reason })
+            });
+            const d = await r.json();
+
+            if (d.success) {
+                window.location.href = d.redirectTo || '/Profile/Deactivated';
+            } else {
+                Swal.fire({ icon: 'error', title: 'Could not deactivate', text: d.message || 'Try again.' });
+            }
+        } catch (e) {
+            Swal.fire({ icon: 'error', title: 'Network error', text: e.message });
+        }
+    });
+
+})();
+</script>

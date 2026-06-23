@@ -1,0 +1,255 @@
+@model ProximaLMS.Controllers.ReferralLeaderboardViewModel
+@{
+    ViewData["Title"] = "Referral Leaderboard";
+    Layout = "_Layout";
+
+    var entries = Model.Entries ?? new List<ProximaLMS.Controllers.LeaderboardEntryViewModel>();
+    var podium  = entries.Take(3).ToList();
+    var rest    = entries.Skip(3).ToList();
+}
+
+<style>
+    :root {
+        --primary: #4C1864;
+        --secondary: #7B2CBF;
+        --bg: #f4f6fb;
+        --gold: #d4af37;
+        --silver: #9ca3af;
+        --bronze: #b87333;
+    }
+
+    .lb-wrap { padding: 10px; background: var(--bg); }
+
+    .lb-header {
+        background: #fff;
+        padding: 20px 25px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 22px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .lb-title { font-size: 22px; font-weight: 700; color: var(--primary); margin: 0; }
+    .lb-sub   { font-size: 13px; color: #8a8f9c; margin-top: 3px; }
+
+    .btn-ghost {
+        border: 1px solid var(--primary);
+        color: var(--primary) !important;
+        background: #fff;
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    /* podium */
+    .lb-podium {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 22px;
+    }
+    @@media (max-width: 720px) { .lb-podium { grid-template-columns: 1fr; } }
+
+    .podium-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 8px 28px rgba(0,0,0,.07);
+        padding: 24px 18px;
+        text-align: center;
+        position: relative;
+        border-top: 5px solid #ddd;
+    }
+    .podium-card.p1 { border-top-color: var(--gold);   transform: translateY(-8px); }
+    .podium-card.p2 { border-top-color: var(--silver); }
+    .podium-card.p3 { border-top-color: var(--bronze); }
+
+    .podium-medal {
+        font-size: 30px; margin-bottom: 6px;
+    }
+    .podium-card.p1 .podium-medal { color: var(--gold); }
+    .podium-card.p2 .podium-medal { color: var(--silver); }
+    .podium-card.p3 .podium-medal { color: var(--bronze); }
+
+    .podium-avatar {
+        width: 64px; height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: #fff; font-size: 24px; font-weight: 700;
+        display: flex; align-items: center; justify-content: center;
+        margin: 6px auto 10px;
+    }
+    .podium-name { font-weight: 700; color: #2f3340; font-size: 15px; }
+    .podium-refs { font-size: 22px; font-weight: 700; color: var(--primary); margin-top: 8px; }
+    .podium-lbl  { font-size: 12px; color: #8a8f9c; }
+    .podium-pts  { font-size: 12px; color: #8a8f9c; margin-top: 4px; }
+
+    .you-badge {
+        position: absolute; top: 12px; right: 12px;
+        background: var(--secondary); color: #fff;
+        font-size: 10px; font-weight: 700;
+        padding: 3px 9px; border-radius: 20px;
+        text-transform: uppercase; letter-spacing: .04em;
+    }
+
+    .lb-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+    .lb-card-head {
+        padding: 16px 20px;
+        border-bottom: 1px solid #eef0f5;
+        font-weight: 700;
+        color: var(--primary);
+        font-size: 15px;
+    }
+
+    table.lb-table { width: 100%; border-collapse: collapse; }
+    table.lb-table thead th {
+        background: #faf7fc;
+        color: var(--primary);
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        padding: 13px 16px;
+        text-align: left;
+    }
+    table.lb-table tbody td {
+        padding: 13px 16px;
+        font-size: 14px;
+        border-bottom: 1px solid #f1f2f6;
+        color: #3b3f4a;
+    }
+    table.lb-table tbody tr:hover { background: #faf9fc; }
+    table.lb-table tbody tr.is-you {
+        background: #f5eefb;
+    }
+    table.lb-table tbody tr.is-you td { font-weight: 700; color: var(--primary); }
+
+    .rank-badge {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 30px; height: 30px; border-radius: 50%;
+        background: #f1eaf6; color: var(--primary);
+        font-weight: 700; font-size: 13px;
+    }
+
+    .mini-avatar {
+        width: 34px; height: 34px; border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        color: #fff; font-weight: 700; font-size: 13px;
+        display: inline-flex; align-items: center; justify-content: center;
+        margin-right: 10px; vertical-align: middle;
+    }
+    .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+    .lb-empty { padding: 50px 20px; text-align: center; color: #9aa0ac; }
+    .lb-empty i { font-size: 40px; color: #d8dbe3; margin-bottom: 12px; }
+</style>
+
+@{
+    Func<string, string> Initials = name =>
+    {
+        if (string.IsNullOrWhiteSpace(name)) return "?";
+        var parts = name.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1) return parts[0].Substring(0, 1).ToUpper();
+        return (parts[0].Substring(0, 1) + parts[parts.Length - 1].Substring(0, 1)).ToUpper();
+    };
+}
+
+<div class="lb-wrap">
+
+    <div class="lb-header">
+        <div>
+            <h2 class="lb-title"><i class="fas fa-trophy"></i> Referral Leaderboard</h2>
+            <div class="lb-sub">Top members by successful referrals</div>
+        </div>
+        <a class="btn-ghost" asp-controller="Referral" asp-action="Index">
+            <i class="fas fa-gift"></i> Refer &amp; Earn
+        </a>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    @if (!entries.Any())
+    {
+        <div class="lb-card">
+            <div class="lb-empty">
+                <i class="fas fa-trophy"></i>
+                <div>No referrals recorded yet. Be the first on the board!</div>
+            </div>
+        </div>
+    }
+    else
+    {
+        @if (podium.Any())
+        {
+            <div class="lb-podium">
+                @{
+                    // display order: 2nd, 1st, 3rd for a classic podium feel
+                    var order = new List<int>();
+                    if (podium.Count > 1) order.Add(1);
+                    if (podium.Count > 0) order.Add(0);
+                    if (podium.Count > 2) order.Add(2);
+                }
+                @foreach (var idx in order)
+                {
+                    var e        = podium[idx];
+                    var isYou    = e.UserID == Model.CurrentUserId;
+                    var pClass   = idx == 0 ? "p1" : idx == 1 ? "p2" : "p3";
+                    var medalIco = idx == 0 ? "fa-crown" : "fa-medal";
+                    <div class="podium-card @pClass">
+                        @if (isYou) { <span class="you-badge">You</span> }
+                        <div class="podium-medal"><i class="fas @medalIco"></i></div>
+                        <div class="podium-avatar">@Initials(e.Name)</div>
+                        <div class="podium-name">@e.Name</div>
+                        <div class="podium-refs">@e.TotalReferrals</div>
+                        <div class="podium-lbl">Referrals</div>
+                        <div class="podium-pts"><i class="fas fa-star"></i> @e.TotalRewardPoints points</div>
+                    </div>
+                }
+            </div>
+        }
+
+        <div class="lb-card">
+            <div class="lb-card-head">Full Rankings</div>
+            <div style="overflow-x:auto;">
+                <table class="lb-table">
+                    <thead>
+                        <tr>
+                            <th style="width:80px;">Rank</th>
+                            <th>Member</th>
+                            <th class="num">Referrals</th>
+                            <th class="num">Reward Points</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in entries)
+                        {
+                            var isYou = e.UserID == Model.CurrentUserId;
+                            <tr class="@(isYou ? "is-you" : "")">
+                                <td><span class="rank-badge">@e.Rank</span></td>
+                                <td>
+                                    <span class="mini-avatar">@Initials(e.Name)</span>
+                                    @e.Name
+                                    @if (isYou) { <span class="you-badge" style="position:static;margin-left:8px;">You</span> }
+                                </td>
+                                <td class="num">@e.TotalReferrals</td>
+                                <td class="num">@e.TotalRewardPoints</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+</div>

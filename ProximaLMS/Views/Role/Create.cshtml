@@ -1,0 +1,401 @@
+@model ProximaLMS.Controllers.RoleFormViewModel
+@{
+    bool isEdit = Model.RoleID > 0;
+    ViewData["Title"] = isEdit ? $"Edit Role — {Model.RoleName}" : "Create Role";
+    Layout = "_Layout";
+}
+
+<style>
+    :root {
+        --primary: #4C1864;
+        --secondary: #7B2CBF;
+        --bg: #f4f6fb;
+    }
+
+    body { background: var(--bg); }
+    .container-fluid { padding-left: 0 !important; padding-right: 0 !important; }
+
+    .page-header {
+        background: #fff;
+        padding: 20px 25px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .page-title { font-size: 22px; font-weight: 700; color: var(--primary); margin: 0; }
+    .page-sub   { font-size: 13px; color: #888; margin-top: 3px; }
+
+    .form-card {
+        background: #fff;
+        border-radius: 16px;
+        box-shadow: 0 4px 20px rgba(0,0,0,.06);
+        padding: 32px;
+        margin: 0 25px 30px;
+        max-width: 700px;
+    }
+
+    .form-section-title {
+        font-size: 13px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .8px;
+        color: var(--primary);
+        border-bottom: 2px solid #f0e8f8;
+        padding-bottom: 10px;
+        margin-bottom: 22px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .form-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 6px;
+        display: block;
+    }
+
+    .form-control, .form-select {
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        padding: 10px 14px;
+        font-size: 14px;
+        transition: border-color .2s, box-shadow .2s;
+        width: 100%;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(76,24,100,.1);
+        outline: none;
+    }
+
+    .form-control.is-invalid { border-color: #ef4444; }
+
+    .invalid-feedback {
+        font-size: 12px;
+        color: #ef4444;
+        margin-top: 4px;
+    }
+
+    .char-counter {
+        font-size: 11px;
+        color: #9ca3af;
+        text-align: right;
+        margin-top: 3px;
+    }
+
+    /* ── TOGGLE CARD ── */
+    .status-card {
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        padding: 18px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        cursor: pointer;
+        transition: border-color .2s;
+    }
+
+    .status-card.active-card { border-color: #22c55e; background: #f0fdf4; }
+
+    .status-card-left { display: flex; align-items: center; gap: 14px; }
+
+    .status-icon {
+        width: 42px; height: 42px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
+        display: flex; align-items: center; justify-content: center;
+        color: #fff;
+        font-size: 18px;
+    }
+
+    .status-text strong { font-size: 15px; display: block; }
+    .status-text span   { font-size: 12px; color: #6b7280; }
+
+    .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 50px; height: 26px;
+    }
+
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+
+    .slider {
+        position: absolute; inset: 0;
+        background: #d1d5db;
+        border-radius: 26px;
+        cursor: pointer;
+        transition: .3s;
+    }
+
+    .slider::before {
+        content: '';
+        position: absolute;
+        width: 20px; height: 20px;
+        left: 3px; bottom: 3px;
+        background: #fff;
+        border-radius: 50%;
+        transition: .3s;
+    }
+
+    input:checked + .slider { background: #22c55e; }
+    input:checked + .slider::before { transform: translateX(24px); }
+
+    /* ── HINT ── */
+    .field-hint {
+        font-size: 12px;
+        color: #6b7280;
+        margin-top: 4px;
+    }
+
+    /* ── BUTTONS ── */
+    .btn-submit {
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        color: #fff;
+        border: none;
+        padding: 11px 28px;
+        border-radius: 9px;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: opacity .2s;
+    }
+
+    .btn-submit:hover { opacity: .88; }
+
+    .btn-cancel {
+        background: #f3f4f6;
+        color: #374151;
+        border: none;
+        padding: 11px 24px;
+        border-radius: 9px;
+        font-size: 15px;
+        font-weight: 600;
+        cursor: pointer;
+        text-decoration: none;
+        transition: background .15s;
+    }
+
+    .btn-cancel:hover { background: #e5e7eb; color: #374151; }
+
+    .btn-row { display: flex; gap: 12px; align-items: center; margin-top: 28px; }
+
+    /* ── INFO CARD ── */
+    .info-card {
+        background: #faf8fc;
+        border-left: 4px solid var(--secondary);
+        border-radius: 0 10px 10px 0;
+        padding: 14px 18px;
+        margin-bottom: 24px;
+    }
+
+    .info-card p { margin: 0; font-size: 13px; color: #555; }
+
+    /* ── BADGE PREVIEW ── */
+    .role-code-preview {
+        background: #f0ebf8;
+        color: var(--primary);
+        font-family: 'Courier New', monospace;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 6px;
+        letter-spacing: .4px;
+        display: inline-block;
+        margin-top: 6px;
+        min-width: 60px;
+    }
+</style>
+
+<div class="container-fluid">
+
+    <!-- PAGE HEADER -->
+    <div class="page-header">
+        <div>
+            <h4 class="page-title">
+                <i class="fas fa-@(isEdit ? "pen" : "plus") me-2"></i>
+                @(isEdit ? $"Edit Role — {Model.RoleName}" : "Create New Role")
+            </h4>
+            <p class="page-sub">
+                @(isEdit ? "Update role details below" : "Fill in the details to create a new system role")
+            </p>
+        </div>
+        <a asp-action="List" style="background:#f1f1f1; color:#333; border:none; padding:9px 18px; border-radius:8px; font-size:14px; display:flex; align-items:center; gap:7px; text-decoration:none;">
+            <i class="fas fa-arrow-left"></i> Back to Roles
+        </a>
+    </div>
+
+    <div class="form-card">
+
+        <!-- INFO BOX -->
+        <div class="info-card">
+            <p><i class="fas fa-info-circle me-2" style="color:var(--secondary);"></i>
+                @(isEdit
+                    ? "Editing role details here will apply changes to all users with this role."
+                    : "After creating the role, assign screen permissions and users from the Role List.")
+            </p>
+        </div>
+
+        <!-- FORM -->
+        <form asp-action="Create" asp-controller="Role" method="post" novalidate>
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="RoleID" />
+
+            <!-- SECTION: ROLE IDENTITY -->
+            <div class="form-section-title">
+                <i class="fas fa-id-badge"></i> Role Identity
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">
+                    Role Code <span style="color:#ef4444;">*</span>
+                </label>
+                <input asp-for="RoleCode"
+                       class="form-control @(ViewData.ModelState["RoleCode"]?.Errors.Count > 0 ? "is-invalid" : "")"
+                       placeholder="e.g. ADMIN, TUTOR, MANAGER"
+                       maxlength="20"
+                       oninput="this.value=this.value.toUpperCase(); updateCodePreview(this.value)" />
+                <span asp-validation-for="RoleCode" class="invalid-feedback"></span>
+                <div class="field-hint">Short code, unique identifier — used internally. Max 20 characters.</div>
+                <div class="mt-2">
+                    Preview: <span class="role-code-preview" id="codePreview">@(Model.RoleCode ?? "CODE")</span>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">
+                    Role Name <span style="color:#ef4444;">*</span>
+                </label>
+                <input asp-for="RoleName"
+                       class="form-control @(ViewData.ModelState["RoleName"]?.Errors.Count > 0 ? "is-invalid" : "")"
+                       placeholder="e.g. Administrator, Course Manager"
+                       maxlength="100"
+                       oninput="countChars(this, 'nameCounter', 100)" />
+                <span asp-validation-for="RoleName" class="invalid-feedback"></span>
+                <div class="char-counter"><span id="nameCounter">@(Model.RoleName?.Length ?? 0)</span>/100</div>
+            </div>
+
+            <!-- SECTION: DESCRIPTION -->
+            <div class="form-section-title mt-4">
+                <i class="fas fa-align-left"></i> Description
+            </div>
+
+            <div class="mb-4">
+                <label class="form-label">Description <span style="color:#9ca3af;">(Optional)</span></label>
+                <textarea asp-for="Description"
+                          class="form-control"
+                          rows="3"
+                          placeholder="Describe what this role is responsible for..."
+                          maxlength="500"
+                          oninput="countChars(this, 'descCounter', 500)"></textarea>
+                <div class="char-counter"><span id="descCounter">@(Model.Description?.Length ?? 0)</span>/500</div>
+            </div>
+
+            <!-- SECTION: STATUS -->
+            <div class="form-section-title mt-4">
+                <i class="fas fa-toggle-on"></i> Status
+            </div>
+
+            <div class="status-card @(Model.IsActive ? "active-card" : "")" id="statusCard"
+                 onclick="toggleStatus()">
+                <div class="status-card-left">
+                    <div class="status-icon">
+                        <i class="fas fa-shield-halved"></i>
+                    </div>
+                    <div class="status-text">
+                        <strong id="statusTitle">@(Model.IsActive ? "Active" : "Inactive")</strong>
+                        <span id="statusDesc">
+                            @(Model.IsActive
+                                ? "Role is enabled — users with this role can access permitted screens."
+                                : "Role is disabled — users with this role will lose access.")
+                        </span>
+                    </div>
+                </div>
+                <label class="toggle-switch" onclick="event.stopPropagation()">
+                    <input type="checkbox" asp-for="IsActive" id="isActiveToggle"
+                           onchange="onStatusChange(this.checked)" />
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+            <!-- BUTTONS -->
+            <div class="btn-row">
+                <button type="submit" class="btn-submit">
+                    <i class="fas fa-@(isEdit ? "save" : "plus-circle")"></i>
+                    @(isEdit ? "Save Changes" : "Create Role")
+                </button>
+                <a asp-action="List" class="btn-cancel">Cancel</a>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+
+    // ── CODE PREVIEW ─────────────────────────────
+    function updateCodePreview(val) {
+        document.getElementById('codePreview').textContent = val || 'CODE';
+    }
+
+    // ── CHAR COUNTER ─────────────────────────────
+    function countChars(el, counterId, max) {
+        document.getElementById(counterId).textContent = el.value.length;
+        if (el.value.length >= max) {
+            document.getElementById(counterId).style.color = '#ef4444';
+        } else {
+            document.getElementById(counterId).style.color = '#9ca3af';
+        }
+    }
+
+    // ── STATUS TOGGLE ─────────────────────────────
+    function toggleStatus() {
+        const chk = document.getElementById('isActiveToggle');
+        chk.checked = !chk.checked;
+        onStatusChange(chk.checked);
+    }
+
+    function onStatusChange(active) {
+        const card  = document.getElementById('statusCard');
+        const title = document.getElementById('statusTitle');
+        const desc  = document.getElementById('statusDesc');
+
+        if (active) {
+            card.classList.add('active-card');
+            title.textContent = 'Active';
+            desc.textContent  = 'Role is enabled — users with this role can access permitted screens.';
+        } else {
+            card.classList.remove('active-card');
+            title.textContent = 'Inactive';
+            desc.textContent  = 'Role is disabled — users with this role will lose access.';
+        }
+    }
+
+    // ── TEMPDATA ──────────────────────────────────
+    @if (TempData["Success"] != null)
+    {
+        <text>
+        Swal.fire({ icon: 'success', title: 'Success', text: '@TempData["Success"]', timer: 2500, showConfirmButton: false });
+        </text>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <text>
+        Swal.fire({ icon: 'error', title: 'Error', text: '@TempData["Error"]' });
+        </text>
+    }
+</script>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

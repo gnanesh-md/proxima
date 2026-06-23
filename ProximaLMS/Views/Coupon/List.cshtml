@@ -1,0 +1,356 @@
+@model IEnumerable<ProximaLMS.Controllers.CouponViewModel>
+@{
+    ViewData["Title"] = "Coupons";
+    Layout = "_Layout";
+}
+
+<style>
+    :root {
+        --primary: #4C1864;
+        --secondary: #7B2CBF;
+        --bg: #f4f6fb;
+    }
+
+    .cpn-wrap { padding: 10px; background: var(--bg); }
+
+    .cpn-header {
+        background: #fff;
+        padding: 20px 25px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 22px;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .cpn-title { font-size: 22px; font-weight: 700; color: var(--primary); margin: 0; }
+
+    .btn-grad {
+        background: linear-gradient(90deg,var(--primary),var(--secondary));
+        color: #fff !important;
+        border: none;
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .btn-ghost {
+        border: 1px solid var(--primary);
+        color: var(--primary) !important;
+        background: #fff;
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .cpn-card {
+        background: #fff;
+        border-radius: 14px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .cpn-table { width: 100%; border-collapse: collapse; }
+    .cpn-table thead th {
+        background: linear-gradient(90deg,var(--primary),var(--secondary));
+        color: #fff;
+        font-size: 12.5px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: .03em;
+        padding: 13px 14px;
+        text-align: left;
+    }
+    .cpn-table tbody td {
+        padding: 13px 14px;
+        border-bottom: 1px solid #eef0f5;
+        font-size: 13.5px;
+        vertical-align: middle;
+    }
+    .cpn-table tbody tr:hover { background: #faf7fd; }
+
+    .code-chip {
+        font-family: 'Consolas', monospace;
+        font-weight: 700;
+        color: var(--primary);
+        background: #f3e8ff;
+        padding: 4px 10px;
+        border-radius: 6px;
+        letter-spacing: .04em;
+    }
+
+    .disc-badge {
+        background: #ecfdf3;
+        color: #027a48;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 6px;
+        font-size: 12.5px;
+    }
+
+    .pill {
+        font-size: 11.5px;
+        font-weight: 600;
+        padding: 3px 11px;
+        border-radius: 20px;
+        display: inline-block;
+    }
+    .pill-active    { background: #e6f9f0; color: #198754; }
+    .pill-expired   { background: #fde8e8; color: #dc3545; }
+    .pill-scheduled { background: #fff4e5; color: #b76e00; }
+    .pill-disabled  { background: #eceff3; color: #667085; }
+    .pill-exhausted { background: #f3e8ff; color: #6941c6; }
+
+    .icon-btn {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 6px 8px;
+        border-radius: 6px;
+    }
+    .icon-btn:hover { background: #f0e8f8; }
+    .icon-edit   { color: #b76e00; }
+    .icon-toggle { color: var(--secondary); }
+    .icon-del    { color: #dc3545; }
+
+    .empty-state { text-align: center; padding: 55px 20px; color: #98a2b3; }
+    .empty-state i { font-size: 44px; margin-bottom: 12px; color: #d0c4dd; }
+
+    .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .search-box {
+        padding: 9px 14px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        width: 240px;
+    }
+</style>
+
+<div class="cpn-wrap">
+
+    <div class="cpn-header">
+        <h4 class="cpn-title"><i class="fa-solid fa-tags me-2"></i>Discount Coupons</h4>
+        <div class="toolbar">
+            <input type="text" id="couponSearch" class="search-box" placeholder="Search coupon code..." />
+            <a href="@Url.Action("UsageReport","Coupon")" class="btn-ghost">
+                <i class="fa-solid fa-chart-column"></i> Usage Analytics
+            </a>
+            <a href="@Url.Action("Create","Coupon")" class="btn-grad">
+                <i class="fa-solid fa-plus"></i> New Coupon
+            </a>
+        </div>
+    </div>
+
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="cpn-card">
+        @if (Model != null && Model.Any())
+        {
+            <table class="cpn-table">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Discount</th>
+                        <th>Applies To</th>
+                        <th>Validity</th>
+                        <th>Usage</th>
+                        <th>Status</th>
+                        <th style="text-align:right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var c in Model)
+                    {
+                        <tr class="coupon-row" data-code="@c.Code.ToLower()">
+                            <td><span class="code-chip">@c.Code</span></td>
+                            <td>
+                                <span class="disc-badge">
+                                    @if (c.DiscountType == "PERCENT")
+                                    {
+                                        <text>@c.DiscountValue.ToString("0.##")% OFF</text>
+                                    }
+                                    else
+                                    {
+                                        <text>₹@c.DiscountValue.ToString("0.##") OFF</text>
+                                    }
+                                </span>
+                                @if (c.DiscountType == "PERCENT" && c.MaxDiscountAmount.HasValue)
+                                {
+                                    <div class="text-muted small mt-1">up to ₹@c.MaxDiscountAmount.Value.ToString("0.##")</div>
+                                }
+                                @if (c.MinOrderAmount > 0)
+                                {
+                                    <div class="text-muted small">min order ₹@c.MinOrderAmount.ToString("0.##")</div>
+                                }
+                            </td>
+                            <td>
+                                @if (c.CourseID.HasValue && !string.IsNullOrEmpty(c.CourseName))
+                                {
+                                    <span><i class="fa-solid fa-book me-1 text-muted"></i>@c.CourseName</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted"><i class="fa-solid fa-globe me-1"></i>All courses</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="small">@c.StartDate.ToString("dd MMM yyyy")</div>
+                                <div class="small text-muted">to @c.EndDate.ToString("dd MMM yyyy")</div>
+                            </td>
+                            <td>
+                                <strong>@c.UsedCount</strong>
+                                @if (c.MaxUses > 0)
+                                {
+                                    <text> / @c.MaxUses</text>
+                                }
+                                else
+                                {
+                                    <span class="text-muted"> / ∞</span>
+                                }
+                                <div class="text-muted small">@c.MaxUsesPerUser per user</div>
+                            </td>
+                            <td>
+                                @{
+                                    var label = c.StatusLabel ?? (c.IsActive ? "Active" : "Disabled");
+                                    var pillClass = label switch
+                                    {
+                                        "Active"    => "pill-active",
+                                        "Expired"   => "pill-expired",
+                                        "Scheduled" => "pill-scheduled",
+                                        "Exhausted" => "pill-exhausted",
+                                        _           => "pill-disabled"
+                                    };
+                                }
+                                <span class="pill @pillClass">@label</span>
+                            </td>
+                            <td style="text-align:right; white-space:nowrap;">
+                                <a class="icon-btn icon-edit" title="Edit"
+                                   href="@Url.Action("Create","Coupon", new { id = c.CouponID })">
+                                    <i class="fa-solid fa-pen"></i>
+                                </a>
+                                <button class="icon-btn icon-toggle btn-toggle"
+                                        title="@(c.IsActive ? "Disable" : "Enable")"
+                                        data-id="@c.CouponID" data-active="@c.IsActive.ToString().ToLower()">
+                                    <i class="fa-solid @(c.IsActive ? "fa-toggle-on" : "fa-toggle-off")"></i>
+                                </button>
+                                <button class="icon-btn icon-del btn-delete"
+                                        title="Delete" data-id="@c.CouponID" data-code="@c.Code">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fa-solid fa-ticket d-block"></i>
+                <h5>No coupons yet</h5>
+                <p>Create your first discount coupon to get started.</p>
+                <a href="@Url.Action("Create","Coupon")" class="btn-grad mt-2">
+                    <i class="fa-solid fa-plus"></i> New Coupon
+                </a>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        const PURPLE = "#4C1864";
+
+        // search
+        $("#couponSearch").on("keyup", function () {
+            const v = $(this).val().toLowerCase();
+            $(".coupon-row").each(function () {
+                $(this).toggle($(this).data("code").indexOf(v) > -1);
+            });
+        });
+
+        // enable / disable
+        $(document).on("click", ".btn-toggle", function () {
+            const btn = $(this);
+            const id = btn.data("id");
+            const isActive = btn.data("active") === true || btn.data("active") === "true";
+            const next = !isActive;
+
+            Swal.fire({
+                title: next ? "Enable this coupon?" : "Disable this coupon?",
+                icon: "question",
+                showCancelButton: true,
+                confirmButtonColor: PURPLE,
+                confirmButtonText: next ? "Enable" : "Disable"
+            }).then(r => {
+                if (!r.isConfirmed) return;
+                $.ajax({
+                    url: '/Coupon/ToggleStatus',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ CouponID: id, IsActive: next }),
+                    success: function (res) {
+                        if (res.success) {
+                            Swal.fire({ icon: "success", title: res.message, timer: 1200, showConfirmButton: false })
+                                .then(() => location.reload());
+                        } else {
+                            Swal.fire("Failed", res.message, "error");
+                        }
+                    },
+                    error: function () { Swal.fire("Error", "Request failed.", "error"); }
+                });
+            });
+        });
+
+        // delete
+        $(document).on("click", ".btn-delete", function () {
+            const id = $(this).data("id");
+            const code = $(this).data("code");
+
+            Swal.fire({
+                title: "Delete coupon?",
+                html: "Coupon <b>" + code + "</b> will be permanently removed.",
+                icon: "warning",
+                showCancelButton: true,
+                confirmButtonColor: "#dc3545",
+                confirmButtonText: "Delete"
+            }).then(r => {
+                if (!r.isConfirmed) return;
+                $.ajax({
+                    url: '/Coupon/Delete',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ CouponID: id }),
+                    success: function (res) {
+                        if (res.success) {
+                            Swal.fire({ icon: "success", title: res.message, timer: 1200, showConfirmButton: false })
+                                .then(() => location.reload());
+                        } else {
+                            Swal.fire("Cannot delete", res.message, "info");
+                        }
+                    },
+                    error: function () { Swal.fire("Error", "Request failed.", "error"); }
+                });
+            });
+        });
+    </script>
+}

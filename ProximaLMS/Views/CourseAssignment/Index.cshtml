@@ -1,0 +1,257 @@
+@model IEnumerable<ProximaLMS.Models.StudentViewModel>
+@{
+    ViewData["Title"] = "Assign Courses to Students";
+    Layout = "_Layout";
+
+    string[] avatarColors = { "#4C1864", "#7B2CBF", "#2563eb", "#059669", "#d97706", "#dc2626", "#0891b2", "#7c3aed" };
+
+    var studentList  = Model?.ToList() ?? new List<ProximaLMS.Models.StudentViewModel>();
+    var activeList   = studentList.Where(s => s.IsActive).ToList();
+    int totalCount   = studentList.Count;
+    int activeCount  = activeList.Count;
+    int inactiveCount = totalCount - activeCount;
+}
+
+<style>
+    :root { --grape:#4C1864; --violet:#7B2CBF; --bg:#f0ebfa; --border:#ede9f8; --text-h:#1a1035; --text-s:#6b7280; }
+    body { background: var(--bg) !important; }
+    .container-fluid { padding: 0 !important; }
+
+    /* ── HERO ── */
+    .ca-hero {
+        background: linear-gradient(135deg, #2d0f4e 0%, var(--grape) 45%, var(--violet) 100%);
+        padding: 30px 36px 88px; position: relative; overflow: hidden;
+    }
+    .ca-hero::before {
+        content: ''; position: absolute; width: 340px; height: 340px;
+        background: radial-gradient(circle, rgba(123,44,191,.35) 0%, transparent 68%);
+        top: -80px; right: -50px; border-radius: 50%;
+    }
+    .hero-inner {
+        display: flex; align-items: center; justify-content: space-between;
+        position: relative; z-index: 2; flex-wrap: wrap; gap: 14px;
+    }
+    .hero-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:2.5px; color:rgba(255,255,255,.45); margin-bottom:6px; }
+    .hero-title { font-size:24px; font-weight:800; color:#fff; margin:0 0 4px; }
+    .hero-sub   { font-size:13px; color:rgba(255,255,255,.55); margin:0; }
+
+    .btn-back {
+        background:rgba(255,255,255,.12); color:#fff;
+        border:1px solid rgba(255,255,255,.25); padding:10px 18px;
+        border-radius:11px; font-size:13px; font-weight:600;
+        text-decoration:none; display:flex; align-items:center; gap:7px; transition:background .2s;
+    }
+    .btn-back:hover { background:rgba(255,255,255,.2); color:#fff; }
+
+    /* ── BODY ── */
+    .ca-body { padding:0 36px 48px; margin-top:-60px; position:relative; z-index:10; }
+
+    /* ── STAT CARDS ── */
+    .stats-row { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:22px; }
+    @@media (max-width:700px) { .stats-row { grid-template-columns:1fr; } }
+    .sc {
+        background:#fff; border-radius:16px; border:1.5px solid var(--border);
+        box-shadow:0 4px 18px rgba(76,24,100,.09);
+        padding:16px 20px; display:flex; align-items:center; gap:14px;
+        transition:transform .2s;
+    }
+    .sc:hover { transform:translateY(-3px); }
+    .si { width:44px; height:44px; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0; }
+    .si-p { background:#ede9f8; color:var(--grape); }
+    .si-g { background:#d1fae5; color:#059669; }
+    .si-b { background:#dbeafe; color:#1d4ed8; }
+    .sn { font-size:26px; font-weight:900; color:var(--text-h); line-height:1; }
+    .sl { font-size:11px; font-weight:700; color:var(--text-s); text-transform:uppercase; letter-spacing:.5px; margin-top:2px; }
+
+    /* ── TOOLBAR ── */
+    .toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px; }
+    .search-wrap { position:relative; }
+    .search-wrap i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#aaa; font-size:13px; pointer-events:none; }
+    .srch {
+        border:1.5px solid var(--border); border-radius:10px;
+        padding:10px 12px 10px 34px; width:260px; font-size:13px;
+        background:#fff; outline:none; transition:border-color .2s, box-shadow .2s;
+    }
+    .srch:focus { border-color:var(--violet); box-shadow:0 0 0 3px rgba(123,44,191,.1); }
+    .count-tag {
+        font-size:13px; color:var(--text-s); background:#fff;
+        padding:8px 16px; border-radius:9px; border:1.5px solid var(--border);
+        font-weight:600; display:flex; align-items:center; gap:6px;
+    }
+
+    /* ── STUDENT CARDS GRID ── */
+    .students-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:18px; }
+
+    .student-card {
+        background:#fff; border-radius:18px; border:1.5px solid var(--border);
+        box-shadow:0 4px 16px rgba(76,24,100,.07);
+        overflow:hidden; display:flex; flex-direction:column;
+        transition:transform .2s, box-shadow .2s, border-color .2s;
+    }
+    .student-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px rgba(76,24,100,.13); border-color:#c4b5f4; }
+
+    .sc-top {
+        padding:16px 18px 14px; display:flex; align-items:center; gap:14px;
+        border-bottom:1px solid #f3f4f6;
+    }
+    .sc-avatar {
+        width:50px; height:50px; border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        font-size:21px; font-weight:800; color:#fff; flex-shrink:0;
+    }
+    .sc-name  { font-size:15px; font-weight:700; color:var(--text-h); }
+    .sc-email { font-size:12px; color:#9ca3af; margin-top:2px; }
+
+    .sc-meta { padding:12px 18px; display:flex; gap:8px; flex-wrap:wrap; border-bottom:1px solid #f3f4f6; }
+    .meta-chip { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:700; padding:4px 10px; border-radius:8px; }
+    .chip-g    { background:#ede9f8; color:var(--grape); }
+    .chip-act  { background:#d1fae5; color:#059669; }
+    .chip-ina  { background:#fee2e2; color:#dc2626; }
+
+    .sc-footer { padding:14px 18px; margin-top:auto; }
+    .btn-assign {
+        display:flex; width:100%; justify-content:center; align-items:center; gap:8px;
+        background:linear-gradient(90deg,var(--grape),var(--violet));
+        color:#fff; border:none; padding:11px; border-radius:11px;
+        font-size:13px; font-weight:700; cursor:pointer; text-decoration:none;
+        transition:opacity .2s, transform .15s;
+    }
+    .btn-assign:hover { opacity:.88; color:#fff; transform:scale(.99); }
+
+    /* ── EMPTY ── */
+    .empty-state {
+        background:#fff; border-radius:18px; border:2px dashed var(--border);
+        padding:64px 40px; text-align:center;
+    }
+    .empty-state i { font-size:52px; color:#d4b8f0; display:block; margin-bottom:14px; }
+    .empty-state h5 { color:var(--text-h); font-weight:700; }
+    .empty-state p  { color:var(--text-s); font-size:13px; }
+</style>
+
+<div class="container-fluid">
+
+    <!-- HERO -->
+    <div class="ca-hero">
+        <div class="hero-inner">
+            <div>
+                <div class="hero-label">Administration</div>
+                <h1 class="hero-title"><i class="fas fa-graduation-cap me-2" style="opacity:.7;"></i>Course Assignment</h1>
+                <p class="hero-sub">Select a student to assign or remove courses from their learning path.</p>
+            </div>
+            <a asp-controller="Dashboard" asp-action="Index" class="btn-back">
+                <i class="fas fa-arrow-left"></i> Dashboard
+            </a>
+        </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="ca-body">
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="sc">
+                <div class="si si-p"><i class="fas fa-users"></i></div>
+                <div><div class="sn">@totalCount</div><div class="sl">Total Students</div></div>
+            </div>
+            <div class="sc">
+                <div class="si si-g"><i class="fas fa-circle-check"></i></div>
+                <div><div class="sn">@activeCount</div><div class="sl">Active</div></div>
+            </div>
+            <div class="sc">
+                <div class="si si-b"><i class="fas fa-book-open"></i></div>
+                <div><div class="sn">—</div><div class="sl">Select student to assign</div></div>
+            </div>
+        </div>
+
+        @if (TempData["Error"] != null)
+        {
+            <div style="background:#fee2e2;color:#dc2626;padding:12px 18px;border-radius:10px;margin-bottom:16px;font-size:14px;font-weight:600;">
+                <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+            </div>
+        }
+
+        <!-- Toolbar -->
+        <div class="toolbar">
+            <div class="search-wrap">
+                <i class="fas fa-search"></i>
+                <input type="text" id="studentSearch" class="srch" placeholder="Search students…" />
+            </div>
+            <div class="count-tag">
+                <i class="fas fa-filter" style="font-size:11px;color:var(--violet);"></i>
+                <span id="visibleCount">@activeCount</span> students shown
+            </div>
+        </div>
+
+        <!-- Student Grid (active students only) -->
+        @if (activeList.Any())
+        {
+            <div class="students-grid" id="studentGrid">
+                @for (int i = 0; i < activeList.Count; i++)
+                {
+                    var student = activeList[i];
+                    var initial = string.IsNullOrWhiteSpace(student.Name) ? "?" : student.Name.Trim()[0].ToString().ToUpper();
+                    var color   = avatarColors[i % avatarColors.Length];
+                    <div class="student-card s-item"
+                         data-name="@student.Name?.ToLower()"
+                         data-email="@student.Email?.ToLower()">
+
+                        <div class="sc-top">
+                            <div class="sc-avatar" style="background:@color;">@initial</div>
+                            <div>
+                                <div class="sc-name">@student.Name</div>
+                                <div class="sc-email">@student.Email</div>
+                            </div>
+                        </div>
+
+                        <div class="sc-meta">
+                            @if (!string.IsNullOrWhiteSpace(student.Gender))
+                            {
+                                <span class="meta-chip chip-g">
+                                    <i class="fas fa-venus-mars" style="font-size:10px;"></i>@student.Gender
+                                </span>
+                            }
+                            <span class="meta-chip @(student.IsActive ? "chip-act" : "chip-ina")">
+                                <i class="fas fa-circle" style="font-size:7px;"></i>
+                                @(student.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </div>
+
+                        <div class="sc-footer">
+                            <a asp-action="Assign" asp-route-id="@student.ID" class="btn-assign">
+                                <i class="fas fa-book-open"></i> Assign Courses
+                            </a>
+                        </div>
+
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-users"></i>
+                <h5>No Active Students Found</h5>
+                <p>No active students are registered in the system yet.<br>
+                   Check the <a asp-controller="Master" asp-action="StudentList" style="color:var(--violet);">Student List</a> to manage student status.</p>
+            </div>
+        }
+
+    </div><!-- /ca-body -->
+</div>
+
+<script>
+    const searchInput  = document.getElementById('studentSearch');
+    const visibleCount = document.getElementById('visibleCount');
+
+    searchInput.addEventListener('input', function () {
+        const q = this.value.toLowerCase().trim();
+        const items = document.querySelectorAll('.s-item');
+        let visible = 0;
+        items.forEach(el => {
+            const match = !q || el.dataset.name?.includes(q) || el.dataset.email?.includes(q);
+            el.style.display = match ? '' : 'none';
+            if (match) visible++;
+        });
+        visibleCount.textContent = visible;
+    });
+</script>

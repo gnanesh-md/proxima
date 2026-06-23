@@ -1,0 +1,415 @@
+@model ProximaLMS.Models.BulkAssignPageViewModel
+@{
+    ViewData["Title"] = "Bulk Course Assignment";
+    Layout = "_Layout";
+}
+
+<style>
+    :root {
+        --grape:#4C1864; --grape-2:#7B2CBF; --ink:#1f1d2b;
+        --muted:#6b7280; --border:#e7e5ee; --ok:#16a34a; --amber:#d97706;
+    }
+    .bk-wrap { max-width:1180px; margin:0 auto; }
+    .bk-head {
+        display:flex; align-items:center; gap:14px; margin-bottom:20px;
+        background:linear-gradient(120deg,var(--grape),var(--grape-2));
+        color:#fff; border-radius:14px; padding:18px 24px;
+        box-shadow:0 12px 30px rgba(76,24,100,.25);
+    }
+    .bk-head h1 { font-size:1.3rem; font-weight:800; margin:0; }
+    .bk-head .sub { opacity:.9; font-size:.85rem; margin-top:3px; }
+    .bk-mode {
+        margin-left:auto; background:rgba(255,255,255,.18);
+        font-size:.74rem; font-weight:700; padding:6px 14px; border-radius:999px;
+        border:1px solid rgba(255,255,255,.3); white-space:nowrap;
+    }
+
+    .bk-grid { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    @@media (max-width:900px){ .bk-grid { grid-template-columns:1fr; } }
+
+    .bk-panel { background:#fff; border:1px solid var(--border); border-radius:14px; box-shadow:0 6px 18px rgba(10,20,40,.05); display:flex; flex-direction:column; min-height:420px; }
+    .bk-panel-h { padding:14px 18px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+    .bk-panel-h h3 { margin:0; font-weight:800; color:var(--ink); font-size:1rem; }
+    .bk-count { margin-left:auto; font-size:.74rem; font-weight:700; color:var(--grape); background:#f4f1fa; padding:3px 10px; border-radius:999px; }
+
+    .bk-search {
+        padding:12px 18px 0;
+    }
+    .bk-search input {
+        width:100%; padding:8px 12px 8px 32px; border:1.5px solid #ede9f8; border-radius:9px;
+        font-size:.86rem; background:#faf9fc url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2398a2b3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>") no-repeat 11px center;
+        background-size:13px; outline:none;
+    }
+    .bk-search input:focus { border-color:var(--grape-2); background-color:#fff; }
+
+    .bk-list { flex:1; overflow-y:auto; padding:10px 8px 16px; max-height:480px; }
+    .bk-item {
+        display:flex; align-items:center; gap:11px; padding:9px 12px; border-radius:9px; cursor:pointer; transition:.12s;
+    }
+    .bk-item:hover { background:#faf9fc; }
+    .bk-item input[type=checkbox] {
+        width:16px; height:16px; cursor:pointer; accent-color:var(--grape-2);
+    }
+    .bk-item.picked { background:#f4f1fa; }
+    .bk-item .ttl { font-weight:600; color:var(--ink); font-size:.88rem; }
+    .bk-item .sub { color:var(--muted); font-size:.74rem; margin-top:1px; }
+    .bk-item .grow { flex:1; min-width:0; }
+    .bk-item .ttl, .bk-item .sub { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+    .bk-tools { padding:10px 18px; border-top:1px solid var(--border); display:flex; gap:8px; align-items:center; font-size:.78rem; }
+    .bk-link { color:var(--grape); font-weight:600; cursor:pointer; text-decoration:none; }
+    .bk-link:hover { text-decoration:underline; }
+    .bk-empty { padding:32px 16px; text-align:center; color:var(--muted); font-size:.85rem; }
+
+    .bk-footer {
+        margin-top:18px; background:#fff; border:1px solid var(--border); border-radius:14px;
+        padding:18px 22px; box-shadow:0 6px 18px rgba(10,20,40,.05);
+    }
+    .bk-footer-row { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; align-items:end; }
+    @@media (max-width:800px){ .bk-footer-row { grid-template-columns:1fr; } }
+    .bk-field label { font-weight:600; font-size:.78rem; color:#344054; margin-bottom:5px; display:block; }
+    .bk-field input[type=date], .bk-field textarea {
+        width:100%; padding:8px 11px; border:1px solid #d6d9e0; border-radius:8px; font-size:.88rem;
+    }
+    .bk-field input[type=date]:focus, .bk-field textarea:focus {
+        outline:none; border-color:var(--grape-2); box-shadow:0 0 0 3px rgba(123,44,191,.12);
+    }
+    .bk-flag { display:flex; align-items:center; gap:9px; font-size:.85rem; font-weight:600; cursor:pointer; user-select:none; padding:8px 0; }
+    .bk-flag input { width:17px; height:17px; accent-color:var(--grape-2); }
+
+    .bk-summary {
+        margin-top:16px; padding:12px 16px; background:linear-gradient(120deg,#faf9fc,#fff);
+        border:1px dashed var(--border); border-radius:11px; font-size:.85rem; color:var(--muted);
+    }
+    .bk-summary b { color:var(--ink); }
+    .bk-summary i.warn { color:var(--amber); }
+
+    .bk-actions { margin-top:16px; display:flex; gap:10px; justify-content:flex-end; }
+    .btn-g { background:linear-gradient(90deg,var(--grape),var(--grape-2)); color:#fff; border:none; padding:10px 22px; border-radius:9px; font-weight:700; cursor:pointer; font-size:.9rem; }
+    .btn-g:disabled { opacity:.55; cursor:not-allowed; }
+    .btn-o { background:#fff; border:1px solid var(--border); color:var(--ink); padding:10px 20px; border-radius:9px; font-weight:700; cursor:pointer; font-size:.9rem; }
+    .btn-o:hover { border-color:var(--grape-2); color:var(--grape); }
+</style>
+
+<div class="bk-wrap">
+    <div class="bk-head">
+        <div>
+            <h1><i class="fa-solid fa-list-check"></i> Bulk Course Assignment</h1>
+            <div class="sub">
+                Pick courses and people. Already-enrolled pairs are skipped automatically.
+            </div>
+        </div>
+        <span class="bk-mode">
+            @if (Model.IsManager)
+            {
+                <i class="fa-solid fa-people-group"></i> <span>Team mode · @Model.TeamSize member@(Model.TeamSize == 1 ? "" : "s")</span>
+            }
+            else
+            {
+                <i class="fa-solid fa-user-shield"></i> <span>Admin mode · all students</span>
+            }
+        </span>
+    </div>
+
+    <div class="bk-grid">
+        <!-- COURSES -->
+        <div class="bk-panel">
+            <div class="bk-panel-h">
+                <i class="fa-solid fa-book" style="color:var(--grape-2);"></i>
+                <h3>Courses</h3>
+                <span class="bk-count" id="courseCount">0 selected</span>
+            </div>
+            <div class="bk-search"><input id="courseSearch" placeholder="Search courses…" /></div>
+            <div class="bk-list" id="courseList"><div class="bk-empty">Loading courses…</div></div>
+            <div class="bk-tools">
+                <a class="bk-link" onclick="selectAll('course', true)">Select all</a>
+                <span style="color:var(--border);">·</span>
+                <a class="bk-link" onclick="selectAll('course', false)">Clear</a>
+            </div>
+        </div>
+
+        <!-- PEOPLE -->
+        <div class="bk-panel">
+            <div class="bk-panel-h">
+                <i class="fa-solid fa-user-group" style="color:var(--grape-2);"></i>
+                <h3>Assignees</h3>
+                <span class="bk-count" id="personCount">0 selected</span>
+            </div>
+            <div class="bk-search"><input id="personSearch" placeholder="Search people…" /></div>
+            <div class="bk-list" id="personList"><div class="bk-empty">Loading people…</div></div>
+            <div class="bk-tools">
+                <a class="bk-link" onclick="selectAll('person', true)">Select all visible</a>
+                <span style="color:var(--border);">·</span>
+                <a class="bk-link" onclick="selectAll('person', false)">Clear</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="bk-footer">
+        <div class="bk-footer-row">
+            <div class="bk-field">
+                <label for="dueDate"><i class="fa-regular fa-calendar"></i> Due date <span style="font-weight:400;color:var(--muted);">(optional)</span></label>
+                <input id="dueDate" type="date" />
+            </div>
+            <div class="bk-field">
+                <label class="bk-flag" style="margin-top:22px;">
+                    <input id="mandatory" type="checkbox" />
+                    <span><i class="fa-solid fa-flag" style="color:var(--amber);"></i> Mark as mandatory</span>
+                </label>
+            </div>
+            <div class="bk-field">
+                <label class="bk-flag" style="margin-top:22px;">
+                    <input id="sendEmail" type="checkbox" checked />
+                    <span><i class="fa-regular fa-envelope" style="color:var(--grape);"></i> Notify by email</span>
+                </label>
+            </div>
+        </div>
+
+        <div class="bk-field" style="margin-top:14px;">
+            <label for="note">Note for assignees <span style="font-weight:400;color:var(--muted);">(optional, shown in the assignment record)</span></label>
+            <textarea id="note" rows="2" placeholder="e.g. Complete before quarterly review"></textarea>
+        </div>
+
+        <div class="bk-summary" id="summary">
+            Select at least one course and one assignee to continue.
+        </div>
+
+        <div class="bk-actions">
+            <button class="btn-o" type="button" onclick="resetForm()"><i class="fa-solid fa-rotate-left"></i> Reset</button>
+            <button class="btn-g" id="btnAssign" type="button" onclick="submitAssign()" disabled>
+                <i class="fa-solid fa-paper-plane"></i> Assign
+            </button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const URL_COURSES   = '@Url.Action("Courses","CourseAssignment")';  // MVC proxy → api/course/list
+        const URL_PEOPLE    = '@Url.Action("AssigneeList","CourseAssignment")';
+        const URL_SUBMIT    = '@Url.Action("BulkAssign","CourseAssignment")';
+
+        const esc = s => (s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+        const truthy = v => v===true||v===1||v==='1';
+
+        let COURSES = [];
+        let PEOPLE  = [];
+
+        // ── load ──────────────────────────────────────────────────
+        async function init() {
+            try {
+                const [cRes, pRes] = await Promise.all([
+                    fetch(URL_COURSES).then(r => r.json()).catch(() => []),
+                    fetch(URL_PEOPLE ).then(r => r.json()).catch(() => [])
+                ]);
+
+                // Normalize courses — the existing project endpoint may return
+                // either a raw array or { courses:[...] }.
+                COURSES = Array.isArray(cRes) ? cRes
+                        : (cRes && Array.isArray(cRes.courses)) ? cRes.courses
+                        : [];
+                // and tolerate active-only filtering on the client
+                COURSES = COURSES.filter(c => c.isActive === undefined || truthy(c.isActive));
+
+                PEOPLE  = Array.isArray(pRes) ? pRes : [];
+
+                renderCourses();
+                renderPeople();
+            } catch (e) {
+                Swal.fire({icon:'error', title:'Load failed', text:e.message, confirmButtonColor:'#4C1864'});
+            }
+        }
+
+        // ── render ────────────────────────────────────────────────
+        function renderCourses(filter) {
+            const box = document.getElementById('courseList');
+            const q = (filter || '').toLowerCase().trim();
+            const rows = COURSES.filter(c =>
+                !q || (c.courseTitle || c.title || '').toLowerCase().includes(q));
+
+            if (rows.length === 0) { box.innerHTML = '<div class="bk-empty">No courses found.</div>'; return; }
+
+            box.innerHTML = rows.map(c => {
+                const id    = c.courseID ?? c.CourseID ?? c.id;
+                const title = c.courseTitle ?? c.CourseTitle ?? c.title ?? ('Course #' + id);
+                const sub   = c.courseLevelName || c.language || '';
+                const price = (c.price !== undefined) ? (c.price > 0 ? '₹' + Number(c.price).toLocaleString('en-IN') : 'Free') : '';
+                return `
+                <label class="bk-item" data-course-id="${id}">
+                    <input type="checkbox" data-kind="course" data-id="${id}" onchange="onPick(this)" />
+                    <div class="grow">
+                        <div class="ttl">${esc(title)}</div>
+                        <div class="sub">${esc(sub)} ${price ? '· ' + price : ''}</div>
+                    </div>
+                </label>`;
+            }).join('');
+            refreshSelectionStyles('course');
+        }
+
+        function renderPeople(filter) {
+            const box = document.getElementById('personList');
+            const q = (filter || '').toLowerCase().trim();
+            const rows = PEOPLE.filter(p =>
+                !q || ((p.email || p.Email || '').toLowerCase().includes(q)
+                    || (p.name  || p.Name  || '').toLowerCase().includes(q)));
+
+            if (rows.length === 0) { box.innerHTML = '<div class="bk-empty">No people found.</div>'; return; }
+
+            box.innerHTML = rows.map(p => {
+                const id    = p.employeeID ?? p.EmployeeID ?? p.id ?? p.ID ?? p.userID;
+                const email = p.email ?? p.Email ?? '';
+                const name  = p.name  ?? p.Name  ?? '';
+                const mob   = p.mobileNumber ?? p.MobileNumber ?? '';
+                return `
+                <label class="bk-item" data-person-id="${id}">
+                    <input type="checkbox" data-kind="person" data-id="${id}" onchange="onPick(this)" />
+                    <div class="grow">
+                        <div class="ttl">${esc(name || email)}</div>
+                        <div class="sub">${esc(email)}${mob ? ' · ' + esc(mob) : ''}</div>
+                    </div>
+                </label>`;
+            }).join('');
+            refreshSelectionStyles('person');
+        }
+
+        function refreshSelectionStyles(kind) {
+            document.querySelectorAll(`[data-kind="${kind}"]`).forEach(chk => {
+                chk.closest('.bk-item').classList.toggle('picked', chk.checked);
+            });
+        }
+
+        // ── selection ────────────────────────────────────────────
+        function pickedIds(kind) {
+            return [...document.querySelectorAll(`[data-kind="${kind}"]:checked`)]
+                   .map(i => parseInt(i.dataset.id, 10));
+        }
+
+        function onPick(el) {
+            el.closest('.bk-item').classList.toggle('picked', el.checked);
+            updateSummary();
+        }
+
+        function selectAll(kind, state) {
+            // visible only (search-filtered) — intentional
+            document.querySelectorAll(`[data-kind="${kind}"]`).forEach(chk => {
+                chk.checked = state;
+                chk.closest('.bk-item').classList.toggle('picked', state);
+            });
+            updateSummary();
+        }
+
+        function updateSummary() {
+            const cIds = pickedIds('course');
+            const pIds = pickedIds('person');
+            document.getElementById('courseCount').textContent = cIds.length + ' selected';
+            document.getElementById('personCount').textContent = pIds.length + ' selected';
+
+            const pairs = cIds.length * pIds.length;
+            const btn   = document.getElementById('btnAssign');
+            const sum   = document.getElementById('summary');
+
+            if (cIds.length === 0 || pIds.length === 0) {
+                sum.innerHTML = 'Select at least one course and one assignee to continue.';
+                btn.disabled = true; return;
+            }
+
+            const due = document.getElementById('dueDate').value;
+            const mand = document.getElementById('mandatory').checked;
+            const email = document.getElementById('sendEmail').checked;
+
+            sum.innerHTML = `Ready to create up to <b>${pairs}</b> assignment${pairs === 1 ? '' : 's'} `
+                          + `(<b>${pIds.length}</b> ${pIds.length === 1 ? 'person' : 'people'} × <b>${cIds.length}</b> course${cIds.length === 1 ? '' : 's'}). `
+                          + (due ? `Due <b>${due}</b>. ` : 'No due date. ')
+                          + (mand ? '<i class="warn">Mandatory.</i> ' : '')
+                          + (email ? 'Email notifications will be sent.' : 'Email notifications are OFF.');
+            btn.disabled = false;
+        }
+
+        ['dueDate','mandatory','sendEmail'].forEach(id =>
+            document.getElementById(id).addEventListener('change', updateSummary));
+
+        document.getElementById('courseSearch').addEventListener('input', e => renderCourses(e.target.value));
+        document.getElementById('personSearch').addEventListener('input', e => renderPeople(e.target.value));
+
+        // ── submit ───────────────────────────────────────────────
+        async function submitAssign() {
+            const cIds = pickedIds('course');
+            const pIds = pickedIds('person');
+            if (cIds.length === 0 || pIds.length === 0) return;
+
+            const body = {
+                StudentIDs:  pIds,
+                CourseIDs:   cIds,
+                DueDate:     document.getElementById('dueDate').value || null,
+                IsMandatory: document.getElementById('mandatory').checked,
+                Note:        document.getElementById('note').value.trim() || null,
+                SendEmails:  document.getElementById('sendEmail').checked
+            };
+
+            const confirm = await Swal.fire({
+                title: 'Create assignments?',
+                html: `<div style="color:#475467;font-size:14px;">Up to <b>${cIds.length * pIds.length}</b> assignment${cIds.length*pIds.length===1?'':'s'} will be created. Already-enrolled pairs are skipped.</div>`,
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonColor: '#4C1864',
+                confirmButtonText: 'Yes, assign'
+            });
+            if (!confirm.isConfirmed) return;
+
+            const btn = document.getElementById('btnAssign');
+            btn.disabled = true;
+            const orig = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Assigning…';
+
+            try {
+                const resp = await fetch(URL_SUBMIT, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const d = await resp.json();
+                if (d.success === false) {
+                    Swal.fire({icon:'error', title:'Failed', text:d.message || 'Could not assign.', confirmButtonColor:'#4C1864'});
+                } else {
+                    const s = d.summary || {};
+                    const created = s.pairsCreated ?? 0;
+                    const skipped = s.pairsSkippedAlreadyEnrolled ?? 0;
+                    const queued  = d.emailsQueued ?? 0;
+                    await Swal.fire({
+                        icon: 'success',
+                        title: 'Assignments saved',
+                        html: `
+                            <div style="font-size:14px;text-align:left;color:#1f1d2b;">
+                              <div>✅ Created: <b>${created}</b></div>
+                              <div>⏭️ Skipped (already enrolled): <b>${skipped}</b></div>
+                              ${queued > 0 ? `<div>📧 Emails queued: <b>${queued}</b></div>` : ''}
+                            </div>`,
+                        confirmButtonColor: '#4C1864'
+                    });
+                    resetForm();
+                }
+            } catch (e) {
+                Swal.fire({icon:'error', title:'Error', text:e.message, confirmButtonColor:'#4C1864'});
+            } finally {
+                btn.innerHTML = orig;
+                updateSummary();
+            }
+        }
+
+        function resetForm() {
+            selectAll('course', false);
+            selectAll('person', false);
+            document.getElementById('dueDate').value = '';
+            document.getElementById('mandatory').checked = false;
+            document.getElementById('sendEmail').checked = true;
+            document.getElementById('note').value = '';
+            document.getElementById('courseSearch').value = '';
+            document.getElementById('personSearch').value = '';
+            renderCourses(); renderPeople();
+            updateSummary();
+        }
+
+        init();
+    </script>
+}

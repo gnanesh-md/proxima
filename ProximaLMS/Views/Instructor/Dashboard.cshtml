@@ -1,0 +1,574 @@
+@model ProximaLMS.Models.InstructorDashboardViewModel
+@{
+    ViewData["Title"] = "Instructor Panel";
+    Layout = "_Layout";
+    var tname = Model.Tutor?.FullName ?? "Instructor";
+    var tini  = string.IsNullOrWhiteSpace(tname) ? "I" : tname.Trim()[0].ToString().ToUpper();
+    var now   = DateTime.Now;
+    var greeting = now.Hour < 12 ? "Good morning" : now.Hour < 17 ? "Good afternoon" : "Good evening";
+}
+
+<style>
+    :root{
+        --grape:#4C1864;--grape-2:#7B2CBF;--grape-3:#9D4EDD;
+        --ink:#1a1523;--muted:#64748b;--border:#ede9fe;--bg:#f8f5ff;
+        --green:#16a34a;--green-bg:#dcfce7;--green-text:#15803d;
+        --amber:#d97706;--amber-bg:#fef3c7;--amber-text:#92400e;
+        --red:#dc2626;--red-bg:#fee2e2;--red-text:#b91c1c;
+        --blue:#2563eb;--blue-bg:#dbeafe;--blue-text:#1e40af;
+    }
+    .ip-page{display:flex;flex-direction:column;gap:22px;}
+
+    /* HERO */
+    .ip-hero{
+        background:linear-gradient(135deg,#3b0764 0%,#4C1864 30%,#7B2CBF 65%,#9D4EDD 100%);
+        border-radius:20px;padding:28px 32px;color:#fff;
+        position:relative;overflow:hidden;
+        display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;
+    }
+    .ip-hero::before{content:'';position:absolute;top:-60px;right:-60px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.06);pointer-events:none;}
+    .ip-hero::after{content:'';position:absolute;bottom:-60px;left:25%;width:180px;height:180px;border-radius:50%;background:rgba(232,121,249,.12);pointer-events:none;}
+    .ip-hero-left{display:flex;align-items:center;gap:18px;position:relative;z-index:1;}
+    .ip-avatar{width:60px;height:60px;border-radius:50%;background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.5);display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;color:#fff;overflow:hidden;flex-shrink:0;}
+    .ip-avatar img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+    .ip-hero-eyebrow{font-size:.77rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;opacity:.7;margin:0 0 5px;}
+    .ip-hero-title{font-size:1.7rem;font-weight:800;margin:0 0 5px;line-height:1.2;}
+    .ip-hero-sub{font-size:.87rem;opacity:.85;margin:0;}
+    .ip-hero-right{position:relative;z-index:1;display:flex;gap:10px;flex-wrap:wrap;}
+    .ip-hero-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:11px;font-size:.84rem;font-weight:700;border:none;cursor:pointer;text-decoration:none;transition:.15s;}
+    .ip-hero-btn--solid{background:#fff;color:var(--grape-2);}
+    .ip-hero-btn--solid:hover{background:#f3e8ff;color:var(--grape);}
+    .ip-hero-btn--ghost{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25);}
+    .ip-hero-btn--ghost:hover{background:rgba(255,255,255,.25);color:#fff;}
+
+    /* KPI STRIP */
+    .ip-kpi-strip{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;}
+    @@media(max-width:1000px){.ip-kpi-strip{grid-template-columns:repeat(3,1fr);}}
+    @@media(max-width:600px){.ip-kpi-strip{grid-template-columns:repeat(2,1fr);}}
+    .ip-kpi{background:#fff;border-radius:14px;border:1px solid var(--border);padding:16px 18px;box-shadow:0 4px 16px rgba(76,24,100,.07);transition:transform .18s,box-shadow .18s;display:flex;flex-direction:column;gap:6px;}
+    .ip-kpi:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(76,24,100,.13);}
+    .ip-kpi-icon{width:40px;height:40px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+    .ip-kpi-val{font-size:1.6rem;font-weight:800;color:var(--ink);line-height:1;}
+    .ip-kpi-lbl{font-size:.74rem;font-weight:600;color:var(--muted);}
+
+    /* GRIDS */
+    .ip-grid-2-1{display:grid;grid-template-columns:2fr 1fr;gap:18px;}
+    .ip-grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
+    @@media(max-width:1100px){.ip-grid-2-1{grid-template-columns:1fr;}.ip-grid-2{grid-template-columns:1fr;}}
+
+    /* CARD */
+    .ip-card{background:#fff;border-radius:16px;border:1px solid var(--border);box-shadow:0 4px 18px rgba(76,24,100,.06);overflow:hidden;}
+    .ip-card-head{padding:15px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #f3f0fa;}
+    .ip-card-title{font-size:.93rem;font-weight:800;color:var(--ink);margin:0;}
+    .ip-card-sub{font-size:.74rem;color:var(--muted);margin:2px 0 0;}
+    .ip-card-body{padding:16px 20px;}
+    .ip-card-body--flush{padding:0;}
+
+    /* BUTTON */
+    .ip-btn{display:inline-flex;align-items:center;gap:5px;padding:6px 13px;border-radius:8px;font-size:.77rem;font-weight:700;cursor:pointer;border:none;transition:.15s;text-decoration:none;}
+    .ip-btn--ghost{background:transparent;border:1px solid var(--border);color:var(--muted);}
+    .ip-btn--ghost:hover{background:var(--bg);color:var(--grape-2);border-color:#c4b5fd;}
+    .ip-btn--primary{background:linear-gradient(135deg,var(--grape),var(--grape-2));color:#fff;}
+    .ip-btn--primary:hover{opacity:.92;color:#fff;}
+    .ip-btn--sm{padding:4px 10px;font-size:.72rem;}
+    .ip-btn--danger{background:var(--red-bg);color:var(--red-text);border:1px solid #fca5a5;}
+    .ip-btn--danger:hover{background:#fecaca;color:var(--red);}
+
+    /* CHART WRAP */
+    .ip-chart-wrap{position:relative;height:200px;}
+
+    /* COURSE TABLE */
+    .ip-table{width:100%;border-collapse:collapse;font-size:.83rem;}
+    .ip-table th{padding:10px 16px;color:var(--muted);font-weight:700;font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;text-align:left;background:#faf8ff;border-bottom:1px solid var(--border);}
+    .ip-table td{padding:11px 16px;color:var(--ink);border-bottom:1px solid #f9f7ff;vertical-align:middle;}
+    .ip-table tr:last-child td{border-bottom:none;}
+    .ip-table tr:hover td{background:#faf5ff;}
+    .ip-cover-thumb{width:38px;height:38px;border-radius:8px;object-fit:cover;background:linear-gradient(135deg,#ede9fe,#ddd6fe);}
+
+    /* PROG */
+    .pw{width:70px;height:5px;background:#ede9fe;border-radius:99px;overflow:hidden;}
+    .pf{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--grape-2),var(--grape-3));}
+
+    /* PILL */
+    .ip-pill{font-size:.7rem;font-weight:700;padding:3px 9px;border-radius:20px;display:inline-flex;align-items:center;gap:3px;}
+    .pill-ok{background:var(--green-bg);color:var(--green-text);}
+    .pill-warn{background:var(--amber-bg);color:var(--amber-text);}
+    .pill-err{background:var(--red-bg);color:var(--red-text);}
+    .pill-info{background:var(--blue-bg);color:var(--blue-text);}
+    .pill-grape{background:#ede9fe;color:var(--grape-2);}
+
+    /* TOGGLE SWITCH */
+    .ip-sw{position:relative;width:40px;height:22px;}
+    .ip-sw input{opacity:0;width:0;height:0;}
+    .ip-tr{position:absolute;inset:0;background:#cbd5e1;border-radius:999px;cursor:pointer;transition:.2s;}
+    .ip-tr:before{content:"";position:absolute;width:16px;height:16px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;}
+    .ip-sw input:checked+.ip-tr{background:var(--green);}
+    .ip-sw input:checked+.ip-tr:before{transform:translateX(18px);}
+
+    /* COURSE CARD (for the grid view) */
+    .ip-course-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;}
+    .ip-cc{background:#fff;border-radius:14px;border:1px solid var(--border);overflow:hidden;box-shadow:0 4px 16px rgba(76,24,100,.06);display:flex;flex-direction:column;transition:transform .18s,box-shadow .18s;}
+    .ip-cc:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(76,24,100,.12);}
+    .ip-cc-cover{height:120px;background:linear-gradient(135deg,var(--grape),var(--grape-3));position:relative;overflow:hidden;}
+    .ip-cc-cover img{width:100%;height:100%;object-fit:cover;}
+    .ip-cc-badge{position:absolute;top:8px;left:8px;font-size:.68rem;font-weight:700;padding:3px 8px;border-radius:20px;color:#fff;}
+    .ip-cc-body{padding:14px 16px;flex:1;display:flex;flex-direction:column;}
+    .ip-cc-title{font-size:.88rem;font-weight:800;color:var(--ink);margin:0 0 6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .ip-cc-chips{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:10px;}
+    .ip-cc-chip{font-size:.68rem;font-weight:600;background:#f4f1fa;color:var(--grape);padding:2px 8px;border-radius:20px;}
+    .ip-cc-meta{display:flex;gap:14px;color:var(--muted);font-size:.78rem;margin-bottom:10px;}
+    .ip-cc-meta i{margin-right:3px;color:var(--grape-2);}
+    .ip-cc-actions{display:flex;gap:6px;margin-top:auto;flex-wrap:wrap;}
+
+    /* GRADING QUEUE */
+    .gq-item{display:flex;align-items:flex-start;gap:12px;padding:12px 0;border-bottom:1px solid #f9f7ff;}
+    .gq-item:last-child{border-bottom:none;padding-bottom:0;}
+    .gq-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;background:linear-gradient(135deg,#4C1864,#7B2CBF);}
+    .gq-title{font-size:.83rem;font-weight:600;color:var(--ink);}
+    .gq-sub{font-size:.73rem;color:var(--muted);margin-top:2px;}
+
+    /* REVIEWS */
+    .rv-item{padding:12px 0;border-bottom:1px solid #f9f7ff;}
+    .rv-item:last-child{border-bottom:none;padding-bottom:0;}
+    .rv-stars{color:#f59e0b;font-size:.75rem;letter-spacing:1px;}
+    .rv-text{font-size:.81rem;color:var(--muted);margin-top:4px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+    .rv-course{font-size:.73rem;font-weight:600;color:var(--grape-2);margin-top:4px;}
+
+    /* EMPTY */
+    .ip-empty{background:#fff;border:1px dashed var(--border);border-radius:16px;padding:40px;text-align:center;color:var(--muted);}
+    .ip-empty i{font-size:36px;color:#d6cfe6;margin-bottom:10px;}
+</style>
+
+<div class="ip-page">
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <!-- HERO -->
+    <div class="ip-hero">
+        <div class="ip-hero-left">
+            <div class="ip-avatar">
+                @if (!string.IsNullOrEmpty(Model.Tutor?.ProfilePhoto))
+                {
+                    <img src="@Url.Content("~/uploads/" + Model.Tutor.ProfilePhoto)" />
+                }
+                else
+                {
+                    @tini
+                }
+            </div>
+            <div>
+                <p class="ip-hero-eyebrow">Instructor Panel</p>
+                <h1 class="ip-hero-title">@greeting, @tname!</h1>
+                <p class="ip-hero-sub"><i class="fa-solid fa-chalkboard-user" style="margin-right:5px;"></i>Manage your courses, track students and grow your audience.</p>
+            </div>
+        </div>
+        <div class="ip-hero-right">
+            <a asp-controller="Courses" asp-action="Create" class="ip-hero-btn ip-hero-btn--solid">
+                <i class="fa-solid fa-plus"></i> New Course
+            </a>
+            <a asp-controller="Exam" asp-action="Index" class="ip-hero-btn ip-hero-btn--ghost">
+                <i class="fa-solid fa-clipboard-list"></i> Exams
+            </a>
+            <a asp-controller="Instructor" asp-action="Students" class="ip-hero-btn ip-hero-btn--ghost">
+                <i class="fa-solid fa-users"></i> Students
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI STRIP -->
+    <div class="ip-kpi-strip">
+        <div class="ip-kpi">
+            <div class="ip-kpi-icon" style="background:#ede9fe;color:#7B2CBF;"><i class="fa-solid fa-book"></i></div>
+            <div class="ip-kpi-val">@Model.Stats.TotalCourses</div>
+            <div class="ip-kpi-lbl">Total Courses</div>
+        </div>
+        <div class="ip-kpi">
+            <div class="ip-kpi-icon" style="background:#dcfce7;color:#16a34a;"><i class="fa-solid fa-circle-check"></i></div>
+            <div class="ip-kpi-val" style="color:#16a34a;">@Model.Stats.PublishedCourses</div>
+            <div class="ip-kpi-lbl">Published</div>
+        </div>
+        <div class="ip-kpi">
+            <div class="ip-kpi-icon" style="background:#fef3c7;color:#d97706;"><i class="fa-solid fa-pen-ruler"></i></div>
+            <div class="ip-kpi-val" style="color:#d97706;">@Model.Stats.DraftCourses</div>
+            <div class="ip-kpi-lbl">Drafts</div>
+        </div>
+        <div class="ip-kpi">
+            <div class="ip-kpi-icon" style="background:#dbeafe;color:#2563eb;"><i class="fa-solid fa-user-graduate"></i></div>
+            <div class="ip-kpi-val" style="color:#2563eb;">@Model.Stats.TotalEnrollments</div>
+            <div class="ip-kpi-lbl">Enrollments</div>
+        </div>
+        <div class="ip-kpi">
+            <div class="ip-kpi-icon" style="background:#fce7f3;color:#db2777;"><i class="fa-solid fa-layer-group"></i></div>
+            <div class="ip-kpi-val" style="color:#db2777;">@Model.Stats.TotalLessons</div>
+            <div class="ip-kpi-lbl">Lessons</div>
+        </div>
+    </div>
+
+    <!-- CHARTS ROW -->
+    <div class="ip-grid-2-1">
+        <!-- Enrollment chart -->
+        <div class="ip-card">
+            <div class="ip-card-head">
+                <div>
+                    <h2 class="ip-card-title"><i class="fa-solid fa-chart-line" style="color:var(--grape-2);margin-right:7px;"></i>Student Enrollment Trend</h2>
+                    <p class="ip-card-sub">New enrollments over the last 6 months</p>
+                </div>
+                <span class="ip-pill pill-grape"><i class="fa-solid fa-circle" style="font-size:6px;"></i>Enrollments</span>
+            </div>
+            <div class="ip-card-body">
+                <div class="ip-chart-wrap"><canvas id="enrollChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Completion donut -->
+        <div class="ip-card">
+            <div class="ip-card-head">
+                <h2 class="ip-card-title"><i class="fa-solid fa-chart-pie" style="color:#2563eb;margin-right:7px;"></i>Course Performance</h2>
+            </div>
+            <div class="ip-card-body" style="text-align:center;">
+                <div style="height:140px;"><canvas id="perfChart"></canvas></div>
+                <div style="display:flex;justify-content:center;gap:14px;margin-top:10px;flex-wrap:wrap;">
+                    <span style="font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:5px;">
+                        <span style="width:10px;height:10px;border-radius:50%;background:#7B2CBF;display:inline-block;"></span>Published
+                    </span>
+                    <span style="font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:5px;">
+                        <span style="width:10px;height:10px;border-radius:50%;background:#cbd5e1;display:inline-block;"></span>Draft
+                    </span>
+                </div>
+                <div style="margin-top:14px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <div style="background:#faf8ff;border-radius:10px;padding:10px;border:1px solid var(--border);">
+                        <div style="font-size:1.3rem;font-weight:800;color:var(--grape-2);">@Model.Stats.TotalEnrollments</div>
+                        <div style="font-size:.72rem;color:var(--muted);">Total enrolled</div>
+                    </div>
+                    <div style="background:#faf8ff;border-radius:10px;padding:10px;border:1px solid var(--border);">
+                        <div style="font-size:1.3rem;font-weight:800;color:#16a34a;">@(Model.Stats.TotalCourses > 0 ? Math.Round((double)Model.Stats.PublishedCourses / Model.Stats.TotalCourses * 100) : 0)%</div>
+                        <div style="font-size:.72rem;color:var(--muted);">Published rate</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- COURSES TABLE -->
+    <div class="ip-card">
+        <div class="ip-card-head">
+            <div>
+                <h2 class="ip-card-title"><i class="fa-solid fa-book-open" style="color:#2563eb;margin-right:7px;"></i>My Courses</h2>
+                <p class="ip-card-sub">Manage content, exams and learner access</p>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button onclick="toggleView()" id="viewToggleBtn" class="ip-btn ip-btn--ghost ip-btn--sm">
+                    <i class="fa-solid fa-grip" id="viewToggleIcon"></i> Grid View
+                </button>
+                <a asp-controller="Courses" asp-action="Create" class="ip-btn ip-btn--primary ip-btn--sm">
+                    <i class="fa-solid fa-plus"></i> Add Course
+                </a>
+            </div>
+        </div>
+
+        @if (Model.Courses != null && Model.Courses.Any())
+        {
+            <!-- Table View (default) -->
+            <div id="tableView">
+                <table class="ip-table">
+                    <thead>
+                        <tr>
+                            <th>Course</th>
+                            <th>Level</th>
+                            <th>Enrolled</th>
+                            <th>Lessons</th>
+                            <th>Price</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var c in Model.Courses)
+                        {
+                            var cover = string.IsNullOrEmpty(c.CoverImage)
+                                ? Url.Content("~/assets/images/noimage.png")
+                                : Url.Content("~/uploads/" + c.CoverImage);
+                            <tr data-course-id="@c.CourseID">
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:10px;">
+                                        <img src="@cover" class="ip-cover-thumb" onerror="this.style.display='none'" />
+                                        <div style="font-weight:600;max-width:200px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@c.CourseTitle</div>
+                                    </div>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(c.CourseLevelName))
+                                    {
+                                        <span class="ip-pill pill-grape">@c.CourseLevelName</span>
+                                    }
+                                    else
+                                    {
+                                        <span style="color:var(--muted);">—</span>
+                                    }
+                                </td>
+                                <td><span style="font-weight:700;color:var(--grape-2);">@c.EnrolledCount</span></td>
+                                <td><span style="color:var(--muted);">@c.LessonCount</span></td>
+                                <td><span style="font-weight:700;">@(c.Price > 0 ? "₹" + c.Price.ToString("N0") : "Free")</span></td>
+                                <td>
+                                    <div style="display:flex;align-items:center;gap:8px;">
+                                        <label class="ip-sw">
+                                            <input type="checkbox" @(c.IsActive ? "checked" : "")
+                                                   onchange="togglePublish(@c.CourseID, this.checked)" />
+                                            <span class="ip-tr"></span>
+                                        </label>
+                                        <span class="ip-pill @(c.IsActive ? "pill-ok" : "pill-warn")" id="badge_@c.CourseID">
+                                            @(c.IsActive ? "Live" : "Draft")
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                                        <a class="ip-btn ip-btn--ghost ip-btn--sm" asp-controller="Courses" asp-action="Edit" asp-route-id="@c.CourseID" title="Edit">
+                                            <i class="fa-solid fa-pen"></i>
+                                        </a>
+                                        <a class="ip-btn ip-btn--ghost ip-btn--sm" asp-controller="Courses" asp-action="Preview" asp-route-id="@c.CourseID" title="Preview">
+                                            <i class="fa-solid fa-eye"></i>
+                                        </a>
+                                        <a class="ip-btn ip-btn--ghost ip-btn--sm" asp-controller="Exam" asp-action="Builder" asp-route-courseId="@c.CourseID" title="Exam Builder">
+                                            <i class="fa-solid fa-file-pen"></i>
+                                        </a>
+                                        <a class="ip-btn ip-btn--ghost ip-btn--sm" asp-controller="Instructor" asp-action="Students" asp-route-id="@c.CourseID" title="Students">
+                                            <i class="fa-solid fa-users"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Grid View (toggled) -->
+            <div id="gridView" style="display:none;" class="ip-card-body">
+                <div class="ip-course-grid">
+                    @foreach (var c in Model.Courses)
+                    {
+                        var cover2 = string.IsNullOrEmpty(c.CoverImage)
+                            ? Url.Content("~/assets/images/noimage.png")
+                            : Url.Content("~/uploads/" + c.CoverImage);
+                        <div class="ip-cc">
+                            <div class="ip-cc-cover">
+                                <img src="@cover2" onerror="this.style.display='none'" />
+                                <span class="ip-cc-badge @(c.IsActive ? "badge-pub" : "badge-draft")" style="background:@(c.IsActive?"#16a34a":"#9ca3af")">
+                                    @(c.IsActive ? "Published" : "Draft")
+                                </span>
+                            </div>
+                            <div class="ip-cc-body">
+                                <div class="ip-cc-title">@c.CourseTitle</div>
+                                <div class="ip-cc-chips">
+                                    @if (!string.IsNullOrEmpty(c.CourseLevelName))
+                                    {
+                                        <span class="ip-cc-chip">@c.CourseLevelName</span>
+                                    }
+                                    @if (!string.IsNullOrEmpty(c.Language))
+                                    {
+                                        <span class="ip-cc-chip">@c.Language</span>
+                                    }
+                                </div>
+                                <div class="ip-cc-meta">
+                                    <span><i class="fa-solid fa-layer-group"></i>@c.LessonCount</span>
+                                    <span><i class="fa-solid fa-users"></i>@c.EnrolledCount</span>
+                                    <span style="margin-left:auto;font-weight:700;color:var(--ink);">@(c.Price>0?"₹"+c.Price.ToString("N0"):"Free")</span>
+                                </div>
+                                <div class="ip-cc-actions">
+                                    <a class="ip-btn ip-btn--ghost ip-btn--sm" asp-controller="Courses" asp-action="Edit" asp-route-id="@c.CourseID"><i class="fa-solid fa-pen"></i> Edit</a>
+                                    <a class="ip-btn ip-btn--ghost ip-btn--sm" asp-controller="Exam" asp-action="Builder" asp-route-courseId="@c.CourseID"><i class="fa-solid fa-file-pen"></i> Exam</a>
+                                    <a class="ip-btn ip-btn--primary ip-btn--sm" asp-controller="Instructor" asp-action="Students" asp-route-id="@c.CourseID"><i class="fa-solid fa-users"></i> Students</a>
+                                </div>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="ip-empty">
+                <i class="fa-solid fa-book-open d-block"></i>
+                <h5 style="color:var(--ink);font-weight:800;margin-bottom:6px;">No courses yet</h5>
+                <p style="margin-bottom:14px;font-size:.84rem;">Create your first course to start teaching and earning.</p>
+                <a asp-controller="Courses" asp-action="Create" class="ip-btn ip-btn--primary">
+                    <i class="fa-solid fa-plus"></i> Create First Course
+                </a>
+            </div>
+        }
+    </div>
+
+    <!-- BOTTOM ROW: Pending Grading + Recent Reviews -->
+    <div class="ip-grid-2">
+
+        <!-- Pending Manual Grading -->
+        <div class="ip-card">
+            <div class="ip-card-head">
+                <div>
+                    <h2 class="ip-card-title"><i class="fa-solid fa-pen-to-square" style="color:#d97706;margin-right:7px;"></i>Pending Manual Grading</h2>
+                    <p class="ip-card-sub">Short-answer exam submissions awaiting your review</p>
+                </div>
+                <a asp-controller="Exam" asp-action="PendingGrading" class="ip-btn ip-btn--ghost ip-btn--sm">View all</a>
+            </div>
+            <div class="ip-card-body" id="gradingQueue">
+                <div style="text-align:center;padding:16px;color:var(--muted);font-size:.82rem;"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</div>
+            </div>
+        </div>
+
+        <!-- Recent Reviews -->
+        <div class="ip-card">
+            <div class="ip-card-head">
+                <div>
+                    <h2 class="ip-card-title"><i class="fa-solid fa-star" style="color:#f59e0b;margin-right:7px;"></i>Recent Reviews</h2>
+                    <p class="ip-card-sub">Student feedback on your courses</p>
+                </div>
+                <a asp-controller="ReviewModeration" asp-action="Index" class="ip-btn ip-btn--ghost ip-btn--sm">View all</a>
+            </div>
+            <div class="ip-card-body" id="recentReviews">
+                <div style="text-align:center;padding:16px;color:var(--muted);font-size:.82rem;"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function(){
+    const TOGGLE_URL = '@Url.Action("TogglePublish","Instructor")';
+    const STATS = {
+        published: @Model.Stats.PublishedCourses,
+        draft: @Model.Stats.DraftCourses
+    };
+
+    /* ── Enrollment Line Chart ── */
+    (function(){
+        const el=document.getElementById('enrollChart');
+        if(!el) return;
+        fetch('/Instructor/EnrollmentTrend').then(r=>r.json()).then(data=>{
+            const labels=data.map(d=>d.month||d.Month||'');
+            const counts=data.map(d=>d.count||d.Count||0);
+            renderChart(labels,counts);
+        }).catch(()=>{
+            const m=['Jan','Feb','Mar','Apr','May','Jun'];
+            renderChart(m,[0,0,0,0,0,0]);
+        });
+        function renderChart(labels,counts){
+            const ctx=el.getContext('2d');
+            const g=ctx.createLinearGradient(0,0,0,180);
+            g.addColorStop(0,'rgba(123,44,191,.35)');
+            g.addColorStop(1,'rgba(123,44,191,0)');
+            new Chart(el,{
+                type:'line',
+                data:{labels,datasets:[{label:'Enrollments',data:counts,borderColor:'#7B2CBF',backgroundColor:g,borderWidth:2.5,tension:.38,fill:true,pointRadius:3,pointBackgroundColor:'#7B2CBF',pointHoverRadius:6}]},
+                options:{responsive:true,maintainAspectRatio:false,
+                    plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#1a1523',bodyColor:'#64748b',borderColor:'#ede9fe',borderWidth:1}},
+                    scales:{x:{grid:{display:false},ticks:{color:'#94a3b8',font:{size:11}}},y:{grid:{color:'#f1eef7'},ticks:{color:'#94a3b8',font:{size:11}}}}
+                }
+            });
+        }
+    })();
+
+    /* ── Performance Donut ── */
+    (function(){
+        const el=document.getElementById('perfChart');
+        if(!el) return;
+        new Chart(el,{
+            type:'doughnut',
+            data:{labels:['Published','Draft'],datasets:[{data:[STATS.published,STATS.draft],backgroundColor:['#7B2CBF','#cbd5e1'],borderWidth:2,borderColor:'#fff',hoverBorderColor:'#fff'}]},
+            options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{display:false},tooltip:{backgroundColor:'#fff',titleColor:'#1a1523',bodyColor:'#64748b',borderColor:'#ede9fe',borderWidth:1}}}
+        });
+    })();
+
+    /* ── Toggle publish ── */
+    window.togglePublish = async function(courseId, makeActive){
+        const badge=document.getElementById('badge_'+courseId);
+        const input=event.target;
+        try{
+            const r=await fetch(TOGGLE_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({CourseID:courseId,IsActive:makeActive})});
+            const d=await r.json();
+            if(!d.success){ input.checked=!makeActive; Swal.fire({icon:'error',title:'Could not update',text:d.message||'Try again.',confirmButtonColor:'#4C1864'}); return; }
+            if(badge){
+                badge.textContent=makeActive?'Live':'Draft';
+                badge.className='ip-pill '+(makeActive?'pill-ok':'pill-warn');
+            }
+            Swal.mixin({toast:true,position:'top-end',showConfirmButton:false,timer:1600,timerProgressBar:true}).fire({icon:'success',title:d.message});
+        }catch(err){ input.checked=!makeActive; Swal.fire({icon:'error',title:'Network error',text:err.message,confirmButtonColor:'#4C1864'}); }
+    };
+
+    /* ── Toggle grid/table view ── */
+    window.toggleView = function(){
+        const t=document.getElementById('tableView');
+        const g=document.getElementById('gridView');
+        const btn=document.getElementById('viewToggleBtn');
+        const ic=document.getElementById('viewToggleIcon');
+        if(t.style.display!=='none'){
+            t.style.display='none'; g.style.display='';
+            btn.innerHTML='<i class="fa-solid fa-table" id="viewToggleIcon"></i> Table View';
+        } else {
+            t.style.display=''; g.style.display='none';
+            btn.innerHTML='<i class="fa-solid fa-grip" id="viewToggleIcon"></i> Grid View';
+        }
+    };
+
+    /* ── Pending Grading ── */
+    (function(){
+        const el=document.getElementById('gradingQueue');
+        const avcolors=['#7B2CBF','#2563eb','#16a34a','#d97706','#dc2626'];
+        fetch('/Exam/PendingGradingQueue?limit=5').then(r=>r.json()).then(items=>{
+            if(!items||!items.length){
+                el.innerHTML='<div style="text-align:center;padding:24px;"><div style="font-size:32px;margin-bottom:8px;">✅</div><p style="font-size:.84rem;color:#64748b;margin:0;">No submissions pending grading!</p></div>';
+                return;
+            }
+            el.innerHTML=items.map((it,i)=>{
+                const nm=it.studentName||it.StudentName||'Student';
+                const init=(nm.trim()[0]||'S').toUpperCase();
+                return `<div class="gq-item">
+                  <div class="gq-av" style="background:${avcolors[i%avcolors.length]};">${init}</div>
+                  <div style="flex:1;">
+                    <div class="gq-title">${esc(nm)}</div>
+                    <div class="gq-sub">${esc(it.examTitle||it.ExamTitle||'Exam')} · ${esc(it.courseTitle||it.CourseTitle||'')}</div>
+                    <div style="margin-top:5px;display:flex;gap:6px;align-items:center;">
+                      <span class="ip-pill pill-warn"><i class="fa-regular fa-clock"></i> Awaiting grade</span>
+                      <a href="/Exam/GradeAttempt/${it.attemptID||it.AttemptID||0}" class="ip-btn ip-btn--primary" style="padding:3px 10px;font-size:.72rem;">
+                        Grade <i class="fa-solid fa-arrow-right"></i>
+                      </a>
+                    </div>
+                  </div>
+                </div>`;
+            }).join('');
+        }).catch(()=>{
+            el.innerHTML='<div style="text-align:center;padding:16px;color:#94a3b8;font-size:.82rem;">Grading queue unavailable.</div>';
+        });
+    })();
+
+    /* ── Recent Reviews ── */
+    (function(){
+        const el=document.getElementById('recentReviews');
+        fetch('/Instructor/RecentReviews?limit=5').then(r=>r.json()).then(items=>{
+            if(!items||!items.length){
+                el.innerHTML='<div style="text-align:center;padding:24px;"><div style="font-size:32px;margin-bottom:8px;">💬</div><p style="font-size:.84rem;color:#64748b;margin:0;">No reviews yet. Keep teaching!</p></div>';
+                return;
+            }
+            el.innerHTML=items.map(rv=>{
+                const rating=Math.round(rv.rating||rv.Rating||5);
+                const stars='★'.repeat(rating)+'☆'.repeat(5-rating);
+                return `<div class="rv-item">
+                  <div class="rv-stars">${stars} <span style="color:#64748b;font-size:.73rem;font-weight:600;">${rating}.0</span></div>
+                  <div class="rv-text">${esc(rv.reviewText||rv.ReviewText||'')}</div>
+                  <div class="rv-course"><i class="fa-solid fa-book" style="margin-right:4px;"></i>${esc(rv.courseTitle||rv.CourseTitle||'')}</div>
+                </div>`;
+            }).join('');
+        }).catch(()=>{
+            el.innerHTML='<div style="text-align:center;padding:16px;color:#94a3b8;font-size:.82rem;">Reviews unavailable.</div>';
+        });
+    })();
+
+    function esc(s){ return (s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+})();
+</script>
+}

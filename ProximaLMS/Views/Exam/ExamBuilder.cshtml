@@ -1,0 +1,1066 @@
+@model ProximaLMS.Models.ExamBuilderPageViewModel
+@using Microsoft.AspNetCore.Http
+@{
+    ViewData["Title"] = "Exam Builder";
+    Layout = "_Layout";
+    // "Back to panel" target depends on who's editing:
+    // admins manage exams from the course list; instructors have their own panel.
+    var _role = Context.Session.GetInt32("RoleID") ?? 0;
+    var backUrl = _role == 1
+        ? Url.Action("CourseList", "Master")
+        : Url.Action("Index", "Instructor");
+}
+
+<style>
+    :root {
+        --grape: #4C1864;
+        --grape-2: #7B2CBF;
+        --ink: #1f1d2b;
+        --muted: #6b7280;
+        --border: #e7e5ee;
+        --ok: #16a34a;
+        --bg: #f5f3fa;
+    }
+
+    .eb-wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+    }
+
+    .eb-head {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 18px;
+        background: linear-gradient(120deg,var(--grape),var(--grape-2));
+        color: #fff;
+        border-radius: 14px;
+        padding: 16px 22px;
+    }
+
+        .eb-head h1 {
+            font-size: 1.2rem;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .eb-head .sub {
+            opacity: .9;
+            font-size: .83rem;
+        }
+
+    .eb-back {
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: .82rem;
+        opacity: .9;
+        margin-left: auto;
+    }
+
+        .eb-back:hover {
+            color: #fff;
+            opacity: 1;
+        }
+
+    .eb-grid {
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 18px;
+        align-items: start;
+    }
+
+    @@media (max-width:900px) {
+        .eb-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .eb-panel {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 6px 18px rgba(10,20,40,.05);
+    }
+
+    .eb-panel-h {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 800;
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .eb-panel-b {
+        padding: 16px;
+    }
+
+    .exam-item {
+        padding: 11px 13px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-bottom: 8px;
+        cursor: pointer;
+        transition: .15s;
+    }
+
+        .exam-item:hover {
+            border-color: var(--grape-2);
+        }
+
+        .exam-item.active {
+            border-color: var(--grape-2);
+            background: #f6f1fb;
+        }
+
+        .exam-item .t {
+            font-weight: 700;
+            color: var(--ink);
+            font-size: .9rem;
+        }
+
+        .exam-item .m {
+            font-size: .74rem;
+            color: var(--muted);
+            margin-top: 3px;
+            display: flex;
+            gap: 8px;
+        }
+
+    .pill {
+        font-size: .68rem;
+        font-weight: 700;
+        padding: 2px 8px;
+        border-radius: 999px;
+    }
+
+        .pill.pub {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .pill.draft {
+            background: #eef0f3;
+            color: #6b7280;
+        }
+
+    label.fl {
+        font-weight: 600;
+        font-size: .82rem;
+        color: #344054;
+        margin-bottom: 4px;
+        display: block;
+    }
+
+    .fc {
+        width: 100%;
+        padding: 9px 11px;
+        border: 1px solid #d6d9e0;
+        border-radius: 8px;
+        font-size: .9rem;
+    }
+
+        .fc:focus {
+            outline: none;
+            border-color: var(--grape-2);
+            box-shadow: 0 0 0 3px rgba(123,44,191,.12);
+        }
+
+    .row2 {
+        display: grid;
+        grid-template-columns: repeat(2,1fr);
+        gap: 12px;
+    }
+
+    .row3 {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: 12px;
+    }
+
+    .btn-g {
+        background: linear-gradient(90deg,var(--grape),var(--grape-2));
+        color: #fff;
+        border: none;
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: .85rem;
+    }
+
+    .btn-o {
+        background: #fff;
+        border: 1px solid var(--border);
+        color: var(--ink);
+        padding: 9px 16px;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: .85rem;
+    }
+
+        .btn-o:hover {
+            border-color: var(--grape-2);
+            color: var(--grape);
+        }
+
+    .btn-danger-o {
+        background: #fff;
+        border: 1px solid #f3c2c2;
+        color: #dc3545;
+        padding: 8px 14px;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: .82rem;
+    }
+
+    .sw {
+        position: relative;
+        width: 44px;
+        height: 24px;
+        display: inline-block;
+    }
+
+        .sw input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+    .tr {
+        position: absolute;
+        inset: 0;
+        background: #cbd5e1;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: .2s;
+    }
+
+        .tr:before {
+            content: "";
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            left: 3px;
+            top: 3px;
+            background: #fff;
+            border-radius: 50%;
+            transition: .2s;
+        }
+
+    .sw input:checked + .tr {
+        background: var(--ok);
+    }
+
+        .sw input:checked + .tr:before {
+            transform: translateX(20px);
+        }
+
+    .q-card {
+        border: 1px solid var(--border);
+        border-radius: 11px;
+        padding: 13px 14px;
+        margin-bottom: 10px;
+        background: #fff;
+    }
+
+    .q-top {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .q-grip {
+        cursor: grab;
+        color: #b6abce;
+    }
+
+    .q-type {
+        font-size: .68rem;
+        font-weight: 700;
+        color: var(--grape);
+        background: #f4f1fa;
+        padding: 2px 8px;
+        border-radius: 999px;
+    }
+
+    .q-marks {
+        font-size: .72rem;
+        color: var(--muted);
+    }
+
+    .q-text {
+        font-weight: 600;
+        color: var(--ink);
+        margin: 8px 0;
+    }
+
+    .q-opts {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+    }
+
+        .q-opts li {
+            font-size: .84rem;
+            color: #475467;
+            padding: 3px 0 3px 22px;
+            position: relative;
+        }
+
+            .q-opts li.correct {
+                color: #15803d;
+                font-weight: 600;
+            }
+
+            .q-opts li i {
+                position: absolute;
+                left: 0;
+                top: 4px;
+            }
+
+    .q-actions {
+        margin-left: auto;
+        display: flex;
+        gap: 6px;
+    }
+
+    .icon-btn {
+        border: none;
+        background: #f4f1fa;
+        color: var(--grape);
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+        .icon-btn.del {
+            background: #fbe9ec;
+            color: #dc3545;
+        }
+
+    .eb-empty {
+        text-align: center;
+        color: var(--muted);
+        padding: 30px;
+    }
+
+    #questionsSection {
+        display: none;
+    }
+
+    /* modal */
+    .ovl {
+        position: fixed;
+        inset: 0;
+        background: rgba(20,16,32,.62);
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 3000;
+        padding: 24px 16px;
+        overflow-y: auto;
+    }
+
+        .ovl.show {
+            display: flex;
+        }
+
+    .modal-card {
+        background: #fff;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 620px;
+        max-height: 90vh;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 24px 70px rgba(0,0,0,.35);
+    }
+
+    .modal-h {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 800;
+        color: var(--ink);
+        display: flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .modal-b {
+        padding: 18px 20px;
+        overflow-y: auto;
+        flex: 1 1 auto;
+    }
+
+    .modal-f {
+        padding: 14px 20px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        flex-shrink: 0;
+        background: #fff;
+    }
+
+    .opt-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+
+        .opt-row .grow {
+            flex: 1;
+        }
+
+    .opt-correct {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: .78rem;
+        color: var(--muted);
+        white-space: nowrap;
+    }
+
+    .opt-del {
+        border: none;
+        background: #fbe9ec;
+        color: #dc3545;
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .sortable-ghost {
+        opacity: .45;
+    }
+
+    /* ── Toast: keep clear of the fixed top header & readable ── */
+    .swal2-container.swal2-top-end { padding-top: 84px !important; }
+    .exb-toast {
+        min-width: 280px !important;
+        box-shadow: 0 10px 30px rgba(76, 24, 100, .18) !important;
+        border: 1px solid #ece7f8 !important;
+        border-radius: 12px !important;
+    }
+    .exb-toast .swal2-title {
+        font-size: .9rem !important;
+        line-height: 1.35 !important;
+        text-align: left !important;
+        word-break: break-word;
+    }
+</style>
+
+<div class="eb-wrap">
+    <div class="eb-head">
+        <div>
+            <h1><i class="fa-solid fa-clipboard-question"></i> Exam Builder</h1>
+            <div class="sub">@Model.CourseTitle</div>
+        </div>
+        <a href="@backUrl" class="eb-back"><i class="fa-solid fa-arrow-left"></i> Back to panel</a>
+    </div>
+
+    <div class="eb-grid">
+        <!-- LEFT: exams list -->
+        <div class="eb-panel">
+            <div class="eb-panel-h"><i class="fa-solid fa-list-check"></i> Exams</div>
+            <div class="eb-panel-b">
+                <button class="btn-g" style="width:100%;margin-bottom:12px;" onclick="newExam()">
+                    <i class="fa-solid fa-plus"></i> New Exam
+                </button>
+                <div id="examList"><div class="eb-empty">Loading…</div></div>
+            </div>
+        </div>
+
+        <!-- RIGHT: header + questions -->
+        <div>
+            <div class="eb-panel" style="margin-bottom:18px;">
+                <div class="eb-panel-h">
+                    <i class="fa-solid fa-sliders"></i> Exam Details
+                    <div style="margin-left:auto;display:flex;align-items:center;gap:8px;">
+                        <span id="pubLbl" style="font-size:.8rem;font-weight:700;color:var(--muted);">Draft</span>
+                        <label class="sw"><input type="checkbox" id="pubToggle" onchange="togglePublish(this.checked)"><span class="tr"></span></label>
+                    </div>
+                </div>
+                <div class="eb-panel-b">
+                    <input type="hidden" id="examId" value="0" />
+                    <div style="margin-bottom:12px;">
+                        <label class="fl">Exam Title *</label>
+                        <input id="exTitle" class="fc" placeholder="e.g. Final Assessment" />
+                    </div>
+                    <div style="margin-bottom:12px;">
+                        <label class="fl">Instructions</label>
+                        <textarea id="exInstr" class="fc" rows="2" placeholder="Shown to students before they begin."></textarea>
+                    </div>
+                    <div class="row3" style="margin-bottom:12px;">
+                        <div><label class="fl">Pass %</label><input id="exPass" type="number" min="0" max="100" value="50" class="fc" /></div>
+                        <div><label class="fl">Duration (min)</label><input id="exDur" type="number" min="0" value="30" class="fc" /></div>
+                        <div><label class="fl">Max Attempts</label><input id="exAttempts" type="number" min="0" value="0" class="fc" /></div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+                        <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;"><input type="checkbox" id="exShuffle" /> Shuffle question order for each student</label>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;"><input type="checkbox" id="exShuffleOpts" /> Shuffle option order per student</label>
+                        <label style="display:flex;align-items:center;gap:8px;font-size:.85rem;"><input type="checkbox" id="exReveal" /> Reveal correct answers after submission <span style="font-size:.72rem;color:var(--muted);">(students see right/wrong)</span></label>
+                    </div>
+                    <button class="btn-g" onclick="saveExam()"><i class="fa-solid fa-floppy-disk"></i> Save Details</button>
+                    <button class="btn-danger-o" id="delExamBtn" style="display:none;margin-left:8px;" onclick="deleteExam()"><i class="fa-solid fa-trash"></i> Delete Exam</button>
+                </div>
+            </div>
+
+            <div class="eb-panel" id="questionsSection">
+                <div class="eb-panel-h">
+                    <i class="fa-solid fa-circle-question"></i> Questions
+                    <span id="qSummary" style="margin-left:8px;font-size:.78rem;color:var(--muted);font-weight:600;"></span>
+                    <div style="margin-left:auto; display:flex; gap:8px;">
+                        <button class="btn-o" onclick="openBankPicker()"><i class="fa-solid fa-database"></i> Pick from Bank</button>
+                        <button class="btn-g" onclick="openEditor()"><i class="fa-solid fa-plus"></i> Add Question</button>
+                    </div>
+                </div>
+                <div class="eb-panel-b">
+                    <div id="qList"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="ovl" id="bankPickerModal">
+    <div class="modal-card" style="max-width:720px;">
+        <div class="modal-h">
+            <i class="fa-solid fa-database" style="margin-right:8px;"></i> Pick from Question Bank
+        </div>
+        <div class="modal-b">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px;">
+                <select id="bpDiff" class="fc" style="max-width:130px;" onchange="loadBankPicker()">
+                    <option value="">All difficulties</option>
+                    <option value="Easy">Easy</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Hard">Hard</option>
+                </select>
+                <select id="bpType" class="fc" style="max-width:170px;" onchange="loadBankPicker()">
+                    <option value="">All types</option>
+                    <option value="Single">MCQ</option>
+                    <option value="Multiple">Multiple</option>
+                    <option value="TrueFalse">True/False</option>
+                    <option value="FillBlank">Fill in the blank</option>
+                    <option value="ShortAnswer">Short Answer</option>
+                </select>
+                <input id="bpSearch" class="fc" style="flex:1;" placeholder="Search…" oninput="debouncedLoadBank()" />
+            </div>
+
+            <div id="bpList" style="max-height:50vh; overflow-y:auto;">
+                <div style="text-align:center; padding:30px; color:#98a2b3;">Loading…</div>
+            </div>
+        </div>
+        <div class="modal-f">
+            <span style="margin-right:auto;font-size:.8rem;color:var(--muted);" id="bpSelectedLbl">0 selected</span>
+            <button class="btn-o" onclick="closeBankPicker()">Cancel</button>
+            <button class="btn-g" onclick="addPickedToExam()"><i class="fa-solid fa-plus"></i> Add to Exam</button>
+        </div>
+    </div>
+</div>
+
+
+<!-- QUESTION EDITOR MODAL -->
+<div class="ovl" id="qModal">
+    <div class="modal-card">
+        <div class="modal-h"><i class="fa-solid fa-pen" style="margin-right:8px;"></i><span id="qModalTitle">Add Question</span></div>
+        <div class="modal-b">
+            <input type="hidden" id="qId" value="0" />
+            <div style="margin-bottom:12px;">
+                <label class="fl">Question *</label>
+                <textarea id="qText" class="fc" rows="2"></textarea>
+            </div>
+            <div class="row3" style="margin-bottom:12px;">
+                <div>
+                    <label class="fl">Type</label>
+                    <select id="qType" class="fc" onchange="onTypeChange(this.value)">
+                        <option value="Single">Single choice (one answer)</option>
+                        <option value="Multiple">Multiple choice (one or more)</option>
+                        <option value="TrueFalse">True / False</option>
+                        <option value="FillBlank">Fill in the blank</option>
+                        <option value="ShortAnswer">Short Answer (manual grading)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="fl">Difficulty</label>
+                    <select id="qDiff" class="fc">
+                        <option value="Easy">Easy</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="Hard">Hard</option>
+                    </select>
+                </div>
+                <div><label class="fl">Marks</label><input id="qMarks" type="number" min="1" value="1" class="fc" /></div>
+            </div>
+            <div id="optBlock">
+                <label class="fl">Options <span style="font-weight:400;color:#98a2b3;">— mark the correct one(s)</span></label>
+                <div id="optList"></div>
+                <button class="btn-o" id="addOptBtn" style="margin-top:6px;" onclick="addOption()"><i class="fa-solid fa-plus"></i> Add Option</button>
+            </div>
+            <div id="fillBlock" style="display:none;">
+                <label class="fl">Acceptable answers *</label>
+                <input id="qAccept" class="fc" placeholder="JavaScript|javascript|JS" />
+                <div style="font-size:.76rem;color:var(--muted);margin-top:4px;">Separate alternatives with <code style="background:#f4f1fa;padding:1px 5px;border-radius:4px;color:var(--grape);">|</code>. Case-insensitive.</div>
+            </div>
+            <div id="shortBlock" style="display:none;">
+                <div style="background:#fffaf0;border:1px solid #fde9c8;border-radius:9px;padding:11px 14px;font-size:.85rem;color:#92400e;"><i class="fa-solid fa-circle-info"></i> Short-answer responses are graded manually by the tutor.</div>
+            </div>
+            <div style="margin-top:12px;">
+                <label class="fl">Explanation <span style="font-weight:400;color:#98a2b3;">(optional — shown on result reveal)</span></label>
+                <textarea id="qExpl" class="fc" rows="2"></textarea>
+            </div>
+        </div>
+        <div class="modal-f">
+            <button class="btn-o" onclick="closeEditor()">Cancel</button>
+            <button class="btn-g" onclick="saveQuestion()"><i class="fa-solid fa-check"></i> Save Question</button>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+    <script>
+        // URLs (extend the existing U map if you prefer; standalone here for clarity)
+        const BANK_U = {
+            list: '@Url.Action("BankList", "Exam")',
+            link: '@Url.Action("BankLink", "Exam")'
+        };
+
+        // current course id is needed for the bank query — extract from the
+        // exam being edited. The existing builder loads `CURRENT.courseID` on
+        // loadExam(); we read it dynamically below.
+
+        let bpPicked = new Set();    // bank question IDs selected
+        let bpSearchTimer;
+        function debouncedLoadBank() { clearTimeout(bpSearchTimer); bpSearchTimer = setTimeout(loadBankPicker, 220); }
+
+        function openBankPicker() {
+            if (!CURRENT || !CURRENT.examID) {
+                Swal.fire({ icon: 'info', title: 'Save the exam first', text: 'Save the exam details before adding questions from the bank.', confirmButtonColor: '#4C1864' });
+                return;
+            }
+            bpPicked.clear();
+            document.getElementById('bpDiff').value = '';
+            document.getElementById('bpType').value = '';
+            document.getElementById('bpSearch').value = '';
+            document.getElementById('bpSelectedLbl').textContent = '0 selected';
+            document.getElementById('bankPickerModal').classList.add('show');
+            loadBankPicker();
+        }
+        function closeBankPicker() { document.getElementById('bankPickerModal').classList.remove('show'); }
+
+        async function loadBankPicker() {
+            const courseId = CURRENT?.courseID;
+            if (!courseId) return;
+            const qs = new URLSearchParams({
+                courseId,
+                difficulty: document.getElementById('bpDiff').value,
+                type: document.getElementById('bpType').value,
+                search: document.getElementById('bpSearch').value.trim()
+            }).toString();
+
+            let rows = await fetch(BANK_U.list + '?' + qs).then(r => r.json()).catch(() => []);
+            rows = camelKeys(rows);
+            const linkedIds = new Set((QUESTIONS || [])
+                .filter(q => q.bankQuestionID)
+                .map(q => q.bankQuestionID));
+
+            const list = document.getElementById('bpList');
+            if (!Array.isArray(rows) || rows.length === 0) {
+                list.innerHTML = '<div style="text-align:center;padding:30px;color:#98a2b3;">No questions found.</div>';
+                return;
+            }
+
+            list.innerHTML = rows.map(r => {
+                const already = linkedIds.has(r.bankQuestionID);
+                const diffCls = r.difficulty === 'Easy' ? 'b-easy' : r.difficulty === 'Hard' ? 'b-hard' : 'b-medium';
+                const typeLabel = ({ Single: 'MCQ', Multiple: 'Multi', TrueFalse: 'T/F', FillBlank: 'Fill', ShortAnswer: 'Short' })[r.questionType] || r.questionType;
+                return `
+                            <label class="opt-row" style="border:1px solid var(--border); border-radius:9px; padding:10px 12px; margin-bottom:6px; cursor:${already ? 'not-allowed' : 'pointer'}; opacity:${already ? '.5' : '1'};">
+                                <input type="checkbox" ${already ? 'disabled checked' : ''}
+                                       onchange="togglePick(${r.bankQuestionID}, this.checked)" />
+                                <div class="grow">
+                                    <div style="font-weight:600; font-size:.88rem; color:var(--ink);">${(r.questionText || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))}</div>
+                                    <div style="margin-top:4px; display:flex; gap:6px;">
+                                        <span class="badge b-type">${typeLabel}</span>
+                                        <span class="badge ${diffCls}">${r.difficulty}</span>
+                                        <span class="badge b-marks" style="background:#f4f1fa;color:var(--grape);">${r.marks} mark${r.marks > 1 ? 's' : ''}</span>
+                                        ${already ? '<span class="badge" style="background:#dbeafe;color:#1e40af;">Already added</span>' : ''}
+                                    </div>
+                                </div>
+                            </label>`;
+            }).join('');
+        }
+
+        function togglePick(id, on) {
+            if (on) bpPicked.add(id); else bpPicked.delete(id);
+            document.getElementById('bpSelectedLbl').textContent = bpPicked.size + ' selected';
+        }
+
+        async function addPickedToExam() {
+            if (bpPicked.size === 0) { closeBankPicker(); return; }
+            const examId = CURRENT.examID;
+            let added = 0, failed = 0;
+            for (const bankId of bpPicked) {
+                try {
+                    const res = await postJson(BANK_U.link, { ExamID: examId, BankQuestionID: bankId });
+                    if (res.status === 'Success' || res.Status === 'Success') added++; else failed++;
+                } catch { failed++; }
+            }
+            closeBankPicker();
+            toast(failed === 0 ? 'success' : 'info',
+                `Added ${added}${failed ? ` (${failed} failed)` : ''} to exam`);
+            await loadExam(examId);
+        }
+    </script>
+    <script>
+        const COURSE_ID = @Model.CourseID;
+        const U = {
+            list: '@Url.Action("List", "Exam")', full: '@Url.Action("Full", "Exam")',
+            saveExam: '@Url.Action("SaveExam", "Exam")', toggle: '@Url.Action("ToggleStatus", "Exam")',
+            delExam: '@Url.Action("DeleteExam", "Exam")', saveQ: '@Url.Action("SaveQuestion", "Exam")',
+            delQ: '@Url.Action("DeleteQuestion", "Exam")', reorderQ: '@Url.Action("ReorderQuestions", "Exam")'
+        };
+        const truthy = v => v === true || v === 1 || v === '1';
+        const esc = s => (s || '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        // Robust POST: read as text first so a non-JSON response (auth redirect /
+        // ASP.NET exception page) surfaces the REAL message instead of silently
+        // failing on JSON.parse. Always resolves to an object with a Status field.
+        const postJson = async (url, body) => {
+            try {
+                const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+                const raw = await r.text();
+                try { return raw ? JSON.parse(raw) : {}; }
+                catch (_) { return { Status: 'Error', Message: 'Server ' + r.status + ': ' + (raw || 'empty response').replace(/\s+/g, ' ').slice(0, 300) }; }
+            } catch (e) { return { Status: 'Error', Message: e.message }; }
+        };
+        // Robust GET: returns parsed JSON, or { Status:'Error', Message } on failure.
+        const getJson = async (url) => {
+            try {
+                const r = await fetch(url);
+                const raw = await r.text();
+                try { return raw ? JSON.parse(raw) : []; }
+                catch (_) { return { Status: 'Error', Message: 'Server ' + r.status + ': ' + (raw || 'empty response').replace(/\s+/g, ' ').slice(0, 300) }; }
+            } catch (e) { return { Status: 'Error', Message: e.message }; }
+        };
+        const isErr = r => r && (r.Status === 'Error' || r.status === 'Error');
+        // The API serialises Dapper dynamic rows with their SQL column names (PascalCase:
+        // ExamID, QuestionCount, BankQuestionID …) while the code below reads camelCase.
+        // Normalise dynamic-row payloads so e.examID / r.bankQuestionID resolve. Typed
+        // endpoints (Full, take/start) are already camelCase, and re-normalising them is
+        // harmless (idempotent).
+        const camelKeys = o => Array.isArray(o) ? o.map(camelKeys)
+            : (o && typeof o === 'object')
+                ? Object.fromEntries(Object.entries(o).map(([k, v]) => [k.charAt(0).toLowerCase() + k.slice(1), camelKeys(v)]))
+                : o;
+        const toast = (icon, title) => Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: icon === 'error' ? 5000 : 2200,
+            timerProgressBar: true,
+            customClass: { popup: 'exb-toast' },
+            didOpen: (el) => {
+                el.addEventListener('mouseenter', Swal.stopTimer);
+                el.addEventListener('mouseleave', Swal.resumeTimer);
+            }
+        }).fire({ icon, title: title || (icon === 'success' ? 'Done' : 'Something went wrong') });
+
+        let CURRENT = null;     // current exam header
+        let QUESTIONS = [];     // current exam questions
+        let editor = null;      // question editor state
+
+        // ── exams list ───────────────────────────────────────────
+        async function loadExams(selectId) {
+            let res = await getJson(U.list + '?courseId=' + COURSE_ID);
+            const box = document.getElementById('examList');
+            if (isErr(res)) {
+                box.innerHTML = '<div class="eb-empty" style="color:#dc2626;">Couldn’t load exams.<br>' + esc(res.Message || res.message || '') + '</div>';
+                return;
+            }
+            res = camelKeys(res);
+            if (!Array.isArray(res) || res.length === 0) {
+                box.innerHTML = '<div class="eb-empty">No exams yet.<br>Create one to begin.</div>';
+                return;
+            }
+            box.innerHTML = res.map(e => `
+                        <div class="exam-item ${e.examID == selectId ? 'active' : ''}" onclick="loadExam(${e.examID})">
+                            <div class="t">${esc(e.title)}</div>
+                            <div class="m">
+                                <span>${e.questionCount} Q</span>
+                                <span>· ${e.durationMinutes}m</span>
+                                <span class="pill ${truthy(e.isActive) ? 'pub' : 'draft'}">${truthy(e.isActive) ? 'Published' : 'Draft'}</span>
+                            </div>
+                        </div>`).join('');
+        }
+
+        function newExam() {
+            CURRENT = null; QUESTIONS = [];
+            document.getElementById('examId').value = 0;
+            document.getElementById('exTitle').value = '';
+            document.getElementById('exInstr').value = '';
+            document.getElementById('exPass').value = 50;
+            document.getElementById('exDur').value = 30;
+            document.getElementById('exAttempts').value = 0;
+            document.getElementById('exShuffle').checked = false;
+            document.getElementById('exShuffleOpts').checked = false;
+            document.getElementById('exReveal').checked = false;
+            document.getElementById('pubToggle').checked = false;
+            document.getElementById('pubLbl').textContent = 'Draft';
+            document.getElementById('questionsSection').style.display = 'none';
+            document.getElementById('delExamBtn').style.display = 'none';
+            document.querySelectorAll('.exam-item').forEach(x => x.classList.remove('active'));
+        }
+
+        async function loadExam(examId) {
+            const data = await getJson(U.full + '?examId=' + examId);
+            if (isErr(data)) { toast('error', data.Message || data.message || 'Could not load exam'); return; }
+            if (!data || !data.exam) { toast('error', 'Could not load exam'); return; }
+            CURRENT = data.exam;
+            QUESTIONS = data.questions || [];
+            document.getElementById('examId').value = CURRENT.examID;
+            document.getElementById('exTitle').value = CURRENT.title || '';
+            document.getElementById('exInstr').value = CURRENT.instructions || '';
+            document.getElementById('exPass').value = CURRENT.passPercentage;
+            document.getElementById('exDur').value = CURRENT.durationMinutes;
+            document.getElementById('exAttempts').value = CURRENT.maxAttempts;
+            document.getElementById('exShuffle').checked = truthy(CURRENT.shuffleQuestions);
+            document.getElementById('exShuffleOpts').checked = truthy(CURRENT.shuffleOptions);
+            document.getElementById('exReveal').checked = truthy(CURRENT.revealAnswers);
+            document.getElementById('pubToggle').checked = truthy(CURRENT.isActive);
+            document.getElementById('pubLbl').textContent = truthy(CURRENT.isActive) ? 'Published' : 'Draft';
+            // Must be an explicit value — '' reverts to the CSS rule (#questionsSection{display:none}),
+            // which would keep the panel hidden.
+            document.getElementById('questionsSection').style.display = 'block';
+            document.getElementById('delExamBtn').style.display = 'inline-block';
+            renderQuestions();
+            loadExams(CURRENT.examID);
+        }
+
+        // ── exam header save / publish / delete ──────────────────
+        async function saveExam() {
+            const title = document.getElementById('exTitle').value.trim();
+            if (!title) { toast('info', 'Enter an exam title'); return; }
+            const body = {
+                ExamID: parseInt(document.getElementById('examId').value, 10) || 0,
+                CourseID: COURSE_ID,
+                Title: title,
+                Instructions: document.getElementById('exInstr').value,
+                PassPercentage: parseInt(document.getElementById('exPass').value, 10) || 0,
+                DurationMinutes: parseInt(document.getElementById('exDur').value, 10) || 0,
+                MaxAttempts: parseInt(document.getElementById('exAttempts').value, 10) || 0,
+                ShuffleQuestions: document.getElementById('exShuffle').checked,
+                ShuffleOptions: document.getElementById('exShuffleOpts').checked,
+                RevealAnswers: document.getElementById('exReveal').checked
+            };
+            const res = await postJson(U.saveExam, body);
+            if (res.status !== 'Success' && res.Status !== 'Success') { toast('error', res.message || res.Message || 'Save failed'); return; }
+            const newId = res.examID || res.ExamID;
+            document.getElementById('examId').value = newId;
+            toast('success', 'Exam saved');
+            await loadExam(newId);
+        }
+
+        async function togglePublish(makeActive) {
+            const id = parseInt(document.getElementById('examId').value, 10) || 0;
+            if (!id) { document.getElementById('pubToggle').checked = false; toast('info', 'Save the exam first'); return; }
+            if (makeActive && QUESTIONS.length === 0) {
+                document.getElementById('pubToggle').checked = false;
+                toast('info', 'Add at least one question before publishing'); return;
+            }
+            const res = await postJson(U.toggle, { ExamID: id, IsActive: makeActive });
+            if (res.status === 'Success' || res.Status === 'Success') {
+                document.getElementById('pubLbl').textContent = makeActive ? 'Published' : 'Draft';
+                toast('success', makeActive ? 'Published' : 'Moved to draft');
+                loadExams(id);
+            } else {
+                document.getElementById('pubToggle').checked = !makeActive;
+                toast('error', 'Could not update');
+            }
+        }
+
+        async function deleteExam() {
+            const id = parseInt(document.getElementById('examId').value, 10) || 0;
+            if (!id) return;
+            const c = await Swal.fire({ icon: 'warning', title: 'Delete this exam?', text: 'All its questions will be removed.', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Delete' });
+            if (!c.isConfirmed) return;
+            const res = await postJson(U.delExam, { ExamID: id });
+            if (res.status === 'Success' || res.Status === 'Success') { toast('success', 'Exam deleted'); newExam(); loadExams(); }
+            else toast('error', 'Delete failed');
+        }
+
+        // ── questions render ─────────────────────────────────────
+        function renderQuestions() {
+            const list = document.getElementById('qList');
+            document.getElementById('qSummary').textContent = QUESTIONS.length
+                ? QUESTIONS.length + ' question' + (QUESTIONS.length > 1 ? 's' : '') + ' · ' + QUESTIONS.reduce((s, q) => s + (q.marks || 0), 0) + ' marks'
+                : '';
+            if (QUESTIONS.length === 0) { list.innerHTML = '<div class="eb-empty">No questions yet. Click “Add Question”.</div>'; return; }
+
+            list.innerHTML = QUESTIONS.map((q, idx) => `
+                        <div class="q-card" data-qid="${q.questionID}">
+                            <div class="q-top">
+                                <span class="q-grip"><i class="fa-solid fa-grip-vertical"></i></span>
+                                <span class="q-type">${q.questionType}</span>
+                                <span class="q-marks">${q.marks} mark${q.marks > 1 ? 's' : ''}</span>
+                                <div class="q-actions">
+                                    <button class="icon-btn" onclick="openEditor(${q.questionID})"><i class="fa-solid fa-pen"></i></button>
+                                    <button class="icon-btn del" onclick="deleteQuestion(${q.questionID})"><i class="fa-solid fa-trash"></i></button>
+                                </div>
+                            </div>
+                            <div class="q-text">${idx + 1}. ${esc(q.questionText)}</div>
+                            ${['Single', 'Multiple', 'TrueFalse'].includes(q.questionType) ? `
+                            <ul class="q-opts">
+                                ${(q.options || []).map(o => `
+                                    <li class="${truthy(o.isCorrect) ? 'correct' : ''}">
+                                        <i class="fa-${truthy(o.isCorrect) ? 'solid fa-circle-check' : 'regular fa-circle'}"></i>
+                                        ${esc(o.optionText)}
+                                    </li>`).join('')}
+                            </ul>` : q.questionType === 'FillBlank' ? `
+                            <div style="font-size:.8rem;color:var(--muted);margin-top:6px;"><i class="fa-solid fa-key" style="margin-right:4px;"></i>Accepts: ${esc(q.acceptableAnswers || '—')}</div>` : `
+                            <div style="font-size:.8rem;color:var(--muted);margin-top:6px;"><i class="fa-solid fa-pen-to-square" style="margin-right:4px;"></i>Open-ended — graded manually by tutor</div>`}
+                        </div>`).join('');
+
+            // drag-reorder
+            const el = document.getElementById('qList');
+            if (window.Sortable) new Sortable(el, { handle: '.q-grip', animation: 150, ghostClass: 'sortable-ghost', onEnd: persistOrder });
+        }
+
+        async function persistOrder() {
+            const ids = [...document.querySelectorAll('#qList .q-card')].map(c => parseInt(c.dataset.qid, 10));
+            const id = parseInt(document.getElementById('examId').value, 10);
+            await postJson(U.reorderQ, { ExamID: id, QuestionIDs: ids });
+        }
+
+        // ── question editor ──────────────────────────────────────
+        function openEditor(questionId) {
+            const q = questionId ? QUESTIONS.find(x => x.questionID === questionId) : null;
+            if (q) {
+                editor = { type: q.questionType, options: (q.options || []).map(o => ({ text: o.optionText, correct: truthy(o.isCorrect) })) };
+                document.getElementById('qId').value = q.questionID;
+                document.getElementById('qText').value = q.questionText;
+                document.getElementById('qType').value = q.questionType;
+                document.getElementById('qDiff').value = q.difficulty || 'Medium';
+                document.getElementById('qMarks').value = q.marks;
+                document.getElementById('qAccept').value = q.acceptableAnswers || '';
+                document.getElementById('qExpl').value = q.explanation || '';
+                document.getElementById('qModalTitle').textContent = 'Edit Question';
+            } else {
+                editor = { type: 'Single', options: [{ text: '', correct: false }, { text: '', correct: false }] };
+                document.getElementById('qId').value = 0;
+                document.getElementById('qText').value = '';
+                document.getElementById('qType').value = 'Single';
+                document.getElementById('qDiff').value = 'Medium';
+                document.getElementById('qMarks').value = 1;
+                document.getElementById('qAccept').value = '';
+                document.getElementById('qExpl').value = '';
+                document.getElementById('qModalTitle').textContent = 'Add Question';
+            }
+            renderOptions();
+            document.getElementById('qModal').classList.add('show');
+        }
+        function closeEditor() { document.getElementById('qModal').classList.remove('show'); }
+
+        function onTypeChange(val) {
+            editor.type = val;
+            const choiceTypes = ['Single', 'Multiple', 'TrueFalse'];
+            const isChoice = choiceTypes.includes(val);
+            document.getElementById('optBlock').style.display = isChoice ? '' : 'none';
+            document.getElementById('fillBlock').style.display = val === 'FillBlank' ? '' : 'none';
+            document.getElementById('shortBlock').style.display = val === 'ShortAnswer' ? '' : 'none';
+            if (val === 'TrueFalse') {
+                const firstCorrect = editor.options.findIndex(o => o.correct);
+                editor.options = [{ text: 'True', correct: firstCorrect === 0 }, { text: 'False', correct: firstCorrect === 1 }];
+            } else if (val === 'Single') {
+                let seen = false;
+                editor.options.forEach(o => { if (o.correct) { if (seen) o.correct = false; else seen = true; } });
+                if (editor.options.length < 2) editor.options.push({ text: '', correct: false });
+            }
+            if (isChoice) renderOptions();
+        }
+
+        function renderOptions() {
+            const box = document.getElementById('optList');
+            const isTF = editor.type === 'TrueFalse';
+            const single = editor.type === 'Single' || isTF;
+            document.getElementById('addOptBtn').style.display = isTF ? 'none' : '';
+            box.innerHTML = editor.options.map((o, i) => `
+                        <div class="opt-row">
+                            <input class="fc grow" placeholder="Option text" value="${esc(o.text)}" ${isTF ? 'readonly' : ''}
+                                   oninput="editor.options[${i}].text=this.value" />
+                            <label class="opt-correct">
+                                <input type="${single ? 'radio' : 'checkbox'}" name="optCorrect" ${o.correct ? 'checked' : ''}
+                                       onchange="setCorrect(${i}, this.checked)"> correct
+                            </label>
+                            ${isTF ? '' : `<button class="opt-del" onclick="removeOption(${i})">✕</button>`}
+                        </div>`).join('');
+        }
+
+        function setCorrect(i, checked) {
+            if (editor.type === 'Multiple') editor.options[i].correct = checked;
+            else editor.options.forEach((o, idx) => o.correct = (idx === i));
+        }
+        function addOption() { editor.options.push({ text: '', correct: false }); renderOptions(); }
+        function removeOption(i) { if (editor.options.length <= 2) { toast('info', 'Keep at least two options'); return; } editor.options.splice(i, 1); renderOptions(); }
+
+        async function saveQuestion() {
+            const text = document.getElementById('qText').value.trim();
+            const qtype = document.getElementById('qType').value;
+            if (!text) { toast('info', 'Enter the question'); return; }
+            const choiceTypes = ['Single', 'Multiple', 'TrueFalse'];
+            let opts = [];
+            if (choiceTypes.includes(qtype)) {
+                opts = editor.options.filter(o => o.text.trim() !== '');
+                if (opts.length < 2) { toast('info', 'At least two options needed'); return; }
+                if (!opts.some(o => o.correct)) { toast('info', 'Mark a correct option'); return; }
+            }
+            const accept = document.getElementById('qAccept').value.trim();
+            if (qtype === 'FillBlank' && !accept) { toast('info', 'Provide at least one acceptable answer'); return; }
+
+            const body = {
+                QuestionID: parseInt(document.getElementById('qId').value, 10) || 0,
+                ExamID: parseInt(document.getElementById('examId').value, 10),
+                QuestionText: text,
+                QuestionType: qtype,
+                Difficulty: document.getElementById('qDiff').value || 'Medium',
+                Marks: parseInt(document.getElementById('qMarks').value, 10) || 1,
+                SortOrder: 0,
+                AcceptableAnswers: qtype === 'FillBlank' ? accept : null,
+                Explanation: document.getElementById('qExpl').value.trim() || null,
+                Options: opts.map(o => ({ OptionText: o.text.trim(), IsCorrect: o.correct }))
+            };
+            const res = await postJson(U.saveQ, body);
+            if (res.status === 'Success' || res.Status === 'Success') {
+                closeEditor(); toast('success', 'Question saved');
+                await loadExam(body.ExamID);
+            } else {
+                toast('error', res.message || res.Message || 'Save failed');
+            }
+        }
+
+        async function deleteQuestion(qid) {
+            const c = await Swal.fire({ icon: 'warning', title: 'Delete this question?', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Delete' });
+            if (!c.isConfirmed) return;
+            const res = await postJson(U.delQ, { QuestionID: qid });
+            if (res.status === 'Success' || res.Status === 'Success') { toast('success', 'Deleted'); await loadExam(parseInt(document.getElementById('examId').value, 10)); }
+            else toast('error', 'Delete failed');
+        }
+
+        // close modal on backdrop click
+        document.getElementById('qModal').addEventListener('click', function (e) { if (e.target === this) closeEditor(); });
+
+        // boot
+        loadExams();
+    </script>
+}

@@ -1,0 +1,551 @@
+
+@model ProximaLMS.Models.SettingsPageVM
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = Model.Title;
+}
+
+<div class="px-page">
+
+    <header class="px-hero">
+        <div class="px-hero__inner">
+            <div>
+                <div class="px-crumb" style="color: rgba(255,255,255,.6);">
+                    <a asp-action="Index" style="color: rgba(255,255,255,.7);">Settings</a>
+                    <span class="px-crumb__sep">›</span>
+                    <span style="color: #fff; font-weight: 600;">Categories</span>
+                </div>
+                <h1 class="px-hero__title">Course Categories</h1>
+                <p class="px-hero__sub">Organize your catalog into a hierarchical, navigable taxonomy.</p>
+            </div>
+            <div class="px-hero__actions">
+                <button class="px-hero__btn px-hero__btn--solid" id="btnAdd">
+                    <i class="fa-solid fa-plus"></i> Add category
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <div class="px-body">
+
+        <div class="px-stat-grid">
+            <div class="px-stat">
+                <div class="px-stat__icon px-stat__icon--grape"><i class="fa-solid fa-layer-group"></i></div>
+                <div>
+                    <div class="px-stat__num" id="statTotal">—</div>
+                    <div class="px-stat__lbl">Total Categories</div>
+                </div>
+            </div>
+            <div class="px-stat">
+                <div class="px-stat__icon px-stat__icon--blue"><i class="fa-solid fa-sitemap"></i></div>
+                <div>
+                    <div class="px-stat__num" id="statTop">—</div>
+                    <div class="px-stat__lbl">Top Level</div>
+                </div>
+            </div>
+            <div class="px-stat">
+                <div class="px-stat__icon px-stat__icon--green"><i class="fa-solid fa-circle-check"></i></div>
+                <div>
+                    <div class="px-stat__num" id="statActive">—</div>
+                    <div class="px-stat__lbl">Active</div>
+                </div>
+            </div>
+            <div class="px-stat">
+                <div class="px-stat__icon px-stat__icon--rose"><i class="fa-solid fa-circle-xmark"></i></div>
+                <div>
+                    <div class="px-stat__num" id="statInactive">—</div>
+                    <div class="px-stat__lbl">Inactive</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="px-card">
+
+            <div class="px-toolbar">
+                <div class="px-search">
+                    <i class="fa-solid fa-search px-search__icon"></i>
+                    <input type="text" id="catSearch" placeholder="Search by name or description…" />
+                </div>
+                <select class="px-select" id="statusFilter" style="width: 160px;">
+                    <option value="">All statuses</option>
+                    <option value="active">Active only</option>
+                    <option value="inactive">Inactive only</option>
+                </select>
+                <div class="px-toolbar__spacer"></div>
+                <span class="px-toolbar__count" id="visibleCount">— shown</span>
+            </div>
+
+            <div class="px-card__body px-card__body--flush">
+                <table class="px-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 70px;">ID</th>
+                            <th>Category</th>
+                            <th>Parent</th>
+                            <th style="width: 80px; text-align: center;">Order</th>
+                            <th style="width: 110px;">Status</th>
+                            <th style="width: 140px; text-align: right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tblBody">
+                        <tr>
+                            <td colspan="6">
+                                <div class="px-empty">
+                                    <div class="px-skel" style="height: 16px; width: 200px; margin: 0 auto;"></div>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="px-card__foot">
+                <span class="px-text-muted" style="font-size: 12.5px;">
+                    Showing <strong id="footCount">0</strong> categories
+                </span>
+                <div class="px-pager">
+                    <button class="px-pager__btn" disabled><i class="fa-solid fa-chevron-left"></i></button>
+                    <button class="px-pager__btn is-active">1</button>
+                    <button class="px-pager__btn" disabled><i class="fa-solid fa-chevron-right"></i></button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    @* ── MODAL ──────────────────────────────────────────────────── *@
+    <div class="px-modal" id="catModal">
+        <div class="px-modal__panel">
+            <div class="px-modal__head">
+                <h3 class="px-modal__title" id="dlgTitle">Add category</h3>
+                <button class="px-modal__close" onclick="closeDlg()" aria-label="Close">&times;</button>
+            </div>
+
+            <div class="px-modal__body">
+                <input type="hidden" id="fId" value="0" />
+
+                <div class="px-grid">
+                    <div class="px-col-6">
+                        <div class="px-field">
+                            <label class="px-label">Category name <span class="px-req">*</span></label>
+                            <input id="fName" class="px-input" placeholder="e.g. Web Development" autocomplete="off" />
+                            <div class="px-help" id="fNameErr" style="color: var(--px-danger); display:none;"></div>
+                        </div>
+                    </div>
+                    <div class="px-col-6">
+                        <div class="px-field">
+                            <label class="px-label">Sort order</label>
+                            <input id="fSort" type="number" class="px-input" value="0" min="0" />
+                        </div>
+                    </div>
+
+                    <div class="px-col-12">
+                        <div class="px-field">
+                            <label class="px-label">
+                                Parent category
+                                <span class="px-help" style="font-weight: 400;">(leave blank for a top-level category)</span>
+                            </label>
+                            <select id="fParent" class="px-select">
+                                <option value="0">— None (top level) —</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="px-col-12">
+                        <div class="px-field">
+                            <label class="px-label">Description</label>
+                            <textarea id="fDesc" class="px-textarea" rows="3" placeholder="Optional"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="px-col-12">
+                        <div class="px-field" style="justify-content: flex-end;">
+                            <label class="px-switch">
+                                <input id="fActive" type="checkbox" checked />
+                                <span class="px-switch__track"></span>
+                                Active
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-modal__foot">
+                <button class="px-btn px-btn--ghost" onclick="closeDlg()">Cancel</button>
+                <button class="px-btn px-btn--primary" id="btnSave">
+                    <i class="fa-solid fa-floppy-disk"></i> Save category
+                </button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function () {
+            const tbl = document.getElementById('tblBody');
+            const modal = document.getElementById('catModal');
+            let rows = [];
+
+            function esc(s) {
+                return (s ?? '').toString().replace(/[<>&"]/g,
+                    c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+            }
+
+            // ── Unwrap whatever shape the API returns ─────────────
+            // Handles:  [...]                    (bare array — what SP_Category_GetAll returns)
+            //           { data: [...] }
+            //           { result: [...] }
+            //           { items: [...] }
+            //           { success: true, data: [...] }
+            function unwrapArray(d) {
+                if (Array.isArray(d)) return d;
+                if (d && typeof d === 'object') {
+                    if (Array.isArray(d.data)) return d.data;
+                    if (Array.isArray(d.result)) return d.result;
+                    if (Array.isArray(d.items)) return d.items;
+                }
+                return [];
+            }
+
+            // ── Tolerate camelCase / PascalCase on each row ───────
+            function field(r, ...names) {
+                for (const n of names) {
+                    if (r[n] !== undefined && r[n] !== null) return r[n];
+                    const lower = n[0].toLowerCase() + n.slice(1);
+                    if (r[lower] !== undefined && r[lower] !== null) return r[lower];
+                }
+                return undefined;
+            }
+
+            function normaliseRow(r) {
+                return {
+                    CategoryID: field(r, 'CategoryID') ?? 0,
+                    CategoryName: field(r, 'CategoryName') ?? '',
+                    ParentCategoryID: field(r, 'ParentCategoryID') ?? 0,
+                    SortOrder: field(r, 'SortOrder', 'DisplayOrder') ?? 0,
+                    Description: field(r, 'Description') ?? '',
+                    IsActive: !!field(r, 'IsActive'),
+                };
+            }
+
+            function idMap() {
+                return Object.fromEntries(rows.map(r => [r.CategoryID, r]));
+            }
+
+            async function load() {
+                try {
+                    const r = await fetch('@Url.Action("CategoryList", "Settings")', {
+                        headers: { 'Accept': 'application/json' }
+                    });
+                    if (!r.ok) throw new Error('HTTP ' + r.status);
+                    const d = await r.json();
+                    rows = unwrapArray(d).map(normaliseRow);
+                    renderStats();
+                    render();
+                } catch (e) {
+                    console.error('Category load failed:', e);
+                    tbl.innerHTML = `
+                              <tr><td colspan="6">
+                                <div class="px-empty">
+                                  <div class="px-empty__icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                                  <div class="px-empty__title">Couldn't load categories</div>
+                                  <p class="px-empty__sub">${esc(e.message || 'Check your connection and try again.')}</p>
+                                </div>
+                              </td></tr>`;
+                }
+            }
+
+            function renderStats() {
+                const total = rows.length;
+                const top = rows.filter(r => !r.ParentCategoryID).length;
+                const active = rows.filter(r => r.IsActive).length;
+                document.getElementById('statTotal').textContent = total;
+                document.getElementById('statTop').textContent = top;
+                document.getElementById('statActive').textContent = active;
+                document.getElementById('statInactive').textContent = total - active;
+            }
+
+            function nestedList() {
+                const byParent = {};
+                rows.forEach(r => { (byParent[r.ParentCategoryID || 0] ||= []).push(r); });
+                Object.values(byParent).forEach(arr =>
+                    arr.sort((a, b) => (a.SortOrder || 0) - (b.SortOrder || 0)));
+                const out = [];
+                function visit(pid, depth) {
+                    (byParent[pid] || []).forEach(r => {
+                        out.push({ row: r, depth });
+                        visit(r.CategoryID, depth + 1);
+                    });
+                }
+                visit(0, 0);
+                return out;
+            }
+
+            function applyFilter(list) {
+                const q = (document.getElementById('catSearch').value || '').toLowerCase().trim();
+                const status = document.getElementById('statusFilter').value;
+                return list.filter(({ row: r }) => {
+                    if (status === 'active' && !r.IsActive) return false;
+                    if (status === 'inactive' && r.IsActive) return false;
+                    if (!q) return true;
+                    return (r.CategoryName || '').toLowerCase().includes(q)
+                        || (r.Description || '').toLowerCase().includes(q);
+                });
+            }
+
+            function render() {
+                const list = applyFilter(nestedList());
+                document.getElementById('visibleCount').textContent = `${list.length} shown`;
+                document.getElementById('footCount').textContent = list.length;
+
+                if (!list.length) {
+                    const isEmpty = rows.length === 0;
+                    tbl.innerHTML = `
+                              <tr><td colspan="6">
+                                <div class="px-empty">
+                                  <div class="px-empty__icon"><i class="fa-solid fa-folder-open"></i></div>
+                                  <div class="px-empty__title">${isEmpty ? 'No categories yet' : 'No categories match your search'}</div>
+                                  <p class="px-empty__sub">${isEmpty
+                            ? 'Click <b>Add category</b> to create your first one.'
+                            : 'Try a different keyword, or clear your filters.'}</p>
+                                </div>
+                              </td></tr>`;
+                    return;
+                }
+
+                const pmap = idMap();
+                tbl.innerHTML = list.map(({ row: r, depth }) => {
+                    const parent = r.ParentCategoryID ? (pmap[r.ParentCategoryID]?.CategoryName || '—') : '—';
+                    const indent = depth ? `style="padding-left:${depth * 22 + 18}px"` : '';
+                    return `
+                              <tr>
+                                <td><span class="px-table__id">#${r.CategoryID}</span></td>
+                                <td ${indent}>
+                                  <span class="px-table__primary">${esc(r.CategoryName)}</span>
+                                  ${r.Description ? `<div class="px-table__secondary">${esc(r.Description)}</div>` : ''}
+                                </td>
+                                <td><span class="px-text-muted">${esc(parent)}</span></td>
+                                <td style="text-align:center;"><span class="px-table__id">${r.SortOrder || 0}</span></td>
+                                <td>
+                                  ${r.IsActive
+                            ? '<span class="px-pill px-pill--success">Active</span>'
+                            : '<span class="px-pill px-pill--neutral">Inactive</span>'}
+                                </td>
+                                <td>
+                                  <div class="px-table__actions">
+                                    <button class="px-btn--icon" title="Toggle status" onclick="toggleRow(${r.CategoryID})">
+                                      <i class="fa-solid ${r.IsActive ? 'fa-toggle-on' : 'fa-toggle-off'}"></i>
+                                    </button>
+                                    <button class="px-btn--icon" title="Edit" onclick="openEdit(${r.CategoryID})">
+                                      <i class="fa-solid fa-pen"></i>
+                                    </button>
+                                    <button class="px-btn--icon is-danger" title="Delete" onclick="deleteRow(${r.CategoryID})">
+                                      <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>`;
+                }).join('');
+            }
+
+            document.getElementById('catSearch').addEventListener('input', render);
+            document.getElementById('statusFilter').addEventListener('change', render);
+
+            // ── Modal helpers ──────────────────────────────────────
+            function openDlg(title) {
+                document.getElementById('dlgTitle').textContent = title;
+                hideFieldErr();
+                modal.classList.add('is-open');
+                document.body.style.overflow = 'hidden';
+                setTimeout(() => document.getElementById('fName').focus(), 50);
+            }
+            window.closeDlg = function () {
+                modal.classList.remove('is-open');
+                document.body.style.overflow = '';
+                hideFieldErr();
+            };
+            modal.addEventListener('click', e => { if (e.target === modal) closeDlg(); });
+            document.addEventListener('keydown', e => {
+                if (e.key === 'Escape' && modal.classList.contains('is-open')) closeDlg();
+            });
+
+            function showFieldErr(msg) {
+                const e = document.getElementById('fNameErr');
+                e.textContent = msg;
+                e.style.display = '';
+                document.getElementById('fName').classList.add('is-invalid');
+            }
+            function hideFieldErr() {
+                document.getElementById('fNameErr').style.display = 'none';
+                document.getElementById('fName').classList.remove('is-invalid');
+            }
+            document.getElementById('fName').addEventListener('input', hideFieldErr);
+
+            document.getElementById('btnAdd').addEventListener('click', () => {
+                document.getElementById('fId').value = 0;
+                document.getElementById('fName').value = '';
+                document.getElementById('fSort').value = 0;
+                document.getElementById('fParent').value = 0;
+                document.getElementById('fDesc').value = '';
+                document.getElementById('fActive').checked = true;
+                rebuildParentOptions();
+                openDlg('Add category');
+            });
+
+            window.openEdit = function (id) {
+                const r = rows.find(x => x.CategoryID === id);
+                if (!r) return;
+                document.getElementById('fId').value = r.CategoryID;
+                document.getElementById('fName').value = r.CategoryName || '';
+                document.getElementById('fSort').value = r.SortOrder || 0;
+                document.getElementById('fDesc').value = r.Description || '';
+                document.getElementById('fActive').checked = !!r.IsActive;
+                rebuildParentOptions(id);
+                document.getElementById('fParent').value = r.ParentCategoryID || 0;
+                openDlg('Edit category');
+            };
+
+            function rebuildParentOptions(excludeId) {
+                const sel = document.getElementById('fParent');
+                sel.innerHTML = '<option value="0">— None (top level) —</option>';
+                // Only TOP-LEVEL categories can be parents (avoid nested-of-nested chaos)
+                rows.filter(r => !r.ParentCategoryID && r.CategoryID !== excludeId)
+                    .forEach(r => {
+                        const o = document.createElement('option');
+                        o.value = r.CategoryID;
+                        o.textContent = r.CategoryName;
+                        sel.appendChild(o);
+                    });
+            }
+
+            // ── SAVE ───────────────────────────────────────────────
+            // Treats the response as success if EITHER:
+            //   • HTTP 2xx AND no explicit `success: false`, OR
+            //   • response body has `success: true`
+            // This matches the API's actual {success, message, categoryId} shape
+            // AND tolerates future {data: {...}} wrappers.
+            document.getElementById('btnSave').addEventListener('click', async () => {
+                const name = document.getElementById('fName').value.trim();
+                if (!name) {
+                    showFieldErr('Category name is required.');
+                    document.getElementById('fName').focus();
+                    return;
+                }
+
+                const payload = {
+                    CategoryID: +document.getElementById('fId').value,
+                    CategoryName: name,
+                    ParentCategoryID: +document.getElementById('fParent').value || 0,
+                    SortOrder: +document.getElementById('fSort').value || 0,
+                    Description: document.getElementById('fDesc').value,
+                    IsActive: document.getElementById('fActive').checked,
+                    ActorEmail: '@(Context.Session.GetString("Email") ?? "Admin")'
+                };
+
+                const btn = document.getElementById('btnSave');
+                const orig = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving…';
+
+                try {
+                    const r = await fetch('@Url.Action("CategorySave", "Settings")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    let d = null;
+                    try { d = await r.json(); } catch { /* empty body is OK */ }
+
+                    const ok = r.ok && (d == null || d.success !== false);
+                    if (ok) {
+                        closeDlg();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Saved',
+                            text: (d && d.message) || 'Category saved successfully.',
+                            timer: 1400,
+                            showConfirmButton: false
+                        });
+                        await load();
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Could not save',
+                            text: (d && d.message) || ('HTTP ' + r.status)
+                        });
+                    }
+                } catch (e) {
+                    Swal.fire({ icon: 'error', title: 'Network error', text: e.message || 'Please try again.' });
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = orig;
+                }
+            });
+
+            // ── TOGGLE ─────────────────────────────────────────────
+            window.toggleRow = async function (id) {
+                try {
+                    const r = await fetch('@Url.Action("CategoryToggle", "Settings")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            CategoryID: id,
+                            ActorEmail: '@(Context.Session.GetString("Email") ?? "Admin")'
+                        })
+                    });
+                    let d = null;
+                    try { d = await r.json(); } catch { }
+                    if (r.ok && (d == null || d.success !== false)) {
+                        await load();
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Could not toggle', text: (d && d.message) || ('HTTP ' + r.status) });
+                    }
+                } catch (e) {
+                    Swal.fire({ icon: 'error', title: 'Network error', text: e.message || 'Please try again.' });
+                }
+            };
+
+            // ── DELETE ─────────────────────────────────────────────
+            window.deleteRow = function (id) {
+                const row = rows.find(r => r.CategoryID === id);
+                const hasChildren = rows.some(r => r.ParentCategoryID === id);
+                Swal.fire({
+                    title: 'Delete this category?',
+                    html: hasChildren
+                        ? `<b>${esc(row?.CategoryName || '')}</b> has sub-categories.<br>This cannot be undone.`
+                        : `<b>${esc(row?.CategoryName || '')}</b> will be removed. This cannot be undone.`,
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#DC2626',
+                    confirmButtonText: 'Delete',
+                    cancelButtonText: 'Cancel'
+                }).then(async res => {
+                    if (!res.isConfirmed) return;
+                    try {
+                        const r = await fetch('@Url.Action("CategoryDelete", "Settings")', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ CategoryID: id })
+                        });
+                        let d = null;
+                        try { d = await r.json(); } catch { }
+                        if (r.ok && (d == null || d.success !== false)) {
+                            Swal.fire({ icon: 'success', title: 'Deleted', timer: 1200, showConfirmButton: false });
+                            await load();
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Could not delete', text: (d && d.message) || ('HTTP ' + r.status) });
+                        }
+                    } catch (e) {
+                        Swal.fire({ icon: 'error', title: 'Network error', text: e.message || 'Please try again.' });
+                    }
+                });
+            };
+
+            load();
+        })();
+    </script>
+}

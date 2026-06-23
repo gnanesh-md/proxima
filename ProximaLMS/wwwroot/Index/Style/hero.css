@@ -1,0 +1,202 @@
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background-color: #001f4d;
+      color: white;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 60px 80px;
+      flex-wrap: wrap;
+    }
+
+    .hero-text {
+      max-width: 600px;
+      flex: 1 1 400px;
+      font-weight: 600;
+    }
+
+    .hero-text h1 {
+      font-size: 2em;
+      margin-bottom: 20px;
+      line-height: 1.4;
+      font-weight: 600;
+    }
+
+    .typewriter-container {
+      color: #FF6B22;
+      display: inline-block;
+      font-weight: bold;
+    }
+
+    .iso-logo {
+      margin: 20px 0;
+    }
+
+    .iso-logo img {
+      height: 40px;
+    }
+
+.cta-button {
+  background-color: #FF6B22;
+  color: white;
+  border: none;
+  padding: 14px 28px;
+  font-size: 1rem;
+  cursor: pointer;
+  border-radius: 6px;
+  margin-top: 15px;
+  font-weight: 600;
+  text-decoration: none; /* removes underline */
+  display: inline-block; /* ensures margin-top works */
+  transition: box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.cta-button:hover {
+  box-shadow: 0 0 12px #FF6B22;
+  transform: translateY(-2px);
+}
+
+
+    .hero-image {
+      flex: 1 1 350px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin-top: 30px;
+    }
+
+    .hero-image img {
+      width: 100%;
+      max-width: 420px;
+      border-radius: 10px;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 3px;
+      background-color: #FF6B22;
+      animation: blink 0.8s infinite;
+      margin-left: 4px;
+      height: 1.2em;
+    }
+
+    @keyframes blink {
+      0%, 50%, 100% { opacity: 1; }
+      25%, 75% { opacity: 0; }
+    }
+
+    /* OUR IMPACT SECTION (now inside .hero-text) */
+    .impact-section {
+      color: white;
+      padding: 40px 0 0;
+    }
+
+    .impact-heading {
+      font-size: 1.6em;
+      margin-bottom: 16px;
+      position: relative;
+      display: inline-block;
+      font-weight: 600;
+    }
+
+    .impact-heading::after {
+      content: '';
+      display: block;
+      width: 50px;
+      height: 3px;
+      background-color: #FF6B22;
+      margin-top: 8px;
+    }
+
+    .impact-grid {
+      display: flex;
+      flex-wrap: wrap;
+      /* gap: 30px; */
+      margin-top: 10px;
+    }
+
+    .impact-item {
+      min-width: 140px;
+    }
+
+    .impact-item h3 {
+      font-size: 1.6em;
+      margin: 0;
+      color: #FF6B22;
+      font-weight: bold;
+      font-weight: 600;
+      
+    }
+
+    .impact-item p {
+      margin-top: 6px;
+      font-size: 0.95em;
+      color: white;
+      font-weight: 600;
+    }
+
+    
+
+    @media (max-width: 768px) {
+      .hero {
+        flex-direction: column;
+        padding: 40px 20px;
+        text-align: left;
+      }
+
+      .hero-text h1 {
+        font-size: 2em;
+      }
+
+   .hero-image {
+    display: block; /* <-- SHOWS the image again */
+    margin-top: 20px;
+    width: 100%; /* Adjust as needed */
+    max-width: 300px; /* Optional: Control size */
+    
+      }
+
+      .impact-grid {
+        font-size: 10px;
+      
+      
+      }
+
+      .impact-item h3 {
+        font-size: 2em;
+      }
+
+      .impact-section {
+        padding-top: 30px;
+      }
+
+      .impact-heading {
+        text-align: center;
+      }
+    }
+
+    .iso-logo {
+  background-color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: fit-content;
+  margin-bottom: 20px;
+}
+
+.iso-logo img {
+  height: 40px;
+  width: auto;
+  display: block;
+}
+

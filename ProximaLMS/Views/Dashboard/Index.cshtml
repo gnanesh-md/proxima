@@ -1,0 +1,697 @@
+@model ProximaLMS.Models.DashboardViewModel
+@{
+    ViewData["Title"] = "Admin Dashboard";
+    Layout = "_Layout";
+    var now = DateTime.Now;
+    var greeting = now.Hour < 12 ? "Good morning" : now.Hour < 17 ? "Good afternoon" : "Good evening";
+}
+
+<style>
+    :root {
+        --grape:#4C1864; --grape-2:#7B2CBF; --grape-3:#9D4EDD;
+        --ink:#1a1523; --muted:#64748b; --border:#ede9fe;
+        --bg:#f8f5ff; --card:#fff;
+        --green:#16a34a; --green-bg:#dcfce7; --green-text:#15803d;
+        --blue:#2563eb; --blue-bg:#dbeafe; --blue-text:#1e40af;
+        --amber:#d97706; --amber-bg:#fef3c7; --amber-text:#92400e;
+        --red:#dc2626; --red-bg:#fee2e2; --red-text:#b91c1c;
+        --teal:#0891b2; --teal-bg:#cffafe; --teal-text:#0e7490;
+        --pink:#db2777; --pink-bg:#fce7f3; --pink-text:#9d174d;
+    }
+
+    /* ── PAGE WRAPPER ── */
+    .ad-page { display:flex; flex-direction:column; gap:22px; }
+
+    /* ── HERO ── */
+    .ad-hero {
+        background: linear-gradient(135deg, #3b0764 0%, #4C1864 35%, #7B2CBF 70%, #9D4EDD 100%);
+        border-radius:20px; padding:28px 32px 90px;
+        position:relative; overflow:hidden; color:#fff;
+    }
+    .ad-hero::before {
+        content:''; position:absolute; top:-60px; right:-60px;
+        width:280px; height:280px; border-radius:50%;
+        background:rgba(255,255,255,.05); pointer-events:none;
+    }
+    .ad-hero::after {
+        content:''; position:absolute; bottom:-80px; left:20%;
+        width:200px; height:200px; border-radius:50%;
+        background:rgba(232,121,249,.12); pointer-events:none;
+    }
+    .ad-hero-inner { position:relative; z-index:1; display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; }
+    .ad-hero-eyebrow { font-size:.78rem; font-weight:700; text-transform:uppercase; letter-spacing:.08em; opacity:.7; margin:0 0 6px; }
+    .ad-hero-title { font-size:1.9rem; font-weight:800; margin:0 0 6px; line-height:1.15; }
+    .ad-hero-sub { font-size:.88rem; opacity:.8; margin:0; }
+    .ad-hero-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .ad-hero-btn {
+        display:inline-flex; align-items:center; gap:7px; padding:9px 18px;
+        border-radius:10px; font-size:.83rem; font-weight:700; cursor:pointer;
+        border:none; text-decoration:none; transition:.15s;
+    }
+    .ad-hero-btn--solid { background:#fff; color:var(--grape-2); }
+    .ad-hero-btn--solid:hover { background:#f3e8ff; color:var(--grape); }
+    .ad-hero-btn--ghost { background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.25); }
+    .ad-hero-btn--ghost:hover { background:rgba(255,255,255,.25); color:#fff; }
+
+    /* ── KPI STRIP (overlaps hero) ── */
+    .ad-kpi-strip {
+        display:grid;
+        grid-template-columns:repeat(4,1fr);
+        gap:14px;
+        margin-top:-62px;
+        position:relative; z-index:2;
+    }
+    @@media(max-width:1100px){ .ad-kpi-strip { grid-template-columns:repeat(2,1fr); } }
+    @@media(max-width:600px){ .ad-kpi-strip { grid-template-columns:1fr; } }
+
+    .ad-kpi {
+        background:#fff; border-radius:16px;
+        box-shadow:0 8px 28px rgba(76,24,100,.11);
+        border:1px solid var(--border);
+        padding:18px 20px; display:flex; align-items:center; gap:14px;
+        transition:transform .18s, box-shadow .18s;
+    }
+    .ad-kpi:hover { transform:translateY(-2px); box-shadow:0 14px 36px rgba(76,24,100,.16); }
+    .ad-kpi-icon {
+        width:48px; height:48px; border-radius:13px;
+        display:flex; align-items:center; justify-content:center;
+        font-size:20px; flex-shrink:0;
+    }
+    .ad-kpi-val { font-size:1.65rem; font-weight:800; color:var(--ink); line-height:1; }
+    .ad-kpi-lbl { font-size:.76rem; font-weight:600; color:var(--muted); margin-top:3px; }
+    .ad-kpi-trend {
+        margin-left:auto; font-size:.72rem; font-weight:700;
+        padding:3px 8px; border-radius:20px;
+        display:flex; align-items:center; gap:3px;
+    }
+    .trend-up { background:var(--green-bg); color:var(--green-text); }
+    .trend-dn { background:var(--red-bg); color:var(--red-text); }
+    .trend-nt { background:#f1f5f9; color:var(--muted); }
+
+    /* ── GRID LAYOUTS ── */
+    .ad-grid-2-1 {
+        display:grid; grid-template-columns:2fr 1fr; gap:18px;
+    }
+    .ad-grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+    .ad-grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:18px; }
+    @@media(max-width:1100px){ .ad-grid-2-1,.ad-grid-3 { grid-template-columns:1fr; } }
+    @@media(max-width:768px){ .ad-grid-2 { grid-template-columns:1fr; } }
+
+    /* ── CARD ── */
+    .ad-card {
+        background:#fff; border-radius:16px;
+        border:1px solid var(--border);
+        box-shadow:0 4px 18px rgba(76,24,100,.06);
+        overflow:hidden;
+    }
+    .ad-card-head {
+        padding:16px 20px; display:flex; align-items:center; justify-content:space-between;
+        border-bottom:1px solid #f3f0fa;
+    }
+    .ad-card-title { font-size:.95rem; font-weight:800; color:var(--ink); margin:0; }
+    .ad-card-sub { font-size:.76rem; color:var(--muted); margin:2px 0 0; }
+    .ad-card-body { padding:18px 20px; }
+    .ad-card-body--flush { padding:0; }
+
+    /* ── BUTTON ── */
+    .ad-btn { display:inline-flex; align-items:center; gap:6px; padding:7px 14px; border-radius:8px; font-size:.78rem; font-weight:700; cursor:pointer; border:none; transition:.15s; text-decoration:none; }
+    .ad-btn--ghost { background:transparent; border:1px solid var(--border); color:var(--muted); }
+    .ad-btn--ghost:hover { background:var(--bg); color:var(--grape-2); border-color:#c4b5fd; }
+    .ad-btn--primary { background:var(--grape-2); color:#fff; }
+    .ad-btn--primary:hover { background:var(--grape); color:#fff; }
+    .ad-btn--sm { padding:5px 11px; font-size:.73rem; }
+
+    /* ── CHART WRAPPER ── */
+    .ad-chart-wrap { position:relative; height:220px; }
+
+    /* ── TOP COURSES TABLE ── */
+    .ad-table { width:100%; border-collapse:collapse; font-size:.84rem; }
+    .ad-table th { padding:10px 16px; color:var(--muted); font-weight:700; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; text-align:left; background:#faf8ff; border-bottom:1px solid var(--border); }
+    .ad-table td { padding:12px 16px; color:var(--ink); border-bottom:1px solid #f9f7ff; vertical-align:middle; }
+    .ad-table tr:last-child td { border-bottom:none; }
+    .ad-table tr:hover td { background:#faf5ff; }
+    .course-thumb { width:36px; height:36px; border-radius:8px; object-fit:cover; background:linear-gradient(135deg,#ede9fe,#ddd6fe); display:flex; align-items:center; justify-content:center; font-size:14px; flex-shrink:0; }
+    .prog-bar-wrap { width:80px; height:5px; background:#ede9fe; border-radius:99px; overflow:hidden; }
+    .prog-bar-fill { height:100%; border-radius:99px; background:linear-gradient(90deg,var(--grape-2),var(--grape-3)); }
+
+    /* ── ACTIVITY FEED ── */
+    .act-item { display:flex; align-items:flex-start; gap:11px; padding:11px 0; border-bottom:1px solid #f9f7ff; }
+    .act-item:last-child { border-bottom:none; padding-bottom:0; }
+    .act-dot { width:34px; height:34px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:13px; flex-shrink:0; }
+    .act-text { font-size:.83rem; color:var(--ink); line-height:1.45; }
+    .act-meta { font-size:.73rem; color:var(--muted); margin-top:2px; }
+
+    /* ── AVATAR ROW ── */
+    .av-row { display:flex; align-items:center; gap:11px; padding:9px 0; border-bottom:1px solid #f9f7ff; }
+    .av-row:last-child { border-bottom:none; padding-bottom:0; }
+    .av-circle {
+        width:36px; height:36px; border-radius:50%; display:flex; align-items:center; justify-content:center;
+        font-size:14px; font-weight:700; color:#fff; flex-shrink:0;
+    }
+    .av-name { font-size:.84rem; font-weight:600; color:var(--ink); }
+    .av-meta { font-size:.73rem; color:var(--muted); }
+
+    /* avatar color variants */
+    .av-v1{background:linear-gradient(135deg,#4C1864,#7B2CBF);}
+    .av-v2{background:linear-gradient(135deg,#1e40af,#3b82f6);}
+    .av-v3{background:linear-gradient(135deg,#15803d,#22c55e);}
+    .av-v4{background:linear-gradient(135deg,#9a3412,#f97316);}
+    .av-v5{background:linear-gradient(135deg,#be185d,#f472b6);}
+    .av-v6{background:linear-gradient(135deg,#0e7490,#22d3ee);}
+    .av-v7{background:linear-gradient(135deg,#7c3aed,#a78bfa);}
+    .av-v8{background:linear-gradient(135deg,#92400e,#fbbf24);}
+
+    /* ── HEALTH PANEL ── */
+    .health-row { display:flex; align-items:center; justify-content:space-between; padding:10px 0; border-bottom:1px solid #f9f7ff; font-size:.84rem; }
+    .health-row:last-child { border-bottom:none; padding-bottom:0; }
+    .health-dot { width:8px; height:8px; border-radius:50%; display:inline-block; margin-right:8px; }
+    .dot-ok { background:#22c55e; }
+    .dot-warn { background:#f59e0b; }
+    .dot-err { background:#ef4444; }
+
+    /* ── PILL BADGE ── */
+    .ad-pill { font-size:.7rem; font-weight:700; padding:3px 9px; border-radius:20px; display:inline-flex; align-items:center; gap:4px; }
+    .pill-ok { background:var(--green-bg); color:var(--green-text); }
+    .pill-warn { background:var(--amber-bg); color:var(--amber-text); }
+    .pill-err { background:var(--red-bg); color:var(--red-text); }
+    .pill-info { background:var(--blue-bg); color:var(--blue-text); }
+    .pill-grape { background:#ede9fe; color:var(--grape-2); }
+
+    /* ── MINI STAT ROW (inside card) ── */
+    .mini-stat-row { display:flex; gap:12px; margin-bottom:14px; flex-wrap:wrap; }
+    .mini-stat { background:#faf8ff; border-radius:10px; padding:10px 14px; flex:1; min-width:80px; text-align:center; border:1px solid var(--border); }
+    .mini-stat .v { font-size:1.25rem; font-weight:800; color:var(--grape-2); }
+    .mini-stat .l { font-size:.7rem; color:var(--muted); margin-top:2px; }
+
+    /* ── SECTION DIVIDER ── */
+    .ad-section-label {
+        font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em;
+        color:var(--muted); margin:0 0 12px; display:flex; align-items:center; gap:8px;
+    }
+    .ad-section-label::after { content:''; flex:1; height:1px; background:var(--border); }
+
+    /* ── REVIEW QUEUE ── */
+    .rv-item { display:flex; align-items:flex-start; gap:12px; padding:11px 0; border-bottom:1px solid #f9f7ff; }
+    .rv-item:last-child { border-bottom:none; }
+    .rv-stars { color:#f59e0b; font-size:.78rem; letter-spacing:1px; }
+    .rv-text { font-size:.82rem; color:var(--muted); margin-top:3px; line-height:1.4; -webkit-line-clamp:2; display:-webkit-box; -webkit-box-orient:vertical; overflow:hidden; }
+    .rv-course { font-size:.74rem; font-weight:600; color:var(--grape-2); margin-top:4px; }
+
+    /* ── RESPONSIVE HELPERS ── */
+    @@media(max-width:768px) {
+        .ad-hero { padding:22px 20px 80px; }
+        .ad-hero-title { font-size:1.4rem; }
+        .ad-card-body { padding:14px 16px; }
+        .ad-card-head { padding:12px 16px; }
+    }
+</style>
+
+<div class="ad-page">
+
+    <!-- ══ HERO ══ -->
+    <div class="ad-hero">
+        <div class="ad-hero-inner">
+            <div>
+                <p class="ad-hero-eyebrow">Admin Control Centre</p>
+                <h1 class="ad-hero-title">@greeting, @(ViewBag.AdminName ?? "Admin") 👋</h1>
+                <p class="ad-hero-sub">Here's what's happening across your platform today.</p>
+            </div>
+            <div class="ad-hero-actions">
+                <a href="#" class="ad-hero-btn ad-hero-btn--ghost">
+                    <i class="fa-regular fa-calendar"></i>
+                    @now.ToString("ddd, dd MMM yyyy")
+                </a>
+                <a asp-controller="Courses" asp-action="Create" class="ad-hero-btn ad-hero-btn--solid">
+                    <i class="fa-solid fa-plus"></i> New Course
+                </a>
+                <a asp-controller="Analytics" asp-action="Index" class="ad-hero-btn ad-hero-btn--ghost">
+                    <i class="fa-solid fa-chart-line"></i> Analytics
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ KPI STRIP ══ -->
+    <div class="ad-kpi-strip">
+        <div class="ad-kpi">
+            <div class="ad-kpi-icon" style="background:#ede9fe;color:#7B2CBF;"><i class="fa-solid fa-graduation-cap"></i></div>
+            <div style="flex:1">
+                <div class="ad-kpi-val">@Model.TotalStudents</div>
+                <div class="ad-kpi-lbl">Total Students</div>
+            </div>
+            @if (Model.NewStudentsPercent != 0)
+            {
+                <span class="ad-kpi-trend @(Model.NewStudentsPercent >= 0 ? "trend-up" : "trend-dn")">
+                    <i class="fa-solid fa-arrow-@(Model.NewStudentsPercent >= 0 ? "up" : "down")"></i>
+                    @Math.Abs(Model.NewStudentsPercent)%
+                </span>
+            }
+        </div>
+        <div class="ad-kpi">
+            <div class="ad-kpi-icon" style="background:#dbeafe;color:#2563eb;"><i class="fa-solid fa-book-open"></i></div>
+            <div style="flex:1">
+                <div class="ad-kpi-val">@Model.TotalCourses</div>
+                <div class="ad-kpi-lbl">Active Courses</div>
+            </div>
+            @if (Model.AllCoursesPercent != 0)
+            {
+                <span class="ad-kpi-trend @(Model.AllCoursesPercent >= 0 ? "trend-up" : "trend-dn")">
+                    <i class="fa-solid fa-arrow-@(Model.AllCoursesPercent >= 0 ? "up" : "down")"></i>
+                    @Math.Abs(Model.AllCoursesPercent)%
+                </span>
+            }
+        </div>
+        <div class="ad-kpi">
+            <div class="ad-kpi-icon" style="background:#dcfce7;color:#16a34a;"><i class="fa-solid fa-chalkboard-user"></i></div>
+            <div style="flex:1">
+                <div class="ad-kpi-val">@Model.TotalTutors</div>
+                <div class="ad-kpi-lbl">Tutors</div>
+            </div>
+            @if (Model.AllTutorsPercent != 0)
+            {
+                <span class="ad-kpi-trend @(Model.AllTutorsPercent >= 0 ? "trend-up" : "trend-dn")">
+                    <i class="fa-solid fa-arrow-@(Model.AllTutorsPercent >= 0 ? "up" : "down")"></i>
+                    @Math.Abs(Model.AllTutorsPercent)%
+                </span>
+            }
+        </div>
+        <div class="ad-kpi">
+            <div class="ad-kpi-icon" style="background:#fef3c7;color:#d97706;"><i class="fa-solid fa-indian-rupee-sign"></i></div>
+            <div style="flex:1">
+                <div class="ad-kpi-val">@Model.TotalIncome</div>
+                <div class="ad-kpi-lbl">Total Revenue</div>
+            </div>
+            @if (Model.IncomePercent != 0)
+            {
+                <span class="ad-kpi-trend @(Model.IncomePercent >= 0 ? "trend-up" : "trend-dn")">
+                    <i class="fa-solid fa-arrow-@(Model.IncomePercent >= 0 ? "up" : "down")"></i>
+                    @Math.Abs(Model.IncomePercent)%
+                </span>
+            }
+        </div>
+    </div>
+
+    <!-- ══ CHARTS ROW ══ -->
+    <div class="ad-grid-2-1">
+        <!-- Enrollment Trend Chart -->
+        <div class="ad-card">
+            <div class="ad-card-head">
+                <div>
+                    <h2 class="ad-card-title"><i class="fa-solid fa-chart-area" style="color:var(--grape-2);margin-right:7px;"></i>Enrollment Trend</h2>
+                    <p class="ad-card-sub">New student registrations over the last 12 months</p>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span class="ad-pill pill-grape"><i class="fa-solid fa-circle" style="font-size:6px;"></i> Students</span>
+                    <a href="/Analytics" class="ad-btn ad-btn--ghost ad-btn--sm"><i class="fa-solid fa-arrow-up-right-from-square"></i> Full Report</a>
+                </div>
+            </div>
+            <div class="ad-card-body">
+                <div class="ad-chart-wrap"><canvas id="enrollChart"></canvas></div>
+            </div>
+        </div>
+
+        <!-- Quick Stats Panel -->
+        <div class="ad-card">
+            <div class="ad-card-head">
+                <h2 class="ad-card-title"><i class="fa-solid fa-bolt" style="color:#f59e0b;margin-right:7px;"></i>Quick Stats</h2>
+            </div>
+            <div class="ad-card-body">
+                <div class="mini-stat-row">
+                    <div class="mini-stat">
+                        <div class="v">@Model.NewStudents</div>
+                        <div class="l">New this month</div>
+                    </div>
+                    <div class="mini-stat">
+                        <div class="v">@Model.TotalEmployees</div>
+                        <div class="l">Employees</div>
+                    </div>
+                </div>
+                <div style="height:148px;"><canvas id="pieChart"></canvas></div>
+                <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+                    <span style="font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:5px;">
+                        <span style="width:10px;height:10px;border-radius:50%;background:#7B2CBF;display:inline-block;"></span>Students
+                    </span>
+                    <span style="font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:5px;">
+                        <span style="width:10px;height:10px;border-radius:50%;background:#2563eb;display:inline-block;"></span>Tutors
+                    </span>
+                    <span style="font-size:.75rem;color:var(--muted);display:flex;align-items:center;gap:5px;">
+                        <span style="width:10px;height:10px;border-radius:50%;background:#16a34a;display:inline-block;"></span>Employees
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ MAIN CONTENT ROW ══ -->
+    <div class="ad-grid-2-1">
+        <!-- Top Courses Table -->
+        <div class="ad-card">
+            <div class="ad-card-head">
+                <div>
+                    <h2 class="ad-card-title"><i class="fa-solid fa-layer-group" style="color:#2563eb;margin-right:7px;"></i>Top Courses</h2>
+                    <p class="ad-card-sub">By enrollment and completion rate</p>
+                </div>
+                <a asp-controller="Master" asp-action="CourseList" class="ad-btn ad-btn--ghost ad-btn--sm">View all</a>
+            </div>
+            <div class="ad-card-body--flush">
+                <table class="ad-table">
+                    <thead>
+                        <tr>
+                            <th>Course</th>
+                            <th>Tutor</th>
+                            <th>Enrolled</th>
+                            <th>Completion</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="topCoursesBody">
+                        <tr>
+                            <td colspan="5" style="text-align:center;padding:30px;color:var(--muted);">
+                                <i class="fa-solid fa-spinner fa-spin"></i> Loading…
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Recent Students -->
+        <div class="ad-card">
+            <div class="ad-card-head">
+                <h2 class="ad-card-title"><i class="fa-solid fa-user-plus" style="color:#16a34a;margin-right:7px;"></i>Recent Students</h2>
+                <a asp-controller="Master" asp-action="StudentList" class="ad-btn ad-btn--ghost ad-btn--sm">View all</a>
+            </div>
+            <div class="ad-card-body">
+                @if (Model.RecentStudents != null && Model.RecentStudents.Any())
+                {
+                    int ri = 0;
+                    foreach (var s in Model.RecentStudents.Take(7))
+                    {
+                        var vcls = $"av-v{(ri++ % 8) + 1}";
+                        var init = string.IsNullOrWhiteSpace(s.Name) ? "?" : s.Name.Trim()[0].ToString().ToUpper();
+                        <div class="av-row">
+                            <div class="av-circle @vcls">@init</div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="av-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@s.Name</div>
+                                <div class="av-meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@s.Email</div>
+                            </div>
+                            <span class="ad-pill pill-ok" style="font-size:.68rem;">New</span>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div style="text-align:center;padding:30px 0;color:var(--muted);">
+                        <i class="fa-solid fa-users" style="font-size:28px;opacity:.3;"></i>
+                        <p style="margin-top:10px;font-size:.83rem;">No recent students yet.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ BOTTOM ROW ══ -->
+    <div class="ad-grid-3">
+
+        <!-- Activity Feed -->
+        <div class="ad-card">
+            <div class="ad-card-head">
+                <div>
+                    <h2 class="ad-card-title"><i class="fa-solid fa-wave-square" style="color:var(--grape-2);margin-right:7px;"></i>Recent Activity</h2>
+                    <p class="ad-card-sub">Latest platform events</p>
+                </div>
+            </div>
+            <div class="ad-card-body" id="activityFeed">
+                <div style="text-align:center;padding:20px;color:var(--muted);font-size:.82rem;">
+                    <i class="fa-solid fa-spinner fa-spin"></i> Loading activity…
+                </div>
+            </div>
+        </div>
+
+        <!-- Tutors Snapshot -->
+        <div class="ad-card">
+            <div class="ad-card-head">
+                <div>
+                    <h2 class="ad-card-title"><i class="fa-solid fa-chalkboard-user" style="color:#0891b2;margin-right:7px;"></i>Tutors</h2>
+                    <p class="ad-card-sub">Performance snapshot</p>
+                </div>
+                <a asp-controller="Tutor" asp-action="List" class="ad-btn ad-btn--ghost ad-btn--sm">Manage</a>
+            </div>
+            <div class="ad-card-body">
+                @if (Model.Tutors != null && Model.Tutors.Any())
+                {
+                    int ti = 0;
+                    foreach (var t in Model.Tutors.Take(6))
+                    {
+                        var tvcls = $"av-v{(ti++ % 8) + 1}";
+                        var tini = string.IsNullOrWhiteSpace(t.TutorName) ? "?" : t.TutorName.Trim()[0].ToString().ToUpper();
+                        <div class="av-row">
+                            <div class="av-circle @tvcls">@tini</div>
+                            <div style="flex:1;min-width:0;">
+                                <div class="av-name" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@t.TutorName</div>
+                                <div class="av-meta" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">@t.Email</div>
+                            </div>
+                            <span class="ad-pill pill-ok">Active</span>
+                        </div>
+                    }
+                    @if (Model.Tutors.Count() > 6)
+                    {
+                        <div style="text-align:center;margin-top:10px;">
+                            <a asp-controller="Tutor" asp-action="List" style="font-size:.78rem;color:var(--grape-2);font-weight:600;">
+                                +@(Model.Tutors.Count() - 6) more tutors →
+                            </a>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <div style="text-align:center;padding:20px;color:var(--muted);font-size:.82rem;">
+                        <i class="fa-solid fa-chalkboard-user" style="font-size:24px;opacity:.3;"></i>
+                        <p style="margin-top:8px;">No tutors yet.</p>
+                        <a asp-controller="Tutor" asp-action="Create" class="ad-btn ad-btn--primary" style="margin-top:8px;font-size:.78rem;">
+                            <i class="fa-solid fa-plus"></i> Add Tutor
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Platform Health & Quick Actions -->
+        <div style="display:flex;flex-direction:column;gap:18px;">
+            <!-- Quick Actions -->
+            <div class="ad-card">
+                <div class="ad-card-head">
+                    <h2 class="ad-card-title"><i class="fa-solid fa-zap" style="color:#f59e0b;margin-right:7px;"></i>Quick Actions</h2>
+                </div>
+                <div class="ad-card-body" style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                    <a asp-controller="Courses" asp-action="Create"
+                       style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:#faf5ff;border-radius:12px;text-decoration:none;border:1px solid #ede9fe;transition:.15s;"
+                       onmouseover="this.style.background='#ede9fe'" onmouseout="this.style.background='#faf5ff'">
+                        <i class="fa-solid fa-book-medical" style="font-size:20px;color:#7B2CBF;"></i>
+                        <span style="font-size:.73rem;font-weight:700;color:var(--ink);">New Course</span>
+                    </a>
+                    <a asp-controller="Tutor" asp-action="Create"
+                       style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:#f0fdf4;border-radius:12px;text-decoration:none;border:1px solid #bbf7d0;transition:.15s;"
+                       onmouseover="this.style.background='#dcfce7'" onmouseout="this.style.background='#f0fdf4'">
+                        <i class="fa-solid fa-user-plus" style="font-size:20px;color:#16a34a;"></i>
+                        <span style="font-size:.73rem;font-weight:700;color:var(--ink);">Add Tutor</span>
+                    </a>
+                    <a asp-controller="Coupon" asp-action="Create"
+                       style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:#fff7ed;border-radius:12px;text-decoration:none;border:1px solid #fed7aa;transition:.15s;"
+                       onmouseover="this.style.background='#ffedd5'" onmouseout="this.style.background='#fff7ed'">
+                        <i class="fa-solid fa-ticket" style="font-size:20px;color:#ea580c;"></i>
+                        <span style="font-size:.73rem;font-weight:700;color:var(--ink);">New Coupon</span>
+                    </a>
+                    <a asp-controller="Notifications" asp-action="Broadcast"
+                       style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:#f0f9ff;border-radius:12px;text-decoration:none;border:1px solid #bae6fd;transition:.15s;"
+                       onmouseover="this.style.background='#e0f2fe'" onmouseout="this.style.background='#f0f9ff'">
+                        <i class="fa-solid fa-bullhorn" style="font-size:20px;color:#0284c7;"></i>
+                        <span style="font-size:.73rem;font-weight:700;color:var(--ink);">Broadcast</span>
+                    </a>
+                    <a asp-controller="ReviewModeration" asp-action="Index"
+                       style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:#fffbeb;border-radius:12px;text-decoration:none;border:1px solid #fde68a;transition:.15s;"
+                       onmouseover="this.style.background='#fef3c7'" onmouseout="this.style.background='#fffbeb'">
+                        <i class="fa-solid fa-star-half-stroke" style="font-size:20px;color:#d97706;"></i>
+                        <span style="font-size:.73rem;font-weight:700;color:var(--ink);">Reviews</span>
+                    </a>
+                    <a asp-controller="AuditLog" asp-action="Index"
+                       style="display:flex;flex-direction:column;align-items:center;gap:6px;padding:14px 8px;background:#f8fafc;border-radius:12px;text-decoration:none;border:1px solid #e2e8f0;transition:.15s;"
+                       onmouseover="this.style.background='#f1f5f9'" onmouseout="this.style.background='#f8fafc'">
+                        <i class="fa-solid fa-shield-halved" style="font-size:20px;color:#475569;"></i>
+                        <span style="font-size:.73rem;font-weight:700;color:var(--ink);">Audit Log</span>
+                    </a>
+                </div>
+            </div>
+
+            <!-- System Health -->
+            <div class="ad-card">
+                <div class="ad-card-head">
+                    <h2 class="ad-card-title"><i class="fa-solid fa-heart-pulse" style="color:#dc2626;margin-right:7px;"></i>System Health</h2>
+                </div>
+                <div class="ad-card-body">
+                    <div class="health-row">
+                        <span><span class="health-dot dot-ok"></span>API Service</span>
+                        <span class="ad-pill pill-ok">Operational</span>
+                    </div>
+                    <div class="health-row">
+                        <span><span class="health-dot dot-ok"></span>Database</span>
+                        <span class="ad-pill pill-ok">Healthy</span>
+                    </div>
+                    <div class="health-row">
+                        <span><span class="health-dot dot-ok"></span>Email (SMTP)</span>
+                        <span class="ad-pill pill-ok">Active</span>
+                    </div>
+                    <div class="health-row">
+                        <span><span class="health-dot dot-ok"></span>Payment (Razorpay)</span>
+                        <span class="ad-pill pill-ok">Connected</span>
+                    </div>
+                    <div class="health-row">
+                        <span><span class="health-dot dot-ok"></span>SignalR Hub</span>
+                        <span class="ad-pill pill-ok">Live</span>
+                    </div>
+                    <div class="health-row">
+                        <span><span class="health-dot dot-ok"></span>Storage</span>
+                        <span class="ad-pill pill-ok">Available</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function(){
+    const MONTHS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartMonths ?? new List<string>()));
+    const COUNTS = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.ChartCounts ?? new List<int>()));
+
+    // ── Enrollment Line Chart ──
+    (function(){
+        const el = document.getElementById('enrollChart');
+        if(!el) return;
+        const ctx = el.getContext('2d');
+        const g = ctx.createLinearGradient(0,0,0,200);
+        g.addColorStop(0,'rgba(123,44,191,.35)');
+        g.addColorStop(1,'rgba(123,44,191,.00)');
+        new Chart(ctx,{
+            type:'line',
+            data:{
+                labels: MONTHS,
+                datasets:[{
+                    label:'Students',
+                    data: COUNTS,
+                    borderColor:'#7B2CBF', backgroundColor:g,
+                    borderWidth:2.5, tension:.38, fill:true,
+                    pointRadius:3, pointBackgroundColor:'#7B2CBF',
+                    pointHoverRadius:6
+                }]
+            },
+            options:{
+                responsive:true, maintainAspectRatio:false,
+                plugins:{ legend:{display:false}, tooltip:{
+                    backgroundColor:'#fff', titleColor:'#1a1523', bodyColor:'#64748b',
+                    borderColor:'#ede9fe', borderWidth:1,
+                    callbacks:{ label: ctx => ' '+ctx.parsed.y+' new students' }
+                }},
+                scales:{
+                    x:{ grid:{display:false}, ticks:{color:'#94a3b8',font:{size:11}} },
+                    y:{ grid:{color:'#f1eef7'}, ticks:{color:'#94a3b8',font:{size:11}} }
+                }
+            }
+        });
+    })();
+
+    // ── Donut Chart ──
+    (function(){
+        const el = document.getElementById('pieChart');
+        if(!el) return;
+        new Chart(el,{
+            type:'doughnut',
+            data:{
+                labels:['Students','Tutors','Employees'],
+                datasets:[{
+                    data:[@Model.TotalStudents, @Model.TotalTutors, @Model.TotalEmployees],
+                    backgroundColor:['#7B2CBF','#2563eb','#16a34a'],
+                    borderWidth:2, borderColor:'#fff', hoverBorderColor:'#fff'
+                }]
+            },
+            options:{
+                responsive:true, maintainAspectRatio:false, cutout:'72%',
+                plugins:{
+                    legend:{display:false},
+                    tooltip:{
+                        backgroundColor:'#fff', titleColor:'#1a1523', bodyColor:'#64748b',
+                        borderColor:'#ede9fe', borderWidth:1
+                    }
+                }
+            }
+        });
+    })();
+
+    // ── Top Courses (loaded from API) ──
+    (function(){
+        const tbody = document.getElementById('topCoursesBody');
+        fetch('/Analytics/TopCourses').then(r=>r.json()).then(data=>{
+            if(!data || !data.length){ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:30px;color:#94a3b8;">No course data yet.</td></tr>'; return; }
+            tbody.innerHTML = data.slice(0,8).map((c,i)=>`
+                <tr>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                      <div class="course-thumb"><i class="fa-solid fa-book" style="color:#a78bfa;"></i></div>
+                      <div>
+                        <div style="font-weight:600;font-size:.83rem;max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(c.courseTitle||c.CourseTitle||'—')}</div>
+                        <div style="font-size:.72rem;color:#94a3b8;">${esc(c.category||c.Category||'')}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style="font-size:.82rem;color:#64748b;">${esc(c.tutorName||c.TutorName||'—')}</td>
+                  <td><span style="font-weight:700;color:#7B2CBF;">${c.enrollments||c.Enrollments||0}</span></td>
+                  <td>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                      <div class="prog-bar-wrap"><div class="prog-bar-fill" style="width:${c.completionRate||c.CompletionRate||0}%;"></div></div>
+                      <span style="font-size:.75rem;color:#64748b;">${c.completionRate||c.CompletionRate||0}%</span>
+                    </div>
+                  </td>
+                  <td><span class="ad-pill ${(c.isActive||c.IsActive)?'pill-ok':'pill-warn'}">${(c.isActive||c.IsActive)?'Published':'Draft'}</span></td>
+                </tr>`).join('');
+        }).catch(()=>{ tbody.innerHTML='<tr><td colspan="5" style="text-align:center;padding:30px;color:#94a3b8;font-size:.82rem;">Could not load course data.</td></tr>'; });
+    })();
+
+    // ── Activity Feed (from AuditLog) ──
+    (function(){
+        const feed = document.getElementById('activityFeed');
+        const icons = {
+            'POST':['fa-circle-plus','#ede9fe','#7B2CBF'],
+            'PUT':['fa-pen','#dbeafe','#2563eb'],
+            'DELETE':['fa-trash','#fee2e2','#dc2626'],
+            'GET':['fa-eye','#dcfce7','#16a34a']
+        };
+        fetch('/AuditLog/Recent?limit=7').then(r=>r.json()).then(data=>{
+            if(!data||!data.length){ feed.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8;font-size:.82rem;">No recent activity.</div>'; return; }
+            feed.innerHTML = data.map(a=>{
+                const m = a.method||a.Method||'POST';
+                const [ic,bg,fg] = icons[m]||['fa-circle-dot','#f1f5f9','#64748b'];
+                return `<div class="act-item">
+                  <div class="act-dot" style="background:${bg};color:${fg};"><i class="fa-solid ${ic}"></i></div>
+                  <div>
+                    <div class="act-text">${esc(a.description||a.Description||a.requestPath||a.RequestPath||'System event')}</div>
+                    <div class="act-meta"><i class="fa-regular fa-clock" style="margin-right:3px;"></i>${esc(a.actorEmail||a.ActorEmail||'System')} · ${formatAgo(a.createdAt||a.CreatedAt)}</div>
+                  </div>
+                </div>`;
+            }).join('');
+        }).catch(()=>{ feed.innerHTML='<div style="text-align:center;padding:20px;color:#94a3b8;font-size:.82rem;">Activity log unavailable.</div>'; });
+    })();
+
+    function esc(s){ return (s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+    function formatAgo(d){
+        if(!d) return '';
+        const sec = Math.floor((new Date()-new Date(d))/1000);
+        if(sec<60) return 'just now';
+        if(sec<3600) return Math.floor(sec/60)+'m ago';
+        if(sec<86400) return Math.floor(sec/3600)+'h ago';
+        return Math.floor(sec/86400)+'d ago';
+    }
+})();
+</script>
+}

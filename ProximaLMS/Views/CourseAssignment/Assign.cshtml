@@ -1,0 +1,393 @@
+@model StudentCourseAssignViewModel
+@{
+    ViewData["Title"] = $"Assign Courses — {Model.StudentName}";
+    Layout = "_Layout";
+    var assigned = Model.Courses.Count(c => c.IsAssigned);
+    var total    = Model.Courses.Count;
+}
+
+<style>
+    :root { --grape:#4C1864; --violet:#7B2CBF; --bg:#f5f3ff; }
+    body  { background:var(--bg); }
+    .container-fluid { padding:0!important; }
+
+    /* HERO */
+    .hero { background:linear-gradient(135deg,var(--grape),#2d0f4e,var(--violet)); padding:26px 32px 70px; position:relative; overflow:hidden; }
+    .hero::before { content:''; position:absolute; width:280px; height:280px; background:radial-gradient(circle,rgba(123,44,191,.3) 0%,transparent 70%); top:-60px; right:-40px; border-radius:50%; }
+    .hero-inner { display:flex; align-items:center; justify-content:space-between; position:relative; z-index:2; flex-wrap:wrap; gap:12px; }
+    .hero-title { font-size:22px; font-weight:800; color:#fff; margin:0 0 4px; }
+    .hero-sub   { font-size:13px; color:rgba(255,255,255,.55); margin:0; }
+    .hero-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:2px; color:rgba(255,255,255,.45); margin-bottom:5px; }
+    .hero-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+
+    .btn-back { background:rgba(255,255,255,.15); color:#fff; border:1px solid rgba(255,255,255,.3); padding:10px 18px; border-radius:10px; font-size:13px; font-weight:600; text-decoration:none; display:flex; align-items:center; gap:7px; }
+    .btn-save-all { background:#fff; color:var(--grape); font-weight:700; font-size:13px; padding:10px 20px; border-radius:10px; border:none; cursor:pointer; display:flex; align-items:center; gap:7px; box-shadow:0 4px 14px rgba(0,0,0,.2); transition:transform .2s; }
+    .btn-save-all:hover { transform:translateY(-1px); }
+
+    /* BODY */
+    .body { padding:22px 32px 40px; margin-top:-44px; position:relative; z-index:10; }
+
+    /* STAT CARDS */
+    .stats-row { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:22px; }
+    @@media(max-width:800px) { .stats-row { grid-template-columns:repeat(2,1fr); } }
+    .sc { background:#fff; border-radius:14px; padding:14px 16px; box-shadow:0 4px 20px rgba(76,24,100,.08); display:flex; align-items:center; gap:12px; border:1px solid #ede9f8; }
+    .si { width:40px; height:40px; border-radius:11px; display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+    .si-p{background:#ede9f8;color:var(--grape);} .si-g{background:#d1fae5;color:#059669;} .si-a{background:#fef3c7;color:#d97706;} .si-b{background:#dbeafe;color:#1d4ed8;}
+    .sn { font-size:22px; font-weight:800; color:var(--grape); line-height:1; }
+    .sl { font-size:10px; font-weight:600; color:#6b7280; margin-top:2px; text-transform:uppercase; letter-spacing:.4px; }
+
+    /* TOOLBAR */
+    .toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; flex-wrap:wrap; gap:10px; }
+    .search-wrap { position:relative; }
+    .search-wrap i { position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#aaa; font-size:12px; pointer-events:none; }
+    .srch { border:1.5px solid #ede9f8; border-radius:10px; padding:8px 12px 8px 32px; width:220px; font-size:13px; background:#fff; outline:none; }
+    .srch:focus { border-color:var(--violet); }
+    .toolbar-right { display:flex; gap:8px; align-items:center; }
+    .btn-grant-all { background:linear-gradient(90deg,var(--grape),var(--violet)); color:#fff; border:none; padding:8px 16px; border-radius:9px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; }
+    .btn-revoke-all { background:#fff1f2; color:#dc2626; border:1.5px solid #fecaca; padding:8px 16px; border-radius:9px; font-size:12px; font-weight:700; cursor:pointer; display:flex; align-items:center; gap:6px; }
+
+    /* COURSE CARDS GRID */
+    .courses-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:16px; }
+
+    .course-card {
+        background:#fff; border-radius:16px; border:2px solid #ede9f8;
+        overflow:hidden; display:flex; flex-direction:column;
+        transition:transform .2s, box-shadow .2s, border-color .2s;
+        position:relative;
+    }
+    .course-card.assigned { border-color:#10b981; box-shadow:0 0 0 3px rgba(16,185,129,.1); }
+    .course-card:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(76,24,100,.1); }
+
+    /* ASSIGNED RIBBON */
+    .assigned-ribbon {
+        position:absolute; top:12px; right:12px; z-index:5;
+        background:#10b981; color:#fff; font-size:10px; font-weight:700;
+        padding:3px 9px; border-radius:20px;
+        display:flex; align-items:center; gap:4px;
+    }
+
+    .course-thumb {
+        height:140px; overflow:hidden; background:#f0ebf8;
+        display:flex; align-items:center; justify-content:center;
+        position:relative;
+    }
+    .course-thumb img { width:100%; height:100%; object-fit:cover; }
+    .course-thumb-placeholder { font-size:48px; color:#d4b8f0; }
+
+    .course-body { padding:14px 16px; flex:1; display:flex; flex-direction:column; gap:8px; }
+    .course-title { font-size:14px; font-weight:700; color:#1a1035; line-height:1.3; }
+    .course-meta { display:flex; gap:6px; flex-wrap:wrap; }
+    .cmeta-chip { display:inline-flex; align-items:center; gap:4px; font-size:11px; font-weight:600; padding:3px 8px; border-radius:6px; }
+    .chip-level  { background:#ede9f8; color:var(--grape); }
+    .chip-lang   { background:#dbeafe; color:#1d4ed8; }
+    .chip-tutor  { background:#fef3c7; color:#92400e; }
+    .course-price { font-size:13px; font-weight:800; color:var(--grape); }
+
+    /* TOGGLE SWITCH in footer */
+    .course-footer {
+        padding:12px 16px;
+        border-top:1px solid #f3f4f6;
+        display:flex; align-items:center; justify-content:space-between;
+    }
+    .assign-toggle-label { font-size:12px; font-weight:600; color:#6b7280; }
+    .tgl-wrap { display:flex; align-items:center; gap:7px; }
+    .tgl-sw { position:relative; width:44px; height:24px; display:inline-block; }
+    .tgl-sw input { opacity:0; width:0; height:0; }
+    .tgl-tr { position:absolute; inset:0; border-radius:24px; cursor:pointer; transition:.3s; background:#d1d5db; }
+    .tgl-tr::before { content:''; position:absolute; width:18px; height:18px; left:3px; bottom:3px; background:#fff; border-radius:50%; transition:.3s; box-shadow:0 1px 3px rgba(0,0,0,.2); }
+    input:checked + .tgl-tr { background:#10b981; }
+    input:checked + .tgl-tr::before { transform:translateX(20px); }
+    .tgl-text { font-size:12px; font-weight:700; min-width:52px; }
+    .tgl-text.on  { color:#059669; }
+    .tgl-text.off { color:#9ca3af; }
+
+    /* SPINNER */
+    .spinner-overlay { display:none; position:fixed; inset:0; background:rgba(255,255,255,.7); z-index:9999; align-items:center; justify-content:center; flex-direction:column; gap:14px; }
+    .spinner-overlay.show { display:flex; }
+
+    /* EMPTY */
+    .empty-state { background:#fff; border-radius:16px; border:2px dashed #ede9f8; padding:60px 40px; text-align:center; }
+    .empty-state i { font-size:48px; color:#d4b8f0; display:block; margin-bottom:12px; }
+</style>
+
+<div class="container-fluid">
+
+    <div class="hero">
+        <div class="hero-inner">
+            <div>
+                <div class="hero-label">Course Assignment</div>
+                <h1 class="hero-title">
+                    <i class="fas fa-user-graduate me-2" style="opacity:.7;"></i>
+                    @Model.StudentName
+                </h1>
+                <p class="hero-sub">
+                    @Model.StudentEmail &nbsp;·&nbsp;
+                    <strong style="color:rgba(255,255,255,.8);">@assigned</strong> of
+                    <strong style="color:rgba(255,255,255,.8);">@total</strong> courses assigned
+                </p>
+            </div>
+            <div class="hero-actions">
+                <a asp-action="Index" class="btn-back">
+                    <i class="fas fa-arrow-left"></i> All Students
+                </a>
+                <button class="btn-save-all" onclick="saveAllAssignments()">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="body">
+
+        <!-- STATS -->
+        <div class="stats-row">
+            <div class="sc">
+                <div class="si si-p"><i class="fas fa-book"></i></div>
+                <div><div class="sn">@total</div><div class="sl">Total Courses</div></div>
+            </div>
+            <div class="sc">
+                <div class="si si-g"><i class="fas fa-circle-check"></i></div>
+                <div><div class="sn" id="assignedCount">@assigned</div><div class="sl">Assigned</div></div>
+            </div>
+            <div class="sc">
+                <div class="si si-a"><i class="fas fa-circle-xmark"></i></div>
+                <div><div class="sn" id="unassignedCount">@(total - assigned)</div><div class="sl">Not Assigned</div></div>
+            </div>
+            <div class="sc">
+                <div class="si si-b"><i class="fas fa-user"></i></div>
+                <div><div class="sn">@Model.StudentName.Split(' ')[0]</div><div class="sl">Student</div></div>
+            </div>
+        </div>
+
+        <!-- TOOLBAR -->
+        <div class="toolbar">
+            <div class="search-wrap">
+                <i class="fas fa-search"></i>
+                <input type="text" id="courseSearch" class="srch" placeholder="Search courses…" />
+            </div>
+            <div class="toolbar-right">
+                <button class="btn-grant-all" onclick="selectAll(true)">
+                    <i class="fas fa-check-double"></i> Assign All
+                </button>
+                <button class="btn-revoke-all" onclick="selectAll(false)">
+                    <i class="fas fa-times"></i> Remove All
+                </button>
+            </div>
+        </div>
+
+        <!-- COURSE GRID -->
+        @if (Model.Courses.Any())
+        {
+            <div class="courses-grid" id="coursesGrid">
+                @foreach (var course in Model.Courses)
+                {
+                    <div class="course-card @(course.IsAssigned ? "assigned" : "")"
+                         id="card_@course.CourseID"
+                         data-title="@course.CourseTitle.ToLower()"
+                         data-assigned="@course.IsAssigned.ToString().ToLower()">
+
+                        @if (course.IsAssigned)
+                        {
+                            <div class="assigned-ribbon">
+                                <i class="fas fa-check" style="font-size:9px;"></i> Assigned
+                            </div>
+                        }
+
+                        <div class="course-thumb">
+                            @if (!string.IsNullOrEmpty(course.CoverImage))
+                            {
+                                <img src="/Coursecontent/Course_@course.CourseID/@course.CoverImage"
+                                     alt="@course.CourseTitle"
+                                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';" />
+                                <div class="course-thumb-placeholder" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center;">
+                                    <i class="fas fa-book-open"></i>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="course-thumb-placeholder">
+                                    <i class="fas fa-book-open"></i>
+                                </div>
+                            }
+                        </div>
+
+                        <div class="course-body">
+                            <div class="course-title">@course.CourseTitle</div>
+                            <div class="course-meta">
+                                @if (!string.IsNullOrEmpty(course.CourseLevelName))
+                                {
+                                    <span class="cmeta-chip chip-level">
+                                        <i class="fas fa-signal" style="font-size:9px;"></i>@course.CourseLevelName
+                                    </span>
+                                }
+                                @if (!string.IsNullOrEmpty(course.Language))
+                                {
+                                    <span class="cmeta-chip chip-lang">
+                                        <i class="fas fa-globe" style="font-size:9px;"></i>@course.Language
+                                    </span>
+                                }
+                                @if (!string.IsNullOrEmpty(course.TutorName))
+                                {
+                                    <span class="cmeta-chip chip-tutor">
+                                        <i class="fas fa-chalkboard-teacher" style="font-size:9px;"></i>@course.TutorName
+                                    </span>
+                                }
+                            </div>
+                            @if (course.Price > 0)
+                            {
+                                <div class="course-price">₹@course.Price.ToString("N0")</div>
+                            }
+                        </div>
+
+                        <div class="course-footer">
+                            <span class="assign-toggle-label">
+                                <i class="fas fa-user-plus" style="font-size:11px;margin-right:4px;"></i>
+                                Assign to Student
+                            </span>
+                            <div class="tgl-wrap">
+                                <label class="tgl-sw">
+                                    <input type="checkbox"
+                                           id="chk_@course.CourseID"
+                                           data-course-id="@course.CourseID"
+                                           @(course.IsAssigned ? "checked" : "")
+                                           onchange="onToggleChange(@course.CourseID, this.checked)" />
+                                    <span class="tgl-tr"></span>
+                                </label>
+                                <span class="tgl-text @(course.IsAssigned ? "on" : "off")"
+                                      id="tglText_@course.CourseID">
+                                    @(course.IsAssigned ? "Assigned" : "Not Set")
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="fas fa-book-open"></i>
+                <h5>No Courses Available</h5>
+                <p style="color:#9ca3af;">No active courses found. Create courses first.</p>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- SPINNER -->
+<div class="spinner-overlay" id="spinner">
+    <div class="spinner-border" style="color:var(--grape);width:3rem;height:3rem;" role="status"></div>
+    <div style="color:var(--grape);font-weight:700;font-size:14px;">Saving assignments…</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    const STUDENT_ID = @Model.StudentID;
+
+    // ── SEARCH ─────────────────────────────────────────────────
+    document.getElementById('courseSearch').addEventListener('input', function () {
+        const q = this.value.toLowerCase().trim();
+        document.querySelectorAll('.course-card').forEach(el => {
+            el.style.display = (!q || el.dataset.title.includes(q)) ? '' : 'none';
+        });
+    });
+
+    // ── TOGGLE CHANGE (visual only — save on "Save Changes") ──
+    function onToggleChange(courseId, isAssigned) {
+        const card    = document.getElementById(`card_${courseId}`);
+        const tglText = document.getElementById(`tglText_${courseId}`);
+        const ribbon  = card.querySelector('.assigned-ribbon');
+
+        if (isAssigned) {
+            card.classList.add('assigned');
+            tglText.textContent = 'Assigned';
+            tglText.className   = 'tgl-text on';
+            if (!ribbon) {
+                const r = document.createElement('div');
+                r.className = 'assigned-ribbon';
+                r.id = `ribbon_${courseId}`;
+                r.innerHTML = '<i class="fas fa-check" style="font-size:9px;"></i> Assigned';
+                card.appendChild(r);
+            }
+        } else {
+            card.classList.remove('assigned');
+            tglText.textContent = 'Not Set';
+            tglText.className   = 'tgl-text off';
+            const r = document.getElementById(`ribbon_${courseId}`) || ribbon;
+            if (r) r.remove();
+        }
+
+        updateCounts();
+    }
+
+    // ── SELECT / DESELECT ALL ──────────────────────────────────
+    function selectAll(state) {
+        document.querySelectorAll('[id^="chk_"]').forEach(chk => {
+            if (chk.checked !== state) {
+                chk.checked = state;
+                onToggleChange(parseInt(chk.dataset.courseId), state);
+            }
+        });
+    }
+
+    // ── UPDATE STAT COUNTERS ───────────────────────────────────
+    function updateCounts() {
+        const total    = document.querySelectorAll('[id^="chk_"]').length;
+        const assigned = [...document.querySelectorAll('[id^="chk_"]')].filter(c => c.checked).length;
+        document.getElementById('assignedCount').textContent   = assigned;
+        document.getElementById('unassignedCount').textContent = total - assigned;
+    }
+
+    // ── SAVE ALL ASSIGNMENTS ───────────────────────────────────
+    async function saveAllAssignments() {
+        const checkedIds = [...document.querySelectorAll('[id^="chk_"]:checked')]
+                           .map(c => parseInt(c.dataset.courseId));
+
+        const confirm = await Swal.fire({
+            title: 'Save Course Assignments?',
+            html: `<p style="color:#6b7280;font-size:14px;">
+                      <strong>${checkedIds.length}</strong> course(s) will be assigned to
+                      <strong>@Html.Raw(Model.StudentName)</strong>.<br>
+                      All other courses will be removed.
+                   </p>`,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#4C1864',
+            confirmButtonText: '<i class="fas fa-save me-1"></i> Yes, Save',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (!confirm.isConfirmed) return;
+
+        document.getElementById('spinner').classList.add('show');
+
+        try {
+            const resp = await fetch('/CourseAssignment/SaveAll', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    studentID: STUDENT_ID,
+                    courseIDs: checkedIds
+                })
+            });
+
+            const data = await resp.json();
+            document.getElementById('spinner').classList.remove('show');
+
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Saved!',
+                    text: data.message || 'Course assignments updated successfully.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Failed', text: data.message });
+            }
+        } catch (e) {
+            document.getElementById('spinner').classList.remove('show');
+            Swal.fire({ icon: 'error', title: 'Error', text: e.message });
+        }
+    }
+</script>

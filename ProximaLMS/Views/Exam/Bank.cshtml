@@ -1,0 +1,853 @@
+@model ProximaLMS.Models.ExamBuilderPageViewModel
+@{
+    ViewData["Title"] = "Question Bank";
+    Layout = "_Layout";
+}
+
+<style>
+    :root {
+        --grape: #4C1864;
+        --grape-2: #7B2CBF;
+        --ink: #1f1d2b;
+        --muted: #6b7280;
+        --border: #e7e5ee;
+        --ok: #16a34a;
+        --amber: #d97706;
+        --red: #dc2626;
+    }
+
+    .qb-wrap {
+        max-width: 1180px;
+        margin: 0 auto;
+    }
+
+    .qb-head {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 18px;
+        background: linear-gradient(120deg,var(--grape),var(--grape-2));
+        color: #fff;
+        border-radius: 14px;
+        padding: 16px 22px;
+        box-shadow: 0 12px 30px rgba(76,24,100,.25);
+    }
+
+        .qb-head h1 {
+            font-size: 1.25rem;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .qb-head .sub {
+            opacity: .9;
+            font-size: .85rem;
+        }
+
+    .qb-back {
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+        font-size: .82rem;
+        opacity: .9;
+        margin-left: auto;
+    }
+
+        .qb-back:hover {
+            opacity: 1;
+            color: #fff;
+        }
+
+    .qb-filters {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 11px 14px;
+        margin-bottom: 14px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        box-shadow: 0 4px 14px rgba(10,20,40,.04);
+    }
+
+        .qb-filters .group-label {
+            font-size: .7rem;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--muted);
+            font-weight: 700;
+            margin-right: 4px;
+        }
+
+    .pill {
+        cursor: pointer;
+        user-select: none;
+        font-size: .78rem;
+        font-weight: 700;
+        padding: 5px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        color: var(--ink);
+        background: #fff;
+    }
+
+        .pill.on {
+            background: linear-gradient(90deg,var(--grape),var(--grape-2));
+            color: #fff;
+            border-color: transparent;
+        }
+
+        .pill.diff-easy.on {
+            background: linear-gradient(90deg,#10b981,#16a34a);
+        }
+
+        .pill.diff-medium.on {
+            background: linear-gradient(90deg,#f59e0b,#d97706);
+        }
+
+        .pill.diff-hard.on {
+            background: linear-gradient(90deg,#ef4444,#dc2626);
+        }
+
+    .qb-divider {
+        width: 1px;
+        height: 18px;
+        background: var(--border);
+        margin: 0 4px;
+    }
+
+    .qb-search {
+        margin-left: auto;
+        padding: 7px 11px 7px 30px;
+        border: 1.5px solid #ede9f8;
+        border-radius: 9px;
+        font-size: .85rem;
+        min-width: 220px;
+        background: #faf9fc url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2398a2b3' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'><circle cx='11' cy='11' r='8'/><line x1='21' y1='21' x2='16.65' y2='16.65'/></svg>") no-repeat 10px center;
+        background-size: 13px;
+        outline: none;
+    }
+
+        .qb-search:focus {
+            border-color: var(--grape-2);
+            background-color: #fff;
+        }
+
+    .qb-actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .btn-g {
+        background: linear-gradient(90deg,var(--grape),var(--grape-2));
+        color: #fff;
+        border: none;
+        padding: 9px 18px;
+        border-radius: 9px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: .85rem;
+    }
+
+    .btn-o {
+        background: #fff;
+        border: 1px solid var(--border);
+        color: var(--ink);
+        padding: 9px 16px;
+        border-radius: 9px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: .85rem;
+    }
+
+        .btn-o:hover {
+            border-color: var(--grape-2);
+            color: var(--grape);
+        }
+
+    .btn-danger-o {
+        background: #fff;
+        border: 1px solid #f3c2c2;
+        color: var(--red);
+        padding: 7px 12px;
+        border-radius: 8px;
+        font-weight: 700;
+        cursor: pointer;
+        font-size: .78rem;
+    }
+
+    .qb-panel {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        box-shadow: 0 6px 18px rgba(10,20,40,.05);
+        overflow: hidden;
+    }
+
+    table.qb-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .qb-table th {
+        text-align: left;
+        font-size: .7rem;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        color: var(--muted);
+        padding: 11px 14px;
+        background: #faf9fc;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .qb-table td {
+        padding: 13px 14px;
+        border-bottom: 1px solid #f1eef7;
+        font-size: .88rem;
+        color: var(--ink);
+        vertical-align: middle;
+    }
+
+    .qb-table tr:last-child td {
+        border-bottom: none;
+    }
+
+    .qb-table tr:hover td {
+        background: #faf9fc;
+    }
+
+    .q-text-cell {
+        max-width: 430px;
+    }
+
+        .q-text-cell .qt {
+            font-weight: 600;
+            color: var(--ink);
+            line-height: 1.45;
+        }
+
+        .q-text-cell .meta {
+            font-size: .74rem;
+            color: var(--muted);
+            margin-top: 4px;
+        }
+
+    .badge {
+        font-size: .68rem;
+        font-weight: 700;
+        padding: 3px 9px;
+        border-radius: 999px;
+        white-space: nowrap;
+    }
+
+    .b-easy {
+        background: #d1fae5;
+        color: #15803d;
+    }
+
+    .b-medium {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .b-hard {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    .b-type {
+        background: #f4f1fa;
+        color: var(--grape);
+    }
+
+    .b-used {
+        background: #dbeafe;
+        color: #1e40af;
+    }
+
+    .icon-btn {
+        border: none;
+        background: #f4f1fa;
+        color: var(--grape);
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        cursor: pointer;
+        margin-right: 4px;
+    }
+
+        .icon-btn.del {
+            background: #fbe9ec;
+            color: var(--red);
+        }
+
+        .icon-btn:hover {
+            transform: translateY(-1px);
+        }
+
+    .qb-empty {
+        padding: 50px 30px;
+        text-align: center;
+        color: var(--muted);
+    }
+
+        .qb-empty i {
+            font-size: 38px;
+            color: #d6cfe6;
+        }
+
+    /* ── editor modal ─── */
+    label.fl {
+        font-weight: 600;
+        font-size: .82rem;
+        color: #344054;
+        margin-bottom: 4px;
+        display: block;
+    }
+
+    .fc {
+        width: 100%;
+        padding: 9px 11px;
+        border: 1px solid #d6d9e0;
+        border-radius: 8px;
+        font-size: .9rem;
+        box-sizing: border-box;
+    }
+
+        .fc:focus {
+            outline: none;
+            border-color: var(--grape-2);
+            box-shadow: 0 0 0 3px rgba(123,44,191,.12);
+        }
+
+    .row2 {
+        display: grid;
+        grid-template-columns: repeat(2,1fr);
+        gap: 12px;
+    }
+
+    .row3 {
+        display: grid;
+        grid-template-columns: repeat(3,1fr);
+        gap: 12px;
+    }
+
+    .ovl {
+        position: fixed;
+        inset: 0;
+        background: rgba(20,16,32,.62);
+        backdrop-filter: blur(3px);
+        -webkit-backdrop-filter: blur(3px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 3000;
+        padding: 24px 16px;
+        overflow-y: auto;
+    }
+
+        .ovl.show {
+            display: flex;
+        }
+
+    .modal-card {
+        background: #fff;
+        border-radius: 16px;
+        width: 100%;
+        max-width: 680px;
+        max-height: 90vh;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        box-shadow: 0 24px 70px rgba(0,0,0,.35);
+    }
+
+    .modal-h {
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--border);
+        font-weight: 800;
+        color: var(--ink);
+        flex-shrink: 0;
+    }
+
+    .modal-b {
+        padding: 18px 20px;
+        overflow-y: auto;
+        flex: 1 1 auto;
+    }
+
+    .modal-f {
+        padding: 14px 20px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        flex-shrink: 0;
+        background: #fff;
+    }
+
+    .opt-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+    }
+
+        .opt-row .grow {
+            flex: 1;
+        }
+
+    .opt-correct {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: .78rem;
+        color: var(--muted);
+        white-space: nowrap;
+    }
+
+    .opt-del {
+        border: none;
+        background: #fbe9ec;
+        color: var(--red);
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    .help-text {
+        font-size: .76rem;
+        color: var(--muted);
+        margin-top: 4px;
+    }
+
+        .help-text code {
+            background: #f4f1fa;
+            padding: 1px 5px;
+            border-radius: 4px;
+            color: var(--grape);
+            font-size: .78rem;
+        }
+
+    /* ── Toast: clear the fixed top header & stay readable ── */
+    .swal2-container.swal2-top-end { padding-top: 84px !important; }
+    .qb-toast {
+        min-width: 280px !important;
+        box-shadow: 0 10px 30px rgba(76, 24, 100, .18) !important;
+        border: 1px solid #ece7f8 !important;
+        border-radius: 12px !important;
+    }
+    .qb-toast .swal2-title {
+        font-size: .9rem !important;
+        line-height: 1.35 !important;
+        text-align: left !important;
+        word-break: break-word;
+    }
+</style>
+
+<div class="qb-wrap">
+    <div class="qb-head">
+        <div>
+            <h1><i class="fa-solid fa-database"></i> Question Bank</h1>
+            <div class="sub">@Model.CourseTitle · reusable questions for this course's exams</div>
+        </div>
+        <a href="@Url.Action("Builder","Exam", new { courseId = Model.CourseID })" class="qb-back">
+            <i class="fa-solid fa-arrow-left"></i> Back to exam builder
+        </a>
+    </div>
+
+    <div class="qb-filters">
+        <span class="group-label">Difficulty</span>
+        <span class="pill diff-easy on" data-flt="diff" data-val="">All</span>
+        <span class="pill diff-easy" data-flt="diff" data-val="Easy">Easy</span>
+        <span class="pill diff-medium" data-flt="diff" data-val="Medium">Medium</span>
+        <span class="pill diff-hard" data-flt="diff" data-val="Hard">Hard</span>
+
+        <span class="qb-divider"></span>
+
+        <span class="group-label">Type</span>
+        <span class="pill on" data-flt="type" data-val="">All</span>
+        <span class="pill" data-flt="type" data-val="Single">MCQ</span>
+        <span class="pill" data-flt="type" data-val="Multiple">Multi</span>
+        <span class="pill" data-flt="type" data-val="TrueFalse">T/F</span>
+        <span class="pill" data-flt="type" data-val="FillBlank">Fill</span>
+        <span class="pill" data-flt="type" data-val="ShortAnswer">Short</span>
+
+        <input id="search" class="qb-search" placeholder="Search question text…" />
+    </div>
+
+    <div class="qb-actions">
+        <button class="btn-g" onclick="openEditor()"><i class="fa-solid fa-plus"></i> New Question</button>
+        <span style="font-size:.78rem; color:var(--muted); align-self:center; margin-left:auto;" id="countLbl">0 questions</span>
+    </div>
+
+    <div class="qb-panel">
+        <table class="qb-table">
+            <thead>
+                <tr>
+                    <th style="width:50%;">Question</th>
+                    <th>Type</th>
+                    <th>Difficulty</th>
+                    <th>Marks</th>
+                    <th>Used in</th>
+                    <th style="text-align:right;">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="qbBody"><tr><td colspan="6" class="qb-empty"><i class="fa-solid fa-database d-block"></i><p style="margin-top:8px;">Loading…</p></td></tr></tbody>
+        </table>
+    </div>
+</div>
+
+
+<!-- EDITOR MODAL -->
+<div class="ovl" id="qbModal">
+    <div class="modal-card">
+        <div class="modal-h"><i class="fa-solid fa-pen" style="margin-right:8px;"></i><span id="qbModalTitle">New Question</span></div>
+        <div class="modal-b">
+            <input type="hidden" id="qbId" value="0" />
+
+            <div style="margin-bottom:12px;">
+                <label class="fl">Question text *</label>
+                <textarea id="qbText" class="fc" rows="2"></textarea>
+            </div>
+
+            <div class="row3" style="margin-bottom:12px;">
+                <div>
+                    <label class="fl">Type</label>
+                    <select id="qbType" class="fc" onchange="onTypeChange(this.value)">
+                        <option value="Single">MCQ (single answer)</option>
+                        <option value="Multiple">Multiple answers</option>
+                        <option value="TrueFalse">True / False</option>
+                        <option value="FillBlank">Fill in the blank</option>
+                        <option value="ShortAnswer">Short Answer</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="fl">Difficulty</label>
+                    <select id="qbDiff" class="fc">
+                        <option value="Easy">Easy</option>
+                        <option value="Medium" selected>Medium</option>
+                        <option value="Hard">Hard</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="fl">Marks</label>
+                    <input id="qbMarks" type="number" min="1" value="1" class="fc" />
+                </div>
+            </div>
+
+            <!-- choice options (Single, Multiple, TrueFalse) -->
+            <div id="optBlock">
+                <label class="fl">Options <span style="font-weight:400;color:#98a2b3;">— mark correct one(s)</span></label>
+                <div id="optList"></div>
+                <button class="btn-o" id="addOptBtn" style="margin-top:6px;font-size:.78rem;padding:6px 12px;" onclick="addOption()"><i class="fa-solid fa-plus"></i> Add Option</button>
+            </div>
+
+            <!-- fill-blank acceptable answers -->
+            <div id="fillBlock" style="display:none;">
+                <label class="fl">Acceptable answers *</label>
+                <input id="qbAccept" class="fc" placeholder="JavaScript|javascript|JS" />
+                <div class="help-text">Separate alternatives with <code>|</code>. Matching is case-insensitive.</div>
+            </div>
+
+            <!-- short answer note -->
+            <div id="shortBlock" style="display:none;">
+                <div style="background:#fffaf0; border:1px solid #fde9c8; border-radius:9px; padding:11px 14px; font-size:.85rem; color:#92400e;">
+                    <i class="fa-solid fa-circle-info"></i>
+                    Short-answer responses are graded manually by the tutor after submission. They won't auto-score.
+                </div>
+            </div>
+
+            <div style="margin-top:14px;">
+                <label class="fl">Explanation <span style="font-weight:400;color:#98a2b3;">(optional, shown on result reveal)</span></label>
+                <textarea id="qbExpl" class="fc" rows="2"></textarea>
+            </div>
+
+            <div style="margin-top:10px;">
+                <label class="fl">Tags <span style="font-weight:400;color:#98a2b3;">(optional, comma-separated)</span></label>
+                <input id="qbTags" class="fc" placeholder="basics, syntax, week1" />
+            </div>
+        </div>
+        <div class="modal-f">
+            <button class="btn-o" onclick="closeEditor()">Cancel</button>
+            <button class="btn-g" onclick="saveQuestion()"><i class="fa-solid fa-check"></i> Save Question</button>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        const COURSE_ID = @Model.CourseID;
+        const U = {
+            list: '@Url.Action("BankList", "Exam")',
+            full: '@Url.Action("BankFull", "Exam")',
+            save: '@Url.Action("BankSave", "Exam")',
+            del: '@Url.Action("BankDelete", "Exam")'
+        };
+        const esc = s => (s || '').toString().replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        const truthy = v => v === true || v === 1 || v === '1';
+        // Robust POST/GET: text-first parse so a non-JSON response (auth redirect /
+        // exception page) becomes a visible error instead of a silent failure.
+        const postJson = async (u, b) => {
+            try {
+                const r = await fetch(u, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(b) });
+                const raw = await r.text();
+                try { return raw ? JSON.parse(raw) : {}; }
+                catch (_) { return { Status: 'Error', Message: 'Server ' + r.status + ': ' + (raw || 'empty response').replace(/\s+/g, ' ').slice(0, 300) }; }
+            } catch (e) { return { Status: 'Error', Message: e.message }; }
+        };
+        const getJson = async (u) => {
+            try {
+                const r = await fetch(u);
+                const raw = await r.text();
+                try { return raw ? JSON.parse(raw) : []; }
+                catch (_) { return { Status: 'Error', Message: 'Server ' + r.status + ': ' + (raw || 'empty response').replace(/\s+/g, ' ').slice(0, 300) }; }
+            } catch (e) { return { Status: 'Error', Message: e.message }; }
+        };
+        const ok = r => r && (r.status === 'Success' || r.Status === 'Success');
+        const isErr = r => r && (r.Status === 'Error' || r.status === 'Error');
+        // API returns Dapper dynamic rows as PascalCase SQL column names
+        // (BankQuestionID, QuestionText, OptionCount …) but the render reads
+        // camelCase — normalise so r.bankQuestionID etc. resolve.
+        const camelKeys = o => Array.isArray(o) ? o.map(camelKeys)
+            : (o && typeof o === 'object')
+                ? Object.fromEntries(Object.entries(o).map(([k, v]) => [k.charAt(0).toLowerCase() + k.slice(1), camelKeys(v)]))
+                : o;
+        const toast = (i, t) => Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: i === 'error' ? 5000 : 2200,
+            timerProgressBar: true,
+            customClass: { popup: 'qb-toast' },
+            didOpen: (el) => {
+                el.addEventListener('mouseenter', Swal.stopTimer);
+                el.addEventListener('mouseleave', Swal.resumeTimer);
+            }
+        }).fire({ icon: i, title: t || (i === 'success' ? 'Done' : 'Something went wrong') });
+
+        let FILTER = { diff: '', type: '' };
+        let QUERY = '';
+        let editor = null;   // { type, options:[{text,correct}] }
+
+        // ── load list ─────────────────────────────────────────────
+        async function load() {
+            const qs = new URLSearchParams({
+                courseId: COURSE_ID,
+                difficulty: FILTER.diff,
+                type: FILTER.type,
+                search: QUERY
+            }).toString();
+            let rows = await getJson(U.list + '?' + qs);
+            if (isErr(rows)) {
+                document.getElementById('qbBody').innerHTML =
+                    `<tr><td colspan="6" class="qb-empty" style="color:#dc2626;">
+                                <i class="fa-solid fa-triangle-exclamation"></i>
+                                <p style="margin-top:8px;">Couldn’t load questions.</p>
+                                <p style="font-size:.8rem;">${esc(rows.Message || rows.message || '')}</p>
+                            </td></tr>`;
+                document.getElementById('countLbl').textContent = '0 questions';
+                return;
+            }
+            rows = camelKeys(rows);
+            renderRows(Array.isArray(rows) ? rows : []);
+        }
+
+        function renderRows(rows) {
+            const body = document.getElementById('qbBody');
+            document.getElementById('countLbl').textContent =
+                rows.length + ' question' + (rows.length === 1 ? '' : 's');
+
+            if (rows.length === 0) {
+                body.innerHTML = `<tr><td colspan="6" class="qb-empty">
+                            <i class="fa-solid fa-database"></i>
+                            <p style="margin-top:8px;">No questions match.</p>
+                            <p style="font-size:.8rem;">Try clearing the filters or create your first question.</p>
+                        </td></tr>`;
+                return;
+            }
+
+            body.innerHTML = rows.map(r => {
+                const diffCls = r.difficulty === 'Easy' ? 'b-easy' : r.difficulty === 'Hard' ? 'b-hard' : 'b-medium';
+                const typeLabel = ({ Single: 'MCQ', Multiple: 'Multi', TrueFalse: 'T/F', FillBlank: 'Fill', ShortAnswer: 'Short' })[r.questionType] || r.questionType;
+                return `
+                        <tr>
+                            <td class="q-text-cell">
+                                <div class="qt">${esc(r.questionText)}</div>
+                                <div class="meta">${r.optionCount ? r.optionCount + ' options · ' : ''}${esc(r.tags || '')}</div>
+                            </td>
+                            <td><span class="badge b-type">${typeLabel}</span></td>
+                            <td><span class="badge ${diffCls}">${r.difficulty}</span></td>
+                            <td>${r.marks}</td>
+                            <td>${r.usedInExams > 0 ? `<span class="badge b-used">${r.usedInExams} exam${r.usedInExams > 1 ? 's' : ''}</span>` : '<span style="color:#98a2b3;font-size:.78rem;">—</span>'}</td>
+                            <td style="text-align:right;">
+                                <button class="icon-btn" title="Edit" onclick="openEditor(${r.bankQuestionID})"><i class="fa-solid fa-pen"></i></button>
+                                <button class="icon-btn del" title="Delete" onclick="del(${r.bankQuestionID}, ${r.usedInExams})"><i class="fa-solid fa-trash"></i></button>
+                            </td>
+                        </tr>`;
+            }).join('');
+        }
+
+        // ── filters & search
+        document.querySelectorAll('.pill').forEach(p => {
+            p.addEventListener('click', function () {
+                const flt = this.dataset.flt;
+                document.querySelectorAll(`.pill[data-flt="${flt}"]`).forEach(x => x.classList.remove('on'));
+                this.classList.add('on');
+                FILTER[flt] = this.dataset.val;
+                load();
+            });
+        });
+        let searchTimer;
+        document.getElementById('search').addEventListener('input', function () {
+            QUERY = this.value.trim();
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(load, 220);
+        });
+
+        // ── editor ─────────────────────────────────────────────────
+        async function openEditor(bankQuestionId) {
+            // reset
+            document.getElementById('qbId').value = 0;
+            document.getElementById('qbText').value = '';
+            document.getElementById('qbType').value = 'Single';
+            document.getElementById('qbDiff').value = 'Medium';
+            document.getElementById('qbMarks').value = 1;
+            document.getElementById('qbAccept').value = '';
+            document.getElementById('qbExpl').value = '';
+            document.getElementById('qbTags').value = '';
+            document.getElementById('qbModalTitle').textContent = 'New Question';
+            editor = { type: 'Single', options: [{ text: '', correct: false }, { text: '', correct: false }] };
+
+            if (bankQuestionId) {
+                try {
+                    const q = await fetch(U.full + '?bankQuestionId=' + bankQuestionId).then(r => r.json());
+                    if (q && q.bankQuestionID) {
+                        document.getElementById('qbId').value = q.bankQuestionID;
+                        document.getElementById('qbText').value = q.questionText || '';
+                        document.getElementById('qbType').value = q.questionType || 'Single';
+                        document.getElementById('qbDiff').value = q.difficulty || 'Medium';
+                        document.getElementById('qbMarks').value = q.marks ?? 1;
+                        document.getElementById('qbAccept').value = q.acceptableAnswers || '';
+                        document.getElementById('qbExpl').value = q.explanation || '';
+                        document.getElementById('qbTags').value = q.tags || '';
+                        document.getElementById('qbModalTitle').textContent = 'Edit Question';
+                        editor.type = q.questionType || 'Single';
+                        editor.options = (q.options || []).map(o => ({ text: o.optionText, correct: truthy(o.isCorrect) }));
+                        if (editor.options.length === 0) editor.options = [{ text: '', correct: false }, { text: '', correct: false }];
+                    }
+                } catch (e) { toast('error', 'Could not load question'); }
+            }
+
+            onTypeChange(editor.type);
+            document.getElementById('qbModal').classList.add('show');
+        }
+        function closeEditor() { document.getElementById('qbModal').classList.remove('show'); }
+
+        function onTypeChange(val) {
+            editor.type = val;
+            document.getElementById('qbType').value = val;
+
+            const choiceTypes = ['Single', 'Multiple', 'TrueFalse'];
+            const isChoice = choiceTypes.includes(val);
+
+            document.getElementById('optBlock').style.display = isChoice ? '' : 'none';
+            document.getElementById('fillBlock').style.display = val === 'FillBlank' ? '' : 'none';
+            document.getElementById('shortBlock').style.display = val === 'ShortAnswer' ? '' : 'none';
+
+            if (val === 'TrueFalse') {
+                const firstCorrect = editor.options.findIndex(o => o.correct);
+                editor.options = [
+                    { text: 'True', correct: firstCorrect === 0 },
+                    { text: 'False', correct: firstCorrect === 1 }
+                ];
+            } else if (val === 'Single') {
+                let seen = false;
+                editor.options.forEach(o => { if (o.correct) { if (seen) o.correct = false; else seen = true; } });
+                if (editor.options.length < 2) editor.options.push({ text: '', correct: false });
+            }
+            if (isChoice) renderOptions();
+        }
+
+        function renderOptions() {
+            const box = document.getElementById('optList');
+            const isTF = editor.type === 'TrueFalse';
+            const single = editor.type === 'Single' || isTF;
+            document.getElementById('addOptBtn').style.display = isTF ? 'none' : '';
+
+            box.innerHTML = editor.options.map((o, i) => `
+                        <div class="opt-row">
+                            <input class="fc grow" placeholder="Option text" value="${esc(o.text)}" ${isTF ? 'readonly' : ''}
+                                   oninput="editor.options[${i}].text=this.value" />
+                            <label class="opt-correct">
+                                <input type="${single ? 'radio' : 'checkbox'}" name="optCorrect" ${o.correct ? 'checked' : ''}
+                                       onchange="setCorrect(${i}, this.checked)"> correct
+                            </label>
+                            ${isTF ? '' : `<button class="opt-del" onclick="removeOption(${i})">✕</button>`}
+                        </div>`).join('');
+        }
+        function setCorrect(i, checked) {
+            if (editor.type === 'Multiple') editor.options[i].correct = checked;
+            else editor.options.forEach((o, idx) => o.correct = (idx === i));
+        }
+        function addOption() { editor.options.push({ text: '', correct: false }); renderOptions(); }
+        function removeOption(i) { if (editor.options.length <= 2) { toast('info', 'Keep at least two options'); return; } editor.options.splice(i, 1); renderOptions(); }
+
+        async function saveQuestion() {
+            const text = document.getElementById('qbText').value.trim();
+            if (!text) { toast('info', 'Enter the question text'); return; }
+
+            const type = document.getElementById('qbType').value;
+            const body = {
+                BankQuestionID: parseInt(document.getElementById('qbId').value, 10) || 0,
+                CourseID: COURSE_ID,
+                QuestionText: text,
+                QuestionType: type,
+                Difficulty: document.getElementById('qbDiff').value,
+                Marks: parseInt(document.getElementById('qbMarks').value, 10) || 1,
+                AcceptableAnswers: type === 'FillBlank' ? document.getElementById('qbAccept').value.trim() : null,
+                Explanation: document.getElementById('qbExpl').value.trim() || null,
+                Tags: document.getElementById('qbTags').value.trim() || null,
+                Options: ['Single', 'Multiple', 'TrueFalse'].includes(type)
+                    ? editor.options.filter(o => o.text.trim() !== '')
+                        .map(o => ({ OptionText: o.text.trim(), IsCorrect: o.correct }))
+                    : []
+            };
+
+            if (['Single', 'Multiple', 'TrueFalse'].includes(type)) {
+                if (body.Options.length < 2) { toast('info', 'At least two options needed'); return; }
+                if (!body.Options.some(o => o.IsCorrect)) { toast('info', 'Mark a correct option'); return; }
+            }
+            if (type === 'FillBlank' && !body.AcceptableAnswers) {
+                toast('info', 'Provide at least one acceptable answer'); return;
+            }
+
+            const res = await postJson(U.save, body);
+            if (ok(res)) { closeEditor(); toast('success', 'Question saved'); load(); }
+            else { toast('error', res.message || res.Message || 'Save failed'); }
+        }
+
+        async function del(id, usedInExams) {
+            const warning = usedInExams > 0
+                ? `<p style="color:#dc2626;font-size:14px;">This question is linked to <b>${usedInExams}</b> exam${usedInExams > 1 ? 's' : ''}. Deleting it will remove it from those exams.</p>`
+                : '';
+            const c = await Swal.fire({
+                icon: 'warning', title: 'Delete this question?', html: warning,
+                showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Delete'
+            });
+            if (!c.isConfirmed) return;
+            const res = await postJson(U.del, { BankQuestionID: id });
+            if (ok(res)) { toast('success', 'Deleted'); load(); }
+            else toast('error', 'Delete failed');
+        }
+
+        document.getElementById('qbModal').addEventListener('click', function (e) { if (e.target === this) closeEditor(); });
+        load();
+    </script>
+}

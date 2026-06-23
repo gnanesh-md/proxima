@@ -1,0 +1,973 @@
+@*  /Views/AuditLog/Index.cshtml
+    ─────────────────────────────────────────
+    REDESIGN (current pass):
+      • CRITICAL: anonymous actor was showing as literal "</em>anonymous</em>"
+        because esc() escapes the fallback HTML. Fixed by building actor
+        HTML conditionally (no esc on hardcoded markup).
+      • CRITICAL: Action column was wrapping character-by-character because
+        table-layout: auto squeezed the column. Switched to <colgroup>
+        with explicit widths + word-break controls.
+      • CRITICAL: "When" column rendered empty because API field name may
+        differ. Added defensive fallback chain (CreatedAt / CreatedDate / etc).
+      • Table now has table-layout:fixed + horizontal scroll on overflow.
+      • All CSS variables have fallback values so design doesn't break if
+        admin-settings.css fails to load.
+      • Table header row has subtle bg + sticky positioning.
+      • Empty / loading states have proper icon + spacing.
+      • UTC display, race-guard, page-size selector, Enter-key, validation,
+        a11y labels — all carried over from previous pass.
+    ───────────────────────────────────────── *@
+@model ProximaLMS.Controllers.AuditLogViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Audit Log";
+}
+
+<div class="al-wrap">
+
+    @* ── HEADER ───────────────────────────────────── *@
+    <div class="al-head">
+        <div class="al-head-ico"><i class="fa-solid fa-clipboard-list"></i></div>
+        <div class="al-head-text">
+            <h1>Audit Log</h1>
+            <div class="al-sub">Every create, update, and delete across the system — who, what, when</div>
+        </div>
+    </div>
+
+    @* ── STATS TILES ──────────────────────────────── *@
+    <div class="al-tiles">
+        <div class="al-tile" style="--accent:#7B2CBF;">
+            <div class="al-tile-num">@Model.Stats.TotalEntries</div>
+            <div class="al-tile-lbl">Total Entries</div>
+        </div>
+        <div class="al-tile" style="--accent:#2563eb;">
+            <div class="al-tile-num">@Model.Stats.Last24h</div>
+            <div class="al-tile-lbl">Last 24 Hours</div>
+        </div>
+        <div class="al-tile" style="--accent:#16a34a;">
+            <div class="al-tile-num">@Model.Stats.Last7d</div>
+            <div class="al-tile-lbl">Last 7 Days</div>
+        </div>
+        <div class="al-tile" style="--accent:#dc2626;">
+            <div class="al-tile-num" style="color:#dc2626;">@Model.Stats.FailedActions</div>
+            <div class="al-tile-lbl">Failed Actions</div>
+        </div>
+    </div>
+
+    @* ── FILTERS ──────────────────────────────────── *@
+    <div class="al-card al-filter-card">
+        <div class="al-filter-row">
+            <div class="al-field">
+                <label for="fromDate">From</label>
+                <input type="date" id="fromDate" max="9999-12-31" />
+            </div>
+            <div class="al-field">
+                <label for="toDate">To</label>
+                <input type="date" id="toDate" max="9999-12-31" />
+            </div>
+            <div class="al-field">
+                <label for="entityName">Entity</label>
+                <select id="entityName">
+                    <option value="">All entities</option>
+                    @foreach (var e in Model.Filters.Entities ?? new())
+                    {
+                        <option value="@e">@e</option>
+                    }
+                </select>
+            </div>
+            <div class="al-field">
+                <label for="actionType">Action</label>
+                <select id="actionType">
+                    <option value="">All actions</option>
+                    @foreach (var a in Model.Filters.ActionTypes ?? new())
+                    {
+                        <option value="@a">@a</option>
+                    }
+                </select>
+            </div>
+            <div class="al-field">
+                <label for="outcome">Outcome</label>
+                <select id="outcome">
+                    <option value="">All</option>
+                    <option value="SUCCESS">Success</option>
+                    <option value="FAILURE">Failure</option>
+                </select>
+            </div>
+            <div class="al-field">
+                <label for="searchTxt">Search (email)</label>
+                <input type="text" id="searchTxt" placeholder="Email contains…" autocomplete="off" />
+            </div>
+        </div>
+
+        <div id="filterError" class="al-error" role="alert" style="display:none;"></div>
+
+        <div class="al-toolbar">
+            <button class="al-btn al-btn-primary" id="btnApply" type="button">
+                <i class="fa-solid fa-filter"></i> <span class="btn-label">Apply</span>
+            </button>
+            <button class="al-btn al-btn-ghost" id="btnReset" type="button">
+                <i class="fa-solid fa-rotate-left"></i> Reset
+            </button>
+            <button class="al-btn al-btn-ghost" id="btnRefresh" type="button" title="Reload with current filters">
+                <i class="fa-solid fa-arrows-rotate"></i> Refresh
+            </button>
+            <div class="al-pagesize">
+                <label for="pageSize">Page size</label>
+                <select id="pageSize">
+                    <option value="10">10</option>
+                    <option value="25" selected>25</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    @* ── TABLE ────────────────────────────────────── *@
+    <div class="al-card al-table-card">
+        <div class="al-table-scroll">
+            <table class="al-table">
+                <colgroup>
+                    <col style="width:180px;" />
+                    <col style="width:200px;" />
+                    <col style="width:170px;" />
+                    <col />
+                    <col style="width:90px;" />
+                    <col style="width:120px;" />
+                    <col />
+                    <col style="width:130px;" />
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>When</th>
+                        <th>Actor</th>
+                        <th>Action</th>
+                        <th>Entity</th>
+                        <th>Method</th>
+                        <th>Result</th>
+                        <th>Request data</th>
+                        <th>IP</th>
+                    </tr>
+                </thead>
+                <tbody id="auditTbody" aria-busy="false">
+                    <tr>
+                        <td colspan="8" class="al-empty">
+                            <i class="fa-solid fa-spinner fa-spin"></i> Loading…
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="al-pager">
+            <span id="pagerInfo" aria-live="polite">Loading…</span>
+            <div class="al-pager-ctrls">
+                <button class="al-btn al-btn-ghost" id="btnPrev" type="button" disabled aria-label="Previous page">
+                    <i class="fa-solid fa-chevron-left"></i> Prev
+                </button>
+                <span id="pageLabel" aria-live="polite">Page 1</span>
+                <button class="al-btn al-btn-ghost" id="btnNext" type="button" disabled aria-label="Next page">
+                    Next <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<style>
+    /* ══════════════════════════════════════════
+           AUDIT LOG · Self-contained styles
+           (no external CSS-var dependency)
+        ══════════════════════════════════════════ */
+    :root {
+        --al-primary: #4C1864;
+        --al-primary-2: #7B2CBF;
+        --al-ink: #1f1d2b;
+        --al-ink2: #6b7280;
+        --al-muted: #9ca3af;
+        --al-border: #e7e5ee;
+        --al-bg: #faf9fc;
+        --al-ok-bg: #dcfce7;
+        --al-ok-ink: #15803d;
+        --al-fail-bg: #fee2e2;
+        --al-fail-ink: #991b1b;
+    }
+
+    .al-wrap {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 4px;
+    }
+
+    /* ── Header banner ── */
+    .al-head {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        background: linear-gradient(120deg, var(--al-primary), var(--al-primary-2));
+        color: #fff;
+        border-radius: 14px;
+        padding: 18px 22px;
+        margin-bottom: 20px;
+        box-shadow: 0 10px 24px rgba(76,24,100,.18);
+    }
+
+    .al-head-ico {
+        width: 44px;
+        height: 44px;
+        border-radius: 12px;
+        background: rgba(255,255,255,.18);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        flex-shrink: 0;
+    }
+
+    .al-head h1 {
+        font-size: 1.25rem;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    .al-sub {
+        opacity: .88;
+        font-size: .83rem;
+        margin-top: 3px;
+    }
+
+    /* ── Stats tiles ── */
+    .al-tiles {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    @@media (max-width: 800px) {
+        .al-tiles {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    .al-tile {
+        background: #fff;
+        border: 1px solid var(--al-border);
+        border-left: 4px solid var(--accent, var(--al-primary-2));
+        border-radius: 12px;
+        padding: 16px 18px;
+        box-shadow: 0 2px 8px rgba(10,20,40,.04);
+    }
+
+    .al-tile-num {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--al-ink);
+        line-height: 1;
+    }
+
+    .al-tile-lbl {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .06em;
+        color: var(--al-ink2);
+        margin-top: 6px;
+    }
+
+    /* ── Cards ── */
+    .al-card {
+        background: #fff;
+        border: 1px solid var(--al-border);
+        border-radius: 14px;
+        box-shadow: 0 4px 16px rgba(10,20,40,.04);
+        margin-bottom: 18px;
+    }
+
+    .al-filter-card {
+        padding: 16px 18px;
+    }
+
+    /* ── Filter row ── */
+    .al-filter-row {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 12px;
+        align-items: end;
+    }
+
+    @@media (max-width: 1100px) {
+        .al-filter-row {
+            grid-template-columns: repeat(3, 1fr);
+        }
+    }
+
+    @@media (max-width: 600px) {
+        .al-filter-row {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    .al-field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+    }
+
+        .al-field label {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: var(--al-ink2);
+            margin: 0;
+        }
+
+        .al-field input,
+        .al-field select {
+            height: 38px;
+            padding: 0 10px;
+            border: 1px solid var(--al-border);
+            border-radius: 8px;
+            background: #fff;
+            font-size: 13px;
+            color: var(--al-ink);
+            outline: none;
+            transition: border-color .15s, box-shadow .15s;
+            font-family: inherit;
+            width: 100%;
+        }
+
+            .al-field input:focus,
+            .al-field select:focus {
+                border-color: var(--al-primary-2);
+                box-shadow: 0 0 0 3px rgba(123,44,191,.12);
+            }
+
+    /* ── Toolbar ── */
+    .al-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-top: 14px;
+        flex-wrap: wrap;
+    }
+
+    .al-pagesize {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .al-pagesize label {
+            font-size: 12px;
+            color: var(--al-ink2);
+            margin: 0;
+        }
+
+        .al-pagesize select {
+            height: 34px;
+            padding: 0 8px;
+            border: 1px solid var(--al-border);
+            border-radius: 7px;
+            font-size: 13px;
+            background: #fff;
+            font-family: inherit;
+        }
+
+    .al-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 700;
+        cursor: pointer;
+        border: 1px solid transparent;
+        font-family: inherit;
+        transition: filter .15s, border-color .15s, opacity .15s;
+        line-height: 1.2;
+    }
+
+    .al-btn-primary {
+        background: linear-gradient(90deg, var(--al-primary), var(--al-primary-2));
+        color: #fff;
+    }
+
+        .al-btn-primary:hover {
+            filter: brightness(1.08);
+        }
+
+    .al-btn-ghost {
+        background: #fff;
+        color: var(--al-ink);
+        border-color: var(--al-border);
+    }
+
+        .al-btn-ghost:hover {
+            border-color: var(--al-primary-2);
+            color: var(--al-primary);
+        }
+
+    .al-btn[disabled] {
+        opacity: .5;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .al-btn.is-loading .btn-label::after {
+        content: "…";
+        margin-left: 2px;
+    }
+
+    /* ── Inline validation message ── */
+    .al-error {
+        margin-top: 12px;
+        padding: 8px 12px;
+        background: #fef2f2;
+        border: 1px solid #fecaca;
+        color: var(--al-fail-ink);
+        border-radius: 8px;
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    /* ══════════════════════════════════════════
+           TABLE  ── the part that was broken
+           table-layout: fixed + colgroup = stable
+        ══════════════════════════════════════════ */
+    .al-table-card {
+        padding: 0;
+        overflow: hidden;
+    }
+
+    .al-table-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .al-table {
+        width: 100%;
+        min-width: 1100px;
+        table-layout: fixed;
+        border-collapse: collapse;
+        font-size: 13px;
+    }
+
+        .al-table thead th {
+            background: var(--al-bg);
+            color: var(--al-ink2);
+            font-size: 10.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .07em;
+            text-align: left;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--al-border);
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+
+        .al-table tbody td {
+            padding: 12px 14px;
+            border-bottom: 1px solid #f1eef7;
+            vertical-align: top;
+            color: var(--al-ink);
+            overflow: hidden;
+            word-break: break-word;
+            overflow-wrap: anywhere;
+        }
+
+        .al-table tbody tr:hover {
+            background: #faf9fc;
+        }
+
+        .al-table tbody tr:last-child td {
+            border-bottom: 0;
+        }
+
+    /* ── When cell ── */
+    .al-when {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 12px;
+        color: var(--al-ink2);
+        white-space: nowrap;
+    }
+
+    /* ── Actor cell ── */
+    .al-actor-email {
+        display: block;
+        font-weight: 600;
+        color: var(--al-ink);
+        font-size: 13px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .al-actor-anon {
+        font-style: italic;
+        color: var(--al-muted);
+        font-weight: 500;
+    }
+
+    .al-actor-role {
+        font-size: 11px;
+        color: var(--al-ink2);
+        margin-top: 2px;
+    }
+
+    /* ── Action cell (fixes the vertical-character wrap bug) ── */
+    .al-action {
+        display: inline-block;
+        max-width: 100%;
+        padding: 3px 8px;
+        background: #f3e8ff;
+        color: var(--al-primary);
+        border-radius: 5px;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        vertical-align: middle;
+        line-height: 1.4;
+    }
+
+    /* ── Entity cell ── */
+    .al-entity-name {
+        font-weight: 700;
+        color: var(--al-ink);
+    }
+
+    .al-entity-id {
+        color: var(--al-muted);
+        font-weight: 500;
+        margin-left: 6px;
+        font-size: 12px;
+    }
+
+    .al-entity-path {
+        font-size: 11px;
+        color: var(--al-muted);
+        margin-top: 3px;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        word-break: break-all;
+    }
+
+    /* ── Method chips ── */
+    .al-method {
+        display: inline-block;
+        padding: 3px 9px;
+        border-radius: 5px;
+        font-size: 10px;
+        font-weight: 800;
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        letter-spacing: .02em;
+    }
+
+        .al-method.GET {
+            background: #ecfdf5;
+            color: #065f46;
+        }
+
+        .al-method.POST {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .al-method.PUT {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .al-method.PATCH {
+            background: #fce7f3;
+            color: #9d174d;
+        }
+
+        .al-method.DELETE {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .al-method.UNK {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+    /* ── Result cell ── */
+    .al-res {
+        display: flex;
+        flex-direction: column;
+        gap: 3px;
+    }
+
+    .al-res-pill {
+        display: inline-block;
+        padding: 2px 9px;
+        border-radius: 5px;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+        width: fit-content;
+    }
+
+        .al-res-pill.ok {
+            background: var(--al-ok-bg);
+            color: var(--al-ok-ink);
+        }
+
+        .al-res-pill.fail {
+            background: var(--al-fail-bg);
+            color: var(--al-fail-ink);
+        }
+
+    .al-res-code {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 11px;
+        color: var(--al-ink2);
+    }
+
+    /* ── Request data cell ── */
+    .al-reqdata {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 11px;
+        color: var(--al-ink2);
+        max-height: 60px;
+        overflow: hidden;
+        cursor: pointer;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        word-break: break-all;
+    }
+
+        .al-reqdata.expanded {
+            max-height: none;
+            -webkit-line-clamp: unset;
+            background: #fafaf7;
+            padding: 4px 6px;
+            border-radius: 4px;
+        }
+
+    /* ── IP cell ── */
+    .al-ip {
+        font-family: ui-monospace, Menlo, Consolas, monospace;
+        font-size: 11px;
+        color: var(--al-muted);
+        white-space: nowrap;
+    }
+
+    /* ── Empty / loading state ── */
+    .al-empty {
+        text-align: center;
+        padding: 40px 20px !important;
+        color: var(--al-muted);
+        font-size: 13px;
+    }
+
+        .al-empty i {
+            font-size: 22px;
+            margin-bottom: 8px;
+            display: block;
+            color: #c4b5fd;
+        }
+
+    /* ── Pager ── */
+    .al-pager {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 14px 20px;
+        border-top: 1px solid var(--al-border);
+        background: var(--al-bg);
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .al-pager-ctrls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    #pagerInfo {
+        font-size: 12.5px;
+        color: var(--al-ink2);
+        font-weight: 500;
+    }
+
+    #pageLabel {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--al-ink);
+        min-width: 90px;
+        text-align: center;
+    }
+</style>
+
+<script>
+    (function () {
+        let page = 1;
+        let pageSize = 25;
+        let totalCount = 0;
+        let requestSeq = 0;
+
+        const tbody = document.getElementById('auditTbody');
+        const elFrom = document.getElementById('fromDate');
+        const elTo = document.getElementById('toDate');
+        const elEntity = document.getElementById('entityName');
+        const elAction = document.getElementById('actionType');
+        const elOutcome = document.getElementById('outcome');
+        const elSearch = document.getElementById('searchTxt');
+        const elPageSize = document.getElementById('pageSize');
+        const elFilterError = document.getElementById('filterError');
+        const elBtnApply = document.getElementById('btnApply');
+        const elBtnReset = document.getElementById('btnReset');
+        const elBtnRefresh = document.getElementById('btnRefresh');
+        const elBtnPrev = document.getElementById('btnPrev');
+        const elBtnNext = document.getElementById('btnNext');
+        const elPageLabel = document.getElementById('pageLabel');
+        const elPagerInfo = document.getElementById('pagerInfo');
+
+        function esc(s) {
+            return (s ?? '').toString().replace(/[<>&"]/g,
+                c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+        }
+
+        // Defensive field resolution — API may use any of these names
+        function pick(row, ...names) {
+            for (const n of names) {
+                if (row[n] !== undefined && row[n] !== null && row[n] !== '') return row[n];
+            }
+            return null;
+        }
+
+        function fmtUtc(s) {
+            if (!s) return '—';
+            let raw = s.toString();
+            if (!/[zZ]|[+-]\d{2}:?\d{2}$/.test(raw)) raw += 'Z';
+            const d = new Date(raw);
+            if (isNaN(d)) return esc(s);
+            return d.toLocaleString('en-GB', {
+                day: '2-digit', month: 'short', year: 'numeric',
+                hour: '2-digit', minute: '2-digit', hour12: false,
+                timeZone: 'UTC'
+            }) + ' UTC';
+        }
+
+        function rowHtml(r) {
+            const createdAt = pick(r, 'CreatedAt', 'CreatedDate', 'created_at', 'LogDate', 'Timestamp');
+            const actorEmail = pick(r, 'ActorEmail', 'Email', 'actor_email');
+            const actorRole = pick(r, 'ActorRoleName', 'RoleName', 'actor_role_name');
+            const actorRoleId = pick(r, 'ActorRoleID', 'RoleID', 'actor_role_id');
+            const action = pick(r, 'Action', 'ActionName', 'action');
+            const entityType = pick(r, 'EntityType', 'EntityName', 'entity_type');
+            const entityId = pick(r, 'EntityID', 'EntityId', 'entity_id');
+            const path = pick(r, 'Path', 'RequestPath', 'path');
+            const method = (pick(r, 'HttpMethod', 'Method', 'http_method') || '').toString().toUpperCase();
+            const outcome = (pick(r, 'Outcome', 'outcome', 'Status') || '').toString().toUpperCase();
+            const statusCode = pick(r, 'StatusCode', 'status_code');
+            const detail = pick(r, 'Detail', 'RequestData', 'detail') || '';
+            const ip = pick(r, 'IpAddress', 'IP', 'ip_address');
+
+            // Actor — build HTML conditionally (do NOT pass fallback markup through esc)
+            const actorHtml = actorEmail
+                ? `<span class="al-actor-email" title="${esc(actorEmail)}">${esc(actorEmail)}</span>`
+                : `<span class="al-actor-email al-actor-anon">anonymous</span>`;
+            const roleLabel = actorRole || (actorRoleId ? `Role ${actorRoleId}` : '');
+            const roleHtml = roleLabel ? `<div class="al-actor-role">${esc(roleLabel)}</div>` : '';
+
+            // Method chip
+            const knownMethods = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+            const methodClass = knownMethods.includes(method) ? method : 'UNK';
+            const methodHtml = method
+                ? `<span class="al-method ${methodClass}">${esc(method)}</span>`
+                : '—';
+
+            // Result pill
+            const isOk = outcome === 'SUCCESS';
+            const resPillClass = isOk ? 'ok' : 'fail';
+            const resPillLabel = isOk ? 'Success' : (outcome === 'FAILURE' ? 'Failure' : (esc(outcome) || 'Unknown'));
+
+            // Request data preview
+            const detailStr = (typeof detail === 'object') ? JSON.stringify(detail) : detail.toString();
+            const detailPreview = detailStr.length > 200 ? detailStr.substring(0, 200) + '…' : detailStr;
+
+            return `
+                <tr>
+                    <td><span class="al-when">${fmtUtc(createdAt)}</span></td>
+                    <td>${actorHtml}${roleHtml}</td>
+                    <td><span class="al-action" title="${esc(action || '')}">${esc(action || '—')}</span></td>
+                    <td>
+                        <span class="al-entity-name">${esc(entityType || '—')}</span>
+                        ${entityId ? `<span class="al-entity-id">#${esc(entityId)}</span>` : ''}
+                        ${path ? `<div class="al-entity-path">${esc(path)}</div>` : ''}
+                    </td>
+                    <td>${methodHtml}</td>
+                    <td>
+                        <div class="al-res">
+                            <span class="al-res-pill ${resPillClass}">${resPillLabel}</span>
+                            ${statusCode != null && statusCode !== '' ? `<span class="al-res-code">${esc(statusCode)}</span>` : ''}
+                        </div>
+                    </td>
+                    <td>
+                        <div class="al-reqdata" title="Click to expand">${esc(detailPreview) || '<span style="color:var(--al-muted);">—</span>'}</div>
+                    </td>
+                    <td><span class="al-ip">${esc(ip || '—')}</span></td>
+                </tr>
+            `;
+        }
+
+        function setLoading(isLoading) {
+            tbody.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+            [elBtnApply, elBtnReset, elBtnRefresh].forEach(b => { if (b) b.disabled = isLoading; });
+            elBtnApply.classList.toggle('is-loading', isLoading);
+            if (!isLoading) {
+                const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+                elBtnPrev.disabled = (page <= 1);
+                elBtnNext.disabled = (page >= totalPages);
+            } else {
+                elBtnPrev.disabled = true;
+                elBtnNext.disabled = true;
+            }
+        }
+
+        function validateFilters() {
+            elFilterError.style.display = 'none';
+            elFilterError.textContent = '';
+            const f = elFrom.value, t = elTo.value;
+            if (f && t && f > t) {
+                elFilterError.textContent = '“From” date must be on or before “To” date.';
+                elFilterError.style.display = 'block';
+                return false;
+            }
+            return true;
+        }
+
+        async function load() {
+            if (!validateFilters()) { updatePager(); return; }
+
+            const mySeq = ++requestSeq;
+            setLoading(true);
+            tbody.innerHTML = '<tr><td colspan="8" class="al-empty"><i class="fa-solid fa-spinner fa-spin"></i> Loading…</td></tr>';
+
+            const params = new URLSearchParams({
+                page: page,
+                pageSize: pageSize,
+                entityName: elEntity.value,
+                actionType: elAction.value,
+                outcome: elOutcome.value,
+                search: elSearch.value
+            });
+            if (elFrom.value) params.append('fromDate', elFrom.value);
+            if (elTo.value) params.append('toDate', elTo.value);
+
+            try {
+                const r = await fetch('/AuditLog/Search?' + params.toString(), {
+                    credentials: 'same-origin',
+                    headers: { 'Accept': 'application/json' }
+                });
+                if (mySeq !== requestSeq) return;
+
+                let d;
+                try { d = await r.json(); }
+                catch { d = { success: false, message: 'Server returned a non-JSON response.' }; }
+                if (mySeq !== requestSeq) return;
+
+                if (!d.success) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="al-empty">
+                        <i class="fa-solid fa-triangle-exclamation" style="color:#dc2626;"></i>
+                        ${esc(d.message || 'Could not load.')}
+                    </td></tr>`;
+                    totalCount = 0;
+                    updatePager();
+                    return;
+                }
+
+                const rows = d.rows || [];
+                totalCount = d.totalCount || 0;
+
+                if (!rows.length) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="al-empty">
+                        <i class="fa-solid fa-folder-open"></i>
+                        No entries match these filters.
+                    </td></tr>`;
+                } else {
+                    tbody.innerHTML = rows.map(rowHtml).join('');
+                    tbody.querySelectorAll('.al-reqdata').forEach(el => {
+                        el.addEventListener('click', () => el.classList.toggle('expanded'));
+                    });
+                }
+                updatePager();
+            } catch (e) {
+                if (mySeq !== requestSeq) return;
+                tbody.innerHTML = `<tr><td colspan="8" class="al-empty">
+                    <i class="fa-solid fa-triangle-exclamation" style="color:#dc2626;"></i>
+                    Network error: ${esc(e.message)}
+                </td></tr>`;
+                totalCount = 0;
+                updatePager();
+            } finally {
+                if (mySeq === requestSeq) setLoading(false);
+            }
+        }
+
+        function updatePager() {
+            const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+            if (page > totalPages) page = totalPages;
+
+            elPageLabel.textContent = `Page ${page} of ${totalPages}`;
+            elBtnPrev.disabled = (page <= 1);
+            elBtnNext.disabled = (page >= totalPages);
+
+            const from = totalCount === 0 ? 0 : ((page - 1) * pageSize + 1);
+            const to = Math.min(page * pageSize, totalCount);
+            elPagerInfo.textContent = totalCount === 0
+                ? 'No entries'
+                : `Showing ${from}–${to} of ${totalCount} entries`;
+        }
+
+        /* ── Event wiring ── */
+        elBtnApply.addEventListener('click', () => { page = 1; load(); });
+        elBtnRefresh.addEventListener('click', () => { load(); });
+        elBtnReset.addEventListener('click', () => {
+            elFrom.value = elTo.value = '';
+            elEntity.value = elAction.value = elOutcome.value = elSearch.value = '';
+            elFilterError.style.display = 'none';
+            page = 1;
+            load();
+        });
+        elBtnPrev.addEventListener('click', () => { if (page > 1) { page--; load(); } });
+        elBtnNext.addEventListener('click', () => { page++; load(); });
+
+        elPageSize.addEventListener('change', () => {
+            const n = parseInt(elPageSize.value, 10);
+            if (!isNaN(n) && n > 0) {
+                pageSize = n;
+                page = 1;
+                load();
+            }
+        });
+
+        [elSearch, elFrom, elTo].forEach(el => {
+            el.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    page = 1;
+                    load();
+                }
+            });
+        });
+
+        load();
+    })();
+</script>

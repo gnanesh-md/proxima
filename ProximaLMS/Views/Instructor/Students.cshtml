@@ -1,0 +1,105 @@
+@model ProximaLMS.Models.InstructorStudentsViewModel
+@{
+    ViewData["Title"] = "Students · " + Model.CourseTitle;
+    Layout = "_Layout";
+
+    Func<int, string> barColor = pct =>
+        pct >= 100 ? "#16a34a" : pct >= 50 ? "#7B2CBF" : pct > 0 ? "#d97706" : "#cbd5e1";
+}
+
+<style>
+    :root {
+        --grape: #4C1864; --grape-2: #7B2CBF; --ink: #1f1d2b;
+        --muted: #6b7280; --border: #e7e5ee; --ok: #16a34a;
+    }
+    .st-wrap { max-width: 1080px; margin: 0 auto; }
+    .st-head {
+        display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+        background: linear-gradient(120deg, var(--grape), var(--grape-2));
+        color: #fff; border-radius: 14px; padding: 18px 24px;
+    }
+    .st-head h1 { font-size: 1.25rem; font-weight: 800; margin: 0; }
+    .st-head .sub { opacity: .9; font-size: .85rem; }
+    .st-back { color: #fff; text-decoration: none; font-weight: 700; font-size: .85rem; opacity: .9; }
+    .st-back:hover { color: #fff; opacity: 1; }
+    .st-state { font-size: .72rem; font-weight: 700; padding: 4px 10px; border-radius: 999px; color: #fff; }
+    .st-pub { background: var(--ok); } .st-draft { background: #9ca3af; }
+
+    .st-panel { background: #fff; border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 8px 24px rgba(10,20,40,.05); overflow: hidden; }
+    table.st-table { width: 100%; border-collapse: collapse; }
+    .st-table th { text-align: left; font-size: .76rem; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); padding: 14px 18px; border-bottom: 1px solid var(--border); background: #faf9fc; }
+    .st-table td { padding: 14px 18px; border-bottom: 1px solid #f1eef7; font-size: .9rem; color: var(--ink); vertical-align: middle; }
+    .st-table tr:last-child td { border-bottom: none; }
+    .st-email { font-weight: 600; }
+    .st-mobile { color: var(--muted); font-size: .82rem; }
+
+    .st-progress { display: flex; align-items: center; gap: 10px; min-width: 200px; }
+    .st-track { flex: 1; height: 9px; background: #eee7f5; border-radius: 999px; overflow: hidden; }
+    .st-fill { height: 100%; border-radius: 999px; transition: width .3s; }
+    .st-pct { font-weight: 800; font-size: .82rem; width: 42px; text-align: right; }
+    .st-count { color: var(--muted); font-size: .78rem; }
+
+    .st-empty { padding: 50px; text-align: center; color: var(--muted); }
+    .st-empty i { font-size: 38px; color: #d6cfe6; margin-bottom: 10px; display: block; }
+</style>
+
+<div class="st-wrap">
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <div class="st-head">
+        <div>
+            <a asp-action="Index" class="st-back"><i class="fa-solid fa-arrow-left"></i> Back to panel</a>
+            <h1>@Model.CourseTitle</h1>
+            <div class="sub">
+                <i class="fa-solid fa-user-group"></i> @Model.Students.Count enrolled
+                &nbsp;·&nbsp;
+                <span class="st-state @(Model.IsActive ? "st-pub" : "st-draft")">@(Model.IsActive ? "Published" : "Draft")</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="st-panel">
+        @if (Model.Students != null && Model.Students.Any())
+        {
+            <table class="st-table">
+                <thead>
+                    <tr>
+                        <th>Student</th>
+                        <th>Mobile</th>
+                        <th style="width:40%;">Progress</th>
+                        <th>Lessons done</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var s in Model.Students)
+                    {
+                        <tr>
+                            <td><div class="st-email">@s.StudentEmail</div></td>
+                            <td><span class="st-mobile">@(string.IsNullOrEmpty(s.MobileNumber) ? "—" : s.MobileNumber)</span></td>
+                            <td>
+                                <div class="st-progress">
+                                    <div class="st-track">
+                                        <div class="st-fill" style="width:@(s.ProgressPercent)%;background:@barColor(s.ProgressPercent);"></div>
+                                    </div>
+                                    <span class="st-pct" style="color:@barColor(s.ProgressPercent);">@s.ProgressPercent%</span>
+                                </div>
+                            </td>
+                            <td><span class="st-count">@s.CompletedContents / @s.TotalContents</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="st-empty">
+                <i class="fa-solid fa-user-slash"></i>
+                <h5 style="color:var(--ink);font-weight:800;">No students enrolled yet</h5>
+                <p>Once learners enroll in this course, their progress will show here.</p>
+            </div>
+        }
+    </div>
+</div>

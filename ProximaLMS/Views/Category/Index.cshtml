@@ -1,0 +1,727 @@
+@model ProximaLMS.Controllers.CategoryListViewModel
+@{
+    ViewData["Title"] = "Categories";
+    Layout = "_Layout";
+}
+
+<style>
+    :root {
+        --md-p1: #4C1864;
+        --md-p2: #7B2CBF;
+        --md-bg: #f4f6fb;
+        --md-ink: #1A0F2E;
+        --md-muted: #6B7280;
+        --md-card: #ffffff;
+        --md-border: #eef0f5;
+    }
+
+    .md-wrap {
+        padding: 10px;
+        background: var(--md-bg);
+    }
+
+    .md-header {
+        background: #fff;
+        padding: 20px 25px;
+        border-radius: 14px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.05);
+        margin-bottom: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .md-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--md-p1);
+        margin: 0;
+    }
+
+    .md-sub {
+        font-size: 13px;
+        color: var(--md-muted);
+        margin-top: 3px;
+    }
+
+    .btn-grad {
+        background: linear-gradient(90deg, var(--md-p1), var(--md-p2));
+        color: #fff !important;
+        border: none;
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+    }
+
+    .md-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    @@media (max-width: 900px) {
+        .md-stats {
+            grid-template-columns: repeat(2,1fr);
+        }
+    }
+
+    .md-stat {
+        background: var(--md-card);
+        border-radius: 14px;
+        padding: 16px 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        border-left: 4px solid var(--md-p2);
+    }
+
+        .md-stat .num {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--md-ink);
+        }
+
+        .md-stat .lbl {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: var(--md-muted);
+            margin-top: 2px;
+        }
+
+        .md-stat.inactive {
+            border-left-color: #6b7280;
+        }
+
+            .md-stat.inactive .num {
+                color: #6b7280;
+            }
+
+    .md-toolbar {
+        background: #fff;
+        border-radius: 14px 14px 0 0;
+        padding: 14px 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        border-bottom: 1px solid var(--md-border);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+        .md-toolbar input[type=text] {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 11px;
+            border: 1px solid #dde1ea;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .md-toolbar select {
+            padding: 8px 11px;
+            border: 1px solid #dde1ea;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+    .md-table-card {
+        background: #fff;
+        border-radius: 0 0 14px 14px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .md-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+        .md-table thead th {
+            background: #faf6fd;
+            color: var(--md-p1);
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            padding: 14px 16px;
+            text-align: left;
+            border-bottom: 2px solid var(--md-border);
+        }
+
+        .md-table tbody td {
+            padding: 13px 16px;
+            font-size: 14px;
+            color: var(--md-ink);
+            border-bottom: 1px solid var(--md-border);
+            vertical-align: middle;
+        }
+
+        .md-table tbody tr:hover {
+            background: #faf8fc;
+        }
+
+    .name-cell {
+        font-weight: 600;
+        color: var(--md-p1);
+    }
+
+    .parent-pill {
+        display: inline-block;
+        background: #f0ebf8;
+        color: var(--md-p1);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 12px;
+    }
+
+    .parent-none {
+        color: #9ca3af;
+        font-style: italic;
+        font-size: 12px;
+    }
+
+    .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .pill-a {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .pill-i {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    /* Toggle switch */
+    .tgl {
+        position: relative;
+        width: 38px;
+        height: 20px;
+        display: inline-block;
+        cursor: pointer;
+    }
+
+        .tgl input {
+            display: none;
+        }
+
+    .tgl-track {
+        position: absolute;
+        inset: 0;
+        background: #d1d5db;
+        border-radius: 12px;
+        transition: background .2s;
+    }
+
+        .tgl-track::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border-radius: 50%;
+            transition: transform .2s;
+        }
+
+    .tgl input:checked + .tgl-track {
+        background: var(--md-p2);
+    }
+
+        .tgl input:checked + .tgl-track::after {
+            transform: translateX(18px);
+        }
+
+    .row-actions {
+        display: inline-flex;
+        gap: 6px;
+    }
+
+    .row-btn {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        width: 30px;
+        height: 30px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background .15s;
+    }
+
+        .row-btn:hover {
+            background: #f1eaf6;
+        }
+
+        .row-btn.edit {
+            color: #1565c0;
+        }
+
+        .row-btn.delete {
+            color: #c62828;
+        }
+
+    .md-empty {
+        padding: 60px 20px;
+        text-align: center;
+        color: var(--md-muted);
+    }
+
+        .md-empty .ic {
+            font-size: 40px;
+            color: #c4b5d4;
+            margin-bottom: 10px;
+        }
+
+    /* Modal */
+    .md-modal-content {
+        border-radius: 16px;
+        border: 0;
+    }
+
+    .md-modal-header {
+        background: linear-gradient(90deg, var(--md-p1), var(--md-p2));
+        color: #fff;
+        border-radius: 16px 16px 0 0;
+        padding: 16px 22px;
+    }
+
+        .md-modal-header .btn-close {
+            filter: invert(1) brightness(2);
+        }
+
+    .md-modal-body {
+        padding: 22px;
+    }
+
+    .md-form label {
+        font-size: 13px;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 4px;
+    }
+
+    .md-form .form-control, .md-form .form-select {
+        font-size: 14px;
+    }
+
+    .md-modal-footer {
+        background: #faf8fc;
+        border-radius: 0 0 16px 16px;
+        padding: 14px 22px;
+    }
+</style>
+
+<div class="md-wrap">
+
+    <!-- HEADER -->
+    <div class="md-header">
+        <div>
+            <h4 class="md-title"><i class="fa-solid fa-folder-tree me-2"></i>Categories</h4>
+            <div class="md-sub">Organise courses into a hierarchy of categories and subcategories.</div>
+        </div>
+        <button class="btn-grad" onclick="openCategoryModal()">
+            <i class="fa-solid fa-plus"></i> New Category
+        </button>
+    </div>
+
+    <!-- STATS -->
+    @{
+        int totalCount = Model.Categories.Count;
+        int activeCount = Model.Categories.Count(c => c.IsActive);
+        int inactiveCount = totalCount - activeCount;
+        int topLevelCount = Model.Categories.Count(c => (c.ParentCategoryID ?? 0) == 0);
+    }
+    <div class="md-stats">
+        <div class="md-stat">
+            <div class="num">@totalCount</div>
+            <div class="lbl">Total Categories</div>
+        </div>
+        <div class="md-stat">
+            <div class="num">@topLevelCount</div>
+            <div class="lbl">Top Level</div>
+        </div>
+        <div class="md-stat">
+            <div class="num">@activeCount</div>
+            <div class="lbl">Active</div>
+        </div>
+        <div class="md-stat inactive">
+            <div class="num">@inactiveCount</div>
+            <div class="lbl">Inactive</div>
+        </div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="md-toolbar">
+        <input type="text" id="catSearch" placeholder="Search by name or description..." />
+        <select id="statusFilter">
+            <option value="">All Statuses</option>
+            <option value="active">Active Only</option>
+            <option value="inactive">Inactive Only</option>
+        </select>
+        <span style="font-size:12px; color: var(--md-muted);">
+            Showing <span id="visibleCount">@totalCount</span> of @totalCount
+        </span>
+    </div>
+
+    <!-- TABLE -->
+    <div class="md-table-card">
+        @if (Model.Categories.Any())
+        {
+            <table class="md-table">
+                <thead>
+                    <tr>
+                        <th style="width:60px;">ID</th>
+                        <th>Category Name</th>
+                        <th>Parent</th>
+                        <th style="width:90px; text-align:center;">Order</th>
+                        <th style="width:110px;">Status</th>
+                        <th style="width:130px; text-align:center;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="catTbody">
+                    @foreach (var c in Model.Categories.OrderBy(x => x.SortOrder).ThenBy(x => x.CategoryName))
+                    {
+                        <tr class="cat-row"
+                            data-id="@c.CategoryID"
+                            data-name="@c.CategoryName.ToLower()"
+                            data-desc="@((c.Description ?? "").ToLower())"
+                            data-active="@(c.IsActive ? "1" : "0")">
+                            <td>#@c.CategoryID</td>
+                            <td>
+                                <div class="name-cell">@c.CategoryName</div>
+                                @if (!string.IsNullOrWhiteSpace(c.Description))
+                                {
+                                    <div style="font-size:12px; color: var(--md-muted); margin-top:2px;">@c.Description</div>
+                                }
+                            </td>
+                            <td>
+                                @if ((c.ParentCategoryID ?? 0) > 0)
+                                {
+                                    <span class="parent-pill">@c.ParentCategoryName</span>
+                                }
+                                else
+                                {
+                                    <span class="parent-none">— Top Level —</span>
+                                }
+                            </td>
+                            <td style="text-align:center;">@c.SortOrder</td>
+                            <td>
+                                <label class="tgl">
+                                    <input type="checkbox" class="status-toggle"
+                                           data-id="@c.CategoryID"
+                                    @(c.IsActive ? "checked" : "") />
+                                    <span class="tgl-track"></span>
+                                </label>
+                                <span class="pill @(c.IsActive ? "pill-a" : "pill-i")" style="margin-left:6px;">
+                                    @(c.IsActive ? "Active" : "Inactive")
+                                </span>
+                            </td>
+                            <td style="text-align:center;">
+                                <div class="row-actions">
+                                    <button class="row-btn edit" title="Edit"
+                                            onclick="openCategoryModal(@c.CategoryID)">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button class="row-btn delete" title="Delete"
+                                            onclick="deleteCategory(@c.CategoryID, '@Html.Raw(c.CategoryName.Replace("'","\\'"))')">
+                                        <i class="fa-solid fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else
+        {
+            <div class="md-empty">
+                <div class="ic"><i class="fa-solid fa-folder-tree"></i></div>
+                <h5>No Categories Yet</h5>
+                <p>Create your first category to organise the course catalogue.</p>
+                <button class="btn-grad" onclick="openCategoryModal()">
+                    <i class="fa-solid fa-plus"></i> Create First Category
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     CATEGORY MODAL  (create / edit)
+═══════════════════════════════════════════ -->
+<div class="modal fade" id="categoryModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content md-modal-content">
+
+            <div class="modal-header md-modal-header">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-folder-plus me-2"></i>
+                    <span id="catModalTitle">New Category</span>
+                </h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body md-modal-body md-form">
+                <input type="hidden" id="catId" value="0" />
+
+                <div class="mb-3">
+                    <label>Category Name <span class="text-danger">*</span></label>
+                    <input type="text" id="catName" class="form-control"
+                           maxlength="100" placeholder="e.g. Web Development" />
+                </div>
+
+                <div class="mb-3">
+                    <label>Parent Category</label>
+                    <select id="catParent" class="form-select">
+                        <option value="0">— Top Level —</option>
+                        @foreach (var p in Model.Categories
+                        .Where(x => (x.ParentCategoryID ?? 0) == 0)
+                        .OrderBy(x => x.CategoryName))
+                        {
+                            <option value="@p.CategoryID">@p.CategoryName</option>
+                        }
+                    </select>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label>Sort Order</label>
+                        <input type="number" id="catSortOrder" class="form-control"
+                               value="0" min="0" max="9999" />
+                    </div>
+                    <div class="col-md-6 d-flex align-items-end">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="catActive" checked />
+                            <label class="form-check-label" for="catActive">Active</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mb-3 mt-3">
+                    <label>Description</label>
+                    <textarea id="catDescription" class="form-control" rows="3"
+                              maxlength="500" placeholder="Short description (optional)"></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer md-modal-footer">
+                <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn-grad" id="catSaveBtn" onclick="saveCategory()">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Category
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    const tempError = "@(TempData["Error"] ?? "")";
+    const tempSuccess = "@(TempData["Success"] ?? "")";
+
+    document.addEventListener("DOMContentLoaded", function () {
+        if (tempError) Swal.fire({ icon: "error", title: "Error", text: tempError, confirmButtonColor: "#4C1864" });
+        if (tempSuccess) Swal.fire({ icon: "success", title: "Success", text: tempSuccess, confirmButtonColor: "#4C1864" });
+
+        // ── search / filter ──────────────────────────────────────
+        document.getElementById("catSearch")?.addEventListener("input", applyFilter);
+        document.getElementById("statusFilter")?.addEventListener("change", applyFilter);
+
+        // ── status toggles ───────────────────────────────────────
+        document.querySelectorAll(".status-toggle").forEach(chk => {
+            chk.addEventListener("change", function () {
+                toggleStatus(this.dataset.id, this.checked, this);
+            });
+        });
+    });
+
+    function applyFilter() {
+        const q = document.getElementById("catSearch").value.toLowerCase().trim();
+        const status = document.getElementById("statusFilter").value;
+        let visible = 0;
+
+        document.querySelectorAll(".cat-row").forEach(row => {
+            const nameMatch = !q || row.dataset.name.includes(q) || row.dataset.desc.includes(q);
+            const statusMatch = !status
+                || (status === "active" && row.dataset.active === "1")
+                || (status === "inactive" && row.dataset.active === "0");
+            const show = nameMatch && statusMatch;
+            row.style.display = show ? "" : "none";
+            if (show) visible++;
+        });
+        document.getElementById("visibleCount").textContent = visible;
+    }
+
+    // ── OPEN modal ─────────────────────────────────────────────
+    async function openCategoryModal(id) {
+        clearForm();
+        const modal = new bootstrap.Modal(document.getElementById("categoryModal"));
+
+        if (!id || id <= 0) {
+            document.getElementById("catModalTitle").textContent = "New Category";
+            modal.show();
+            return;
+        }
+
+        try {
+            const resp = await fetch("/Category/GetOne?id=" + id);
+            const data = await resp.json();
+            if (!data.success) {
+                Swal.fire({ icon: "error", title: "Error", text: data.message || "Not found", confirmButtonColor: "#4C1864" });
+                return;
+            }
+            const c = data.category || {};
+            document.getElementById("catModalTitle").textContent = "Edit Category";
+            document.getElementById("catId").value = c.categoryID ?? c.CategoryID ?? 0;
+            document.getElementById("catName").value = c.categoryName ?? c.CategoryName ?? "";
+            document.getElementById("catParent").value = (c.parentCategoryID ?? c.ParentCategoryID ?? 0);
+            document.getElementById("catSortOrder").value = c.sortOrder ?? c.SortOrder ?? 0;
+            document.getElementById("catActive").checked = c.isActive ?? c.IsActive ?? true;
+            document.getElementById("catDescription").value = c.description ?? c.Description ?? "";
+            modal.show();
+        } catch (e) {
+            Swal.fire({ icon: "error", title: "Error", text: e.message, confirmButtonColor: "#4C1864" });
+        }
+    }
+
+    function clearForm() {
+        document.getElementById("catId").value = 0;
+        document.getElementById("catName").value = "";
+        document.getElementById("catParent").value = 0;
+        document.getElementById("catSortOrder").value = 0;
+        document.getElementById("catActive").checked = true;
+        document.getElementById("catDescription").value = "";
+    }
+
+    // ── SAVE ─────────────────────────────────────────────────────
+    async function saveCategory() {
+        const name = document.getElementById("catName").value.trim();
+        if (!name) {
+            Swal.fire({ icon: "warning", title: "Required", text: "Category name is required.", confirmButtonColor: "#4C1864" });
+            return;
+        }
+
+        const btn = document.getElementById("catSaveBtn");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        const payload = {
+            CategoryID: parseInt(document.getElementById("catId").value) || 0,
+            CategoryName: name,
+            ParentCategoryID: parseInt(document.getElementById("catParent").value) || 0,
+            Description: document.getElementById("catDescription").value.trim(),
+            SortOrder: parseInt(document.getElementById("catSortOrder").value) || 0,
+            IsActive: document.getElementById("catActive").checked
+        };
+
+        try {
+            const resp = await fetch("/Category/Save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            const ok = data.success || data.Success;
+            const msg = data.message || data.Message || (ok ? "Saved." : "Save failed.");
+
+            if (ok) {
+                Swal.fire({ icon: "success", title: "Saved", text: msg, timer: 1400, showConfirmButton: false })
+                    .then(() => location.reload());
+            } else {
+                Swal.fire({ icon: "error", title: "Error", text: msg, confirmButtonColor: "#4C1864" });
+            }
+        } catch (e) {
+            Swal.fire({ icon: "error", title: "Error", text: e.message, confirmButtonColor: "#4C1864" });
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Category';
+        }
+    }
+
+    // ── TOGGLE STATUS ───────────────────────────────────────────
+    async function toggleStatus(id, isActive, chk) {
+        try {
+            const resp = await fetch("/Category/ToggleStatus", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ Id: parseInt(id) })
+            });
+            const data = await resp.json();
+            const ok = data.success || data.Success;
+            if (!ok) {
+                chk.checked = !isActive;
+                Swal.fire({ icon: "error", title: "Failed", text: data.message || data.Message || "Toggle failed.", confirmButtonColor: "#4C1864" });
+                return;
+            }
+            const row = chk.closest("tr");
+            const pill = row.querySelector(".pill");
+            const nowOn = chk.checked;
+            row.dataset.active = nowOn ? "1" : "0";
+            pill.className = "pill " + (nowOn ? "pill-a" : "pill-i");
+            pill.style.marginLeft = "6px";
+            pill.textContent = nowOn ? "Active" : "Inactive";
+        } catch (e) {
+            chk.checked = !isActive;
+            Swal.fire({ icon: "error", title: "Error", text: e.message, confirmButtonColor: "#4C1864" });
+        }
+    }
+
+    // ── DELETE ──────────────────────────────────────────────────
+    async function deleteCategory(id, name) {
+        const result = await Swal.fire({
+            title: `Delete "${name}"?`,
+            html: `<p style="color:#6b7280;font-size:14px;">
+                          This action <strong style="color:#dc2626;">cannot be undone</strong>.<br>
+                          Delete is blocked if the category has children or is in use.
+                       </p>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, delete it',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            const resp = await fetch("/Category/Delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ Id: parseInt(id) })
+            });
+            const data = await resp.json();
+            const ok = data.success || data.Success;
+            const msg = data.message || data.Message || (ok ? "Deleted." : "Delete failed.");
+            if (ok) {
+                Swal.fire({ icon: "success", title: "Deleted", text: msg, timer: 1400, showConfirmButton: false })
+                    .then(() => location.reload());
+            } else {
+                Swal.fire({ icon: "error", title: "Cannot delete", text: msg, confirmButtonColor: "#4C1864" });
+            }
+        } catch (e) {
+            Swal.fire({ icon: "error", title: "Error", text: e.message, confirmButtonColor: "#4C1864" });
+        }
+    }
+</script>

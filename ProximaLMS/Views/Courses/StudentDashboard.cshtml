@@ -1,0 +1,409 @@
+@model ProximaLMS.Models.StudentDashboardViewModel
+@using Microsoft.AspNetCore.Http
+@inject IHttpContextAccessor HttpContextAccessor
+@{
+    ViewData["Title"] = "Dashboard";
+    Layout = "_Layout";
+    var studentName = HttpContextAccessor.HttpContext?.Session.GetString("Email") ?? "Student";
+    var firstName = studentName.Contains("@") ? studentName.Split('@')[0] : studentName;
+    firstName = char.ToUpper(firstName[0]) + firstName.Substring(1);
+    var hour = DateTime.Now.Hour;
+    var greeting = hour < 12 ? "Good Morning" : hour < 17 ? "Good Afternoon" : "Good Evening";
+}
+
+<style>
+    @* ── Google Font ── *@
+    @@import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600&display=swap');
+
+    :root {
+        --p1: #4C1864;
+        --p2: #7B2CBF;
+        --p3: #9D4EDD;
+        --accent: #E040FB;
+        --gold: #FFB300;
+        --teal: #00BFA5;
+        --bg: #F3F0F8;
+        --card: #ffffff;
+        --text: #1a0a2e;
+        --muted: #7a6d8a;
+        --border: #e8e0f0;
+        --shadow: 0 4px 24px rgba(76,24,100,0.10);
+        --shadow-lg: 0 12px 40px rgba(76,24,100,0.16);
+    }
+
+    * { box-sizing: border-box; }
+
+    .sd-page {
+        font-family: 'Sora', sans-serif;
+        background: var(--bg);
+        min-height: 100vh;
+        padding: 0 0 60px;
+    }
+
+    /* ── HERO BANNER ── */
+    .sd-hero {
+        background: linear-gradient(135deg, #4C1864 0%, #7B2CBF 50%, #9D4EDD 100%);
+        padding: 36px 36px 80px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .sd-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background:
+            radial-gradient(ellipse 60% 80% at 80% 20%, rgba(224,64,251,0.18) 0%, transparent 60%),
+            radial-gradient(ellipse 40% 60% at 10% 80%, rgba(0,191,165,0.12) 0%, transparent 60%);
+    }
+
+    .sd-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -2px; left: 0; right: 0; height: 60px;
+        background: var(--bg);
+        border-radius: 50% 50% 0 0 / 30px 30px 0 0;
+    }
+
+    .sd-hero-inner {
+        position: relative; z-index: 1;
+        display: flex; justify-content: space-between;
+        align-items: flex-start; flex-wrap: wrap; gap: 16px;
+    }
+
+    .sd-greeting {
+        color: rgba(255,255,255,0.75);
+        font-size: 13px; font-weight: 500;
+        letter-spacing: .08em; text-transform: uppercase;
+        margin-bottom: 6px;
+    }
+
+    .sd-hero-name {
+        color: #fff !important; font-size: 28px; font-weight: 700;
+        letter-spacing: -.5px; line-height: 1.2;
+    }
+
+    .sd-hero-name span {
+        background: linear-gradient(90deg, #FFB300, #E040FB);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .sd-hero-sub {
+        color: rgba(255,255,255,0.85);
+        font-size: 14px; margin-top: 8px;
+    }
+
+    .sd-avatar-badge {
+        width: 60px; height: 60px;
+        background: linear-gradient(135deg, #FFB300, #E040FB);
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 26px; font-weight: 700; color: #fff;
+        box-shadow: 0 8px 24px rgba(224,64,251,0.4);
+        border: 3px solid rgba(255,255,255,0.3);
+        flex-shrink: 0;
+    }
+
+    /* ── STAT CARDS ── */
+    .sd-stats-row {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        padding: 0 36px;
+        margin-top: -40px;
+        position: relative; z-index: 2;
+    }
+
+    .sd-stat {
+        background: var(--card);
+        border-radius: 18px;
+        padding: 22px 24px;
+        display: flex; align-items: center; gap: 16px;
+        box-shadow: var(--shadow);
+        border: 1px solid var(--border);
+        transition: transform .25s, box-shadow .25s;
+    }
+
+    .sd-stat:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .sd-stat-icon {
+        width: 48px; height: 48px; border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px; color: #fff;
+    }
+
+    .sd-stat-icon.purple { background: linear-gradient(135deg, #7B2CBF, #9D4EDD); }
+    .sd-stat-icon.teal   { background: linear-gradient(135deg, #00BFA5, #00897B); }
+    .sd-stat-icon.gold   { background: linear-gradient(135deg, #FFB300, #FB8C00); }
+
+    .sd-stat-val { font-size: 26px; font-weight: 700; color: var(--text); line-height: 1; }
+    .sd-stat-lbl { font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 4px; }
+
+    /* ── SECTION ── */
+    .sd-section { padding: 32px 36px 0; }
+
+    .sd-section-header {
+        display: flex; justify-content: space-between;
+        align-items: center; margin-bottom: 20px;
+    }
+
+    .sd-section-title {
+        font-size: 18px; font-weight: 700; color: var(--text);
+        display: flex; align-items: center; gap: 10px;
+    }
+
+    .sd-section-title::before {
+        content: '';
+        width: 4px; height: 22px;
+        background: linear-gradient(180deg, #4C1864, #E040FB);
+        border-radius: 2px;
+    }
+
+    /* ── QUICK LINKS STRIP ── */
+    .sd-quick-links {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 14px;
+    }
+
+    .sd-quick-link {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 22px 14px;
+        text-align: center;
+        text-decoration: none;
+        transition: transform .2s, box-shadow .2s, border-color .2s;
+        display: flex; flex-direction: column; align-items: center; gap: 10px;
+    }
+
+    .sd-quick-link:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow);
+        border-color: var(--p3);
+        text-decoration: none;
+    }
+
+    .sd-quick-link-icon {
+        width: 48px; height: 48px;
+        border-radius: 14px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 20px;
+    }
+
+    .sd-quick-link-label {
+        font-size: 13px; font-weight: 700;
+        color: var(--text);
+    }
+
+    .sd-quick-link-hint {
+        font-size: 11px; color: var(--muted); font-weight: 500;
+        margin-top: -4px;
+    }
+
+    /* ── WELCOME BANNER ── */
+    .sd-welcome-banner {
+        background: linear-gradient(120deg, #4C1864 0%, #7B2CBF 60%, #9D4EDD 100%);
+        border-radius: 20px;
+        padding: 32px;
+        display: flex; align-items: center; gap: 24px;
+        flex-wrap: wrap; position: relative; overflow: hidden;
+        margin-top: 28px;
+    }
+
+    .sd-welcome-banner::before {
+        content: ''; position: absolute;
+        right: -30px; top: -30px;
+        width: 200px; height: 200px;
+        background: rgba(255,255,255,0.06);
+        border-radius: 50%;
+    }
+
+    .sd-welcome-banner-icon { font-size: 52px; flex-shrink: 0; z-index: 1; }
+    .sd-welcome-banner h3   { color: #fff; font-size: 20px; font-weight: 700; margin-bottom: 6px; z-index: 1; position: relative; }
+    .sd-welcome-banner p    { color: rgba(255,255,255,.85); font-size: 14px; line-height: 1.6; z-index: 1; position: relative; margin: 0; }
+
+    .sd-welcome-banner .sd-cta {
+        margin-left: auto;
+        background: #fff; color: var(--p1);
+        font-weight: 700; font-size: 13px;
+        padding: 11px 22px; border-radius: 12px;
+        text-decoration: none;
+        display: inline-flex; align-items: center; gap: 8px;
+        box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+        transition: transform .2s, box-shadow .2s;
+        z-index: 1; position: relative;
+    }
+
+    .sd-welcome-banner .sd-cta:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+        color: var(--p1);
+    }
+
+    /* ── RESPONSIVE ── */
+    @@media (max-width: 640px) {
+        .sd-hero      { padding: 24px 20px 72px; }
+        .sd-section   { padding: 24px 16px 0; }
+        .sd-stats-row { grid-template-columns: 1fr; padding: 0 16px; }
+        .sd-welcome-banner .sd-cta { margin-left: 0; }
+    }
+
+    @@media (max-width: 768px) {
+        .sd-stats-row { grid-template-columns: repeat(3, 1fr); }
+    }
+
+    /* reveal */
+    .sd-stat,
+    .sd-quick-link {
+        opacity: 0; animation: cardReveal .5s ease-out forwards;
+    }
+    .sd-stat:nth-child(1)        { animation-delay: .10s; }
+    .sd-stat:nth-child(2)        { animation-delay: .20s; }
+    .sd-stat:nth-child(3)        { animation-delay: .30s; }
+    .sd-quick-link:nth-child(1)  { animation-delay: .15s; }
+    .sd-quick-link:nth-child(2)  { animation-delay: .25s; }
+    .sd-quick-link:nth-child(3)  { animation-delay: .35s; }
+    .sd-quick-link:nth-child(4)  { animation-delay: .45s; }
+
+    @@keyframes cardReveal {
+        from { opacity: 0; transform: translateY(20px); }
+        to   { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+<div class="sd-page">
+
+    @* ── HERO ── *@
+    <div class="sd-hero">
+        <div class="sd-hero-inner">
+            <div>
+                <p class="sd-greeting">
+                    <i class="fas fa-sun" style="margin-right:6px;color:#FFB300;"></i>@greeting
+                </p>
+                <h1 class="sd-hero-name">
+                    Welcome back, <span>@firstName</span> 👋
+                </h1>
+                <p class="sd-hero-sub">
+                    <i class="fas fa-book-open" style="margin-right:5px;"></i>
+                    You have <strong style="color:#fff;">@Model.TotalAssignedCourses</strong>
+                    course@(Model.TotalAssignedCourses == 1 ? "" : "s") in your learning library
+                </p>
+            </div>
+            <div class="sd-avatar-badge">
+                @(firstName.Length > 0 ? firstName[0].ToString().ToUpper() : "S")
+            </div>
+        </div>
+    </div>
+
+    @* ── STAT CARDS ── *@
+    <div class="sd-stats-row">
+        <div class="sd-stat">
+            <div class="sd-stat-icon purple"><i class="fas fa-book-open"></i></div>
+            <div>
+                <div class="sd-stat-val">@Model.TotalAssignedCourses</div>
+                <div class="sd-stat-lbl">My Courses</div>
+            </div>
+        </div>
+        <div class="sd-stat">
+            <div class="sd-stat-icon teal"><i class="fas fa-play-circle"></i></div>
+            <div>
+                <div class="sd-stat-val">@Model.InProgressCourses</div>
+                <div class="sd-stat-lbl">In Progress</div>
+            </div>
+        </div>
+        <div class="sd-stat">
+            <div class="sd-stat-icon gold"><i class="fas fa-trophy"></i></div>
+            <div>
+                <div class="sd-stat-val">@Model.CompletedCourses</div>
+                <div class="sd-stat-lbl">Completed</div>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="sd-section" style="padding-top:20px;">
+            <div style="background:#fee2e2;color:#dc2626;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;">
+                <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+            </div>
+        </div>
+    }
+
+    @* ── QUICK LINKS ── *@
+    <div class="sd-section" style="padding-top:32px;">
+        <div class="sd-section-header">
+            <div class="sd-section-title">Quick Actions</div>
+        </div>
+
+        <div class="sd-quick-links">
+            <a asp-controller="Courses" asp-action="List" class="sd-quick-link">
+                <div class="sd-quick-link-icon" style="background:#EDE0F8;">
+                    <i class="fas fa-book-open" style="color:#7B2CBF;"></i>
+                </div>
+                <span class="sd-quick-link-label">My Courses</span>
+                <span class="sd-quick-link-hint">Continue learning</span>
+            </a>
+
+            <a asp-controller="Courses" asp-action="Browse" class="sd-quick-link">
+                <div class="sd-quick-link-icon" style="background:#FFF7E6;">
+                    <i class="fas fa-store" style="color:#B45309;"></i>
+                </div>
+                <span class="sd-quick-link-label">Browse Courses</span>
+                <span class="sd-quick-link-hint">Discover &amp; enroll</span>
+            </a>
+
+            <a asp-controller="Account" asp-action="ForgotPassword" class="sd-quick-link">
+                <div class="sd-quick-link-icon" style="background:#E0F7FA;">
+                    <i class="fas fa-key" style="color:#00838F;"></i>
+                </div>
+                <span class="sd-quick-link-label">Change Password</span>
+                <span class="sd-quick-link-hint">Account security</span>
+            </a>
+
+            <a asp-controller="Account" asp-action="Logout" class="sd-quick-link">
+                <div class="sd-quick-link-icon" style="background:#FFF3E0;">
+                    <i class="fas fa-sign-out-alt" style="color:#E65100;"></i>
+                </div>
+                <span class="sd-quick-link-label">Logout</span>
+                <span class="sd-quick-link-hint">End your session</span>
+            </a>
+        </div>
+    </div>
+
+    @* ── BIG CTA BANNER ── *@
+    <div class="sd-section">
+        @if (Model.TotalAssignedCourses > 0)
+        {
+            <div class="sd-welcome-banner">
+                <div class="sd-welcome-banner-icon">🎓</div>
+                <div>
+                    <h3>Ready to continue learning?</h3>
+                    <p>You have @Model.TotalAssignedCourses course@(Model.TotalAssignedCourses == 1 ? "" : "s") waiting. Jump back in and pick up where you left off.</p>
+                </div>
+                <a asp-controller="Courses" asp-action="List" class="sd-cta">
+                    <i class="fas fa-arrow-right"></i> Go to My Courses
+                </a>
+            </div>
+        }
+        else
+        {
+            <div class="sd-welcome-banner">
+                <div class="sd-welcome-banner-icon">🚀</div>
+                <div>
+                    <h3>Let's get you started!</h3>
+                    <p>You don't have any courses yet — browse the catalog and unlock your first one in a single click.</p>
+                </div>
+                <a asp-controller="Courses" asp-action="Browse" class="sd-cta">
+                    <i class="fas fa-store"></i> Browse Courses
+                </a>
+            </div>
+        }
+    </div>
+
+</div>

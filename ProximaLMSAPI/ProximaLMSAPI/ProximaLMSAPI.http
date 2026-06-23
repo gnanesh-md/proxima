@@ -1,0 +1,6 @@
+@ProximaLMSAPI_HostAddress = http://localhost:5167
+
+GET {{ProximaLMSAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -1,0 +1,147 @@
+@{
+    ViewData["Title"] = "Payment History";
+    Layout = "_Layout";
+    var inv = ViewBag.Invoices as Newtonsoft.Json.Linq.JArray ?? new Newtonsoft.Json.Linq.JArray();
+    decimal totalSpent = 0;
+    foreach (var i in inv) totalSpent += (decimal?)i["TotalAmount"] ?? 0;
+}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--g1:#4C1864;--g2:#7B2CBF;--g3:#9D4EDD;--ink:#1a1523;--sub:#4b5563;--muted:#94a3b8;--border:#ede9fe;--bg:#f8f5ff;--card:#fff;--sh:0 2px 12px rgba(76,24,100,.07);--sh-md:0 8px 28px rgba(76,24,100,.13);}
+*{box-sizing:border-box;}
+.ph-pg{display:flex;flex-direction:column;gap:22px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;padding-bottom:40px;}
+
+/* HERO */
+.ph-hero{background:linear-gradient(135deg,#052e16 0%,#4C1864 35%,#7B2CBF 70%,#0EA5E9 130%);border-radius:24px;padding:32px 36px;color:#fff;position:relative;overflow:hidden;box-shadow:0 14px 50px rgba(76,24,100,.28);}
+.ph-hero::before{content:'💳';position:absolute;right:40px;bottom:-8px;font-size:130px;opacity:.1;line-height:1;pointer-events:none;}
+.ph-hero::after{content:'';position:absolute;width:240px;height:240px;border-radius:50%;background:rgba(14,165,233,.1);top:-80px;right:-40px;pointer-events:none;}
+.ph-hero-inner{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;}
+.ph-hero-left h1{margin:0 0 6px;font-size:1.9rem;font-weight:900;}
+.ph-hero-left p{margin:0;font-size:.9rem;opacity:.82;}
+.ph-hero-pills{display:flex;gap:12px;flex-wrap:wrap;}
+.ph-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:16px;padding:12px 18px;text-align:center;min-width:90px;}
+.ph-pill-val{font-size:1.5rem;font-weight:900;line-height:1;}
+.ph-pill-lbl{font-size:.72rem;font-weight:600;opacity:.8;margin-top:3px;}
+
+/* CARD TABLE */
+.ph-card{background:var(--card);border:1px solid var(--border);border-radius:22px;overflow:hidden;box-shadow:var(--sh);}
+.ph-card-head{padding:16px 24px;border-bottom:1px solid #f5f3ff;display:flex;align-items:center;justify-content:space-between;}
+.ph-card-title{font-size:.92rem;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px;}
+.ph-card-title i{color:var(--g2);}
+
+/* INVOICE ROW */
+.ph-row{display:flex;align-items:center;gap:14px;padding:16px 24px;border-bottom:1px solid #faf7ff;transition:background .15s;}
+.ph-row:last-child{border-bottom:none;}
+.ph-row:hover{background:#faf5ff;}
+
+.ph-row-ico{width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#ede9fe,#ddd6fe);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--g2);flex-shrink:0;}
+.ph-row-info{flex:1;min-width:0;}
+.ph-row-title{font-size:.88rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ph-row-meta{display:flex;align-items:center;gap:10px;margin-top:4px;flex-wrap:wrap;}
+.ph-row-date{font-size:.72rem;color:var(--muted);font-weight:600;}
+.ph-row-no{font-size:.7rem;color:var(--g2);font-weight:700;font-family:monospace;background:#f5f3ff;padding:2px 8px;border-radius:6px;}
+.ph-tax-pill{font-size:.7rem;font-weight:700;padding:2px 9px;border-radius:20px;background:#ede9fe;color:var(--g2);}
+
+.ph-row-right{display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.ph-amount{font-size:1rem;font-weight:900;color:var(--ink);}
+.ph-dl-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;border-radius:10px;font-size:.78rem;font-weight:700;text-decoration:none;box-shadow:0 3px 10px rgba(76,24,100,.22);transition:box-shadow .15s,transform .15s;}
+.ph-dl-btn:hover{color:#fff;transform:translateY(-1px);box-shadow:0 6px 16px rgba(76,24,100,.32);}
+
+/* EMPTY */
+.ph-empty{background:var(--card);border:1px dashed #d8b4fe;border-radius:22px;padding:64px 24px;text-align:center;color:var(--muted);}
+.ph-empty-ico{font-size:60px;margin-bottom:16px;}
+.ph-empty h3{font-size:1.15rem;font-weight:800;color:var(--ink);margin:0 0 8px;}
+.ph-empty p{font-size:.85rem;margin:0;}
+
+@@media(max-width:640px){
+    .ph-row{flex-wrap:wrap;}
+    .ph-row-right{width:100%;justify-content:flex-end;margin-top:8px;}
+}
+</style>
+
+<div class="ph-pg">
+
+    <!-- HERO -->
+    @if (TempData["Error"] != null)
+    {
+        <div style="background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:10px;">
+            <i class="fa-solid fa-circle-exclamation" style="color:#dc2626;"></i>
+            <span style="font-size:.9rem;color:#991b1b;font-weight:600;">@TempData["Error"]</span>
+        </div>
+    }
+
+    <div class="ph-hero">
+        <div class="ph-hero-inner">
+            <div class="ph-hero-left">
+                <h1><i class="fa-solid fa-receipt me-2"></i>Payment History</h1>
+                <p>Your invoices with GST breakdown — download anytime</p>
+            </div>
+            <div class="ph-hero-pills">
+                <div class="ph-pill">
+                    <div class="ph-pill-val">@inv.Count</div>
+                    <div class="ph-pill-lbl">Invoices</div>
+                </div>
+                <div class="ph-pill">
+                    <div class="ph-pill-val">₹@totalSpent.ToString("N0")</div>
+                    <div class="ph-pill-lbl">Total Spent</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @if (inv.Count == 0)
+    {
+        <div class="ph-empty">
+            <div class="ph-empty-ico">🧾</div>
+            <h3>No invoices yet</h3>
+            <p>Invoices appear here after a successful course purchase.</p>
+        </div>
+    }
+    else
+    {
+        <div class="ph-card">
+            <div class="ph-card-head">
+                <div class="ph-card-title"><i class="fa-solid fa-file-invoice-dollar"></i> All Transactions</div>
+                <span style="font-size:.75rem;color:var(--muted);font-weight:600;">@inv.Count invoice@(inv.Count == 1 ? "" : "s")</span>
+            </div>
+            @foreach (var item in inv)
+            {
+                var id     = (int?)item["InvoiceID"] ?? 0;
+                var no     = (string?)item["InvoiceNo"] ?? "";
+                var title  = (string?)item["CourseTitle"] ?? "";
+                var date   = (DateTime?)item["InvoiceDate"];
+                var total  = (decimal?)item["TotalAmount"] ?? 0;
+                var inter  = ((int?)item["IsInterState"] ?? 0) == 1;
+                <div class="ph-row">
+                    <div class="ph-row-ico"><i class="fa-solid fa-bag-shopping"></i></div>
+                    <div class="ph-row-info">
+                        <div class="ph-row-title">@title</div>
+                        <div class="ph-row-meta">
+                            @if (date.HasValue)
+                            {
+                                <span class="ph-row-date"><i class="fa-solid fa-calendar fa-xs me-1"></i>@date.Value.ToString("dd MMM yyyy")</span>
+                            }
+                            <span class="ph-row-no">#@no</span>
+                            <span class="ph-tax-pill">@(inter ? "IGST 18%" : "CGST + SGST")</span>
+                        </div>
+                    </div>
+                    <div class="ph-row-right">
+                        <div class="ph-amount">₹@total.ToString("N2")</div>
+                        @if (id > 0)
+                        {
+                            <a class="ph-dl-btn" asp-action="Invoice" asp-route-id="@id">
+                                <i class="fa-solid fa-download"></i>Invoice
+                            </a>
+                        }
+                        else
+                        {
+                            <span class="ph-dl-btn" style="opacity:.4;cursor:not-allowed;" title="Invoice not yet generated">
+                                <i class="fa-solid fa-clock"></i>Pending
+                            </span>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

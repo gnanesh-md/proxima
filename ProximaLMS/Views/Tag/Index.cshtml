@@ -1,0 +1,631 @@
+@model ProximaLMS.Controllers.TagListViewModel
+@{
+    ViewData["Title"] = "Tags";
+    Layout = "_Layout";
+}
+
+<style>
+    :root {
+        --md-p1: #4C1864;
+        --md-p2: #7B2CBF;
+        --md-bg: #f4f6fb;
+        --md-ink: #1A0F2E;
+        --md-muted: #6B7280;
+        --md-border: #eef0f5;
+    }
+
+    .md-wrap {
+        padding: 10px;
+        background: var(--md-bg);
+    }
+
+    .md-header {
+        background: #fff;
+        padding: 20px 25px;
+        border-radius: 14px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.05);
+        margin-bottom: 18px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+
+    .md-title {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--md-p1);
+        margin: 0;
+    }
+
+    .md-sub {
+        font-size: 13px;
+        color: var(--md-muted);
+        margin-top: 3px;
+    }
+
+    .btn-grad {
+        background: linear-gradient(90deg, var(--md-p1), var(--md-p2));
+        color: #fff !important;
+        border: none;
+        padding: 9px 18px;
+        border-radius: 8px;
+        font-weight: 600;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+    }
+
+    /* Stats */
+    .md-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 18px;
+    }
+
+    @@media (max-width: 900px) {
+        .md-stats {
+            grid-template-columns: repeat(2,1fr);
+        }
+    }
+
+    .md-stat {
+        background: #fff;
+        border-radius: 14px;
+        padding: 16px 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        border-left: 4px solid var(--md-p2);
+    }
+
+        .md-stat .num {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--md-ink);
+        }
+
+        .md-stat .lbl {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: var(--md-muted);
+            margin-top: 2px;
+        }
+
+        .md-stat.inactive {
+            border-left-color: #6b7280;
+        }
+
+            .md-stat.inactive .num {
+                color: #6b7280;
+            }
+
+    /* Toolbar */
+    .md-toolbar {
+        background: #fff;
+        border-radius: 14px 14px 0 0;
+        padding: 14px 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        border-bottom: 1px solid var(--md-border);
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+        .md-toolbar input[type=text] {
+            flex: 1;
+            min-width: 200px;
+            padding: 8px 11px;
+            border: 1px solid #dde1ea;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+    /* Tag cards grid */
+    .md-grid-card {
+        background: #fff;
+        padding: 22px;
+        border-radius: 0 0 14px 14px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+    }
+
+    .tag-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 14px;
+    }
+
+    .tag-card {
+        position: relative;
+        border: 1px solid var(--md-border);
+        border-radius: 12px;
+        padding: 14px 16px;
+        background: linear-gradient(180deg, #fff 0%, #faf8fc 100%);
+        transition: transform .15s, box-shadow .15s;
+    }
+
+        .tag-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 24px rgba(76,24,100,.10);
+        }
+
+        .tag-card.inactive {
+            opacity: 0.55;
+        }
+
+    .tag-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 12px;
+        border-radius: 16px;
+        font-size: 13px;
+        font-weight: 700;
+        color: #fff;
+        box-shadow: 0 4px 10px rgba(0,0,0,.08);
+    }
+
+    .tag-meta {
+        font-size: 12px;
+        color: var(--md-muted);
+        margin-top: 10px;
+        line-height: 1.6;
+    }
+
+        .tag-meta strong {
+            color: var(--md-ink);
+        }
+
+    .tag-actions {
+        display: flex;
+        gap: 6px;
+        margin-top: 12px;
+        padding-top: 10px;
+        border-top: 1px dashed var(--md-border);
+    }
+
+    .row-btn {
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: 5px 10px;
+        border-radius: 6px;
+        font-size: 12px;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        font-weight: 600;
+    }
+
+        .row-btn:hover {
+            background: #f1eaf6;
+        }
+
+        .row-btn.edit {
+            color: #1565c0;
+        }
+
+        .row-btn.delete {
+            color: #c62828;
+        }
+
+        .row-btn.toggle {
+            color: var(--md-p1);
+            margin-left: auto;
+        }
+
+    .md-empty {
+        padding: 60px 20px;
+        text-align: center;
+        color: var(--md-muted);
+    }
+
+        .md-empty .ic {
+            font-size: 40px;
+            color: #c4b5d4;
+            margin-bottom: 10px;
+        }
+
+    /* Modal */
+    .md-modal-content {
+        border-radius: 16px;
+        border: 0;
+    }
+
+    .md-modal-header {
+        background: linear-gradient(90deg, var(--md-p1), var(--md-p2));
+        color: #fff;
+        border-radius: 16px 16px 0 0;
+        padding: 16px 22px;
+    }
+
+        .md-modal-header .btn-close {
+            filter: invert(1) brightness(2);
+        }
+
+    .md-modal-body {
+        padding: 22px;
+    }
+
+    .md-modal-footer {
+        background: #faf8fc;
+        border-radius: 0 0 16px 16px;
+        padding: 14px 22px;
+    }
+
+    .color-swatch {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 2px solid #fff;
+        box-shadow: 0 0 0 1px #dde1ea;
+        cursor: pointer;
+        transition: transform .1s;
+    }
+
+        .color-swatch.active {
+            box-shadow: 0 0 0 3px var(--md-p1);
+            transform: scale(1.05);
+        }
+
+    .swatch-row {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 6px;
+    }
+</style>
+
+<div class="md-wrap">
+
+    <!-- HEADER -->
+    <div class="md-header">
+        <div>
+            <h4 class="md-title"><i class="fa-solid fa-tags me-2"></i>Tags</h4>
+            <div class="md-sub">Keyword tags shown on courses for filtering and discovery.</div>
+        </div>
+        <button class="btn-grad" onclick="openTagModal()">
+            <i class="fa-solid fa-plus"></i> New Tag
+        </button>
+    </div>
+
+    <!-- STATS -->
+    @{
+        int totalCount = Model.Tags.Count;
+        int activeCount = Model.Tags.Count(t => t.IsActive);
+        int inactiveCount = totalCount - activeCount;
+        int totalUsage = Model.Tags.Sum(t => t.UsageCount);
+    }
+    <div class="md-stats">
+        <div class="md-stat"><div class="num">@totalCount</div><div class="lbl">Total Tags</div></div>
+        <div class="md-stat"><div class="num">@activeCount</div><div class="lbl">Active</div></div>
+        <div class="md-stat inactive"><div class="num">@inactiveCount</div><div class="lbl">Inactive</div></div>
+        <div class="md-stat"><div class="num">@totalUsage</div><div class="lbl">Total Usage</div></div>
+    </div>
+
+    <!-- TOOLBAR -->
+    <div class="md-toolbar">
+        <input type="text" id="tagSearch" placeholder="Search by name or slug..." />
+        <span style="font-size:12px; color: var(--md-muted);">
+            Showing <span id="visibleCount">@totalCount</span> of @totalCount
+        </span>
+    </div>
+
+    <!-- GRID -->
+    <div class="md-grid-card">
+        @if (Model.Tags.Any())
+        {
+            <div class="tag-grid" id="tagGrid">
+                @foreach (var t in Model.Tags.OrderBy(x => x.SortOrder).ThenBy(x => x.TagName))
+                {
+                    var color = string.IsNullOrWhiteSpace(t.ColorHex) ? "#7B2CBF" : t.ColorHex;
+                    <div class="tag-card @(t.IsActive ? "" : "inactive")"
+                         data-id="@t.TagID"
+                         data-name="@t.TagName.ToLower()"
+                         data-slug="@((t.Slug ?? "").ToLower())">
+
+                        <span class="tag-chip" style="background:@color;">
+                            <i class="fa-solid fa-tag"></i> @t.TagName
+                        </span>
+
+                        <div class="tag-meta">
+                            <div><strong>Slug:</strong> @(string.IsNullOrWhiteSpace(t.Slug) ? "—" : t.Slug)</div>
+                            <div><strong>Used by:</strong> @t.UsageCount course@(t.UsageCount == 1 ? "" : "s")</div>
+                            <div><strong>Order:</strong> @t.SortOrder</div>
+                        </div>
+
+                        <div class="tag-actions">
+                            <button class="row-btn edit" onclick="openTagModal(@t.TagID)">
+                                <i class="fa-solid fa-pen"></i> Edit
+                            </button>
+                            <button class="row-btn delete"
+                                    onclick="deleteTag(@t.TagID, '@Html.Raw(t.TagName.Replace("'","\\'"))')">
+                                <i class="fa-solid fa-trash-can"></i> Delete
+                            </button>
+                            <button class="row-btn toggle" onclick="toggleStatus(@t.TagID, this)">
+                                <i class="fa-solid fa-@(t.IsActive ? "toggle-on" : "toggle-off")"></i>
+                                @(t.IsActive ? "Disable" : "Enable")
+                            </button>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+        else
+        {
+            <div class="md-empty">
+                <div class="ic"><i class="fa-solid fa-tags"></i></div>
+                <h5>No Tags Yet</h5>
+                <p>Create tags to help students discover courses by topic.</p>
+                <button class="btn-grad" onclick="openTagModal()">
+                    <i class="fa-solid fa-plus"></i> Create First Tag
+                </button>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════
+     TAG MODAL  (create / edit)
+═══════════════════════════════════════════ -->
+<div class="modal fade" id="tagModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content md-modal-content">
+
+            <div class="modal-header md-modal-header">
+                <h5 class="modal-title">
+                    <i class="fa-solid fa-tag me-2"></i>
+                    <span id="tagModalTitle">New Tag</span>
+                </h5>
+                <button class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body md-modal-body">
+                <input type="hidden" id="tagId" value="0" />
+
+                <div class="mb-3">
+                    <label class="form-label">Tag Name <span class="text-danger">*</span></label>
+                    <input type="text" id="tagName" class="form-control"
+                           maxlength="80" placeholder="e.g. JavaScript" />
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Slug <span class="text-muted">(optional, lowercase)</span></label>
+                    <input type="text" id="tagSlug" class="form-control"
+                           maxlength="80" placeholder="auto-generated if empty" />
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Colour</label>
+                        <input type="color" id="tagColor" class="form-control form-control-color"
+                               value="#7B2CBF" style="width:100%; height:42px;" />
+                        <div class="swatch-row">
+                            <div class="color-swatch" style="background:#4C1864;" data-color="#4C1864"></div>
+                            <div class="color-swatch" style="background:#7B2CBF;" data-color="#7B2CBF"></div>
+                            <div class="color-swatch" style="background:#1565c0;" data-color="#1565c0"></div>
+                            <div class="color-swatch" style="background:#2e7d32;" data-color="#2e7d32"></div>
+                            <div class="color-swatch" style="background:#e65100;" data-color="#e65100"></div>
+                            <div class="color-swatch" style="background:#c62828;" data-color="#c62828"></div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Sort Order</label>
+                        <input type="number" id="tagSortOrder" class="form-control"
+                               value="0" min="0" max="9999" />
+                        <div class="form-check mt-3">
+                            <input class="form-check-input" type="checkbox" id="tagActive" checked />
+                            <label class="form-check-label" for="tagActive">Active</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3 p-3" style="background:#faf8fc; border-radius:8px;">
+                    <small class="text-muted">Preview:</small><br />
+                    <span id="tagPreview" class="tag-chip" style="background:#7B2CBF; margin-top:6px;">
+                        <i class="fa-solid fa-tag"></i> <span id="tagPreviewLabel">Tag name</span>
+                    </span>
+                </div>
+            </div>
+
+            <div class="modal-footer md-modal-footer">
+                <button class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button class="btn-grad" id="tagSaveBtn" onclick="saveTag()">
+                    <i class="fa-solid fa-floppy-disk"></i> Save Tag
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    const tempError = "@(TempData["Error"] ?? "")";
+    const tempSuccess = "@(TempData["Success"] ?? "")";
+
+    document.addEventListener("DOMContentLoaded", function () {
+        if (tempError) Swal.fire({ icon: "error", title: "Error", text: tempError, confirmButtonColor: "#4C1864" });
+        if (tempSuccess) Swal.fire({ icon: "success", title: "Success", text: tempSuccess, confirmButtonColor: "#4C1864" });
+
+        // Search
+        document.getElementById("tagSearch")?.addEventListener("input", function () {
+            const q = this.value.toLowerCase().trim();
+            let visible = 0;
+            document.querySelectorAll(".tag-card").forEach(c => {
+                const show = !q || c.dataset.name.includes(q) || c.dataset.slug.includes(q);
+                c.style.display = show ? "" : "none";
+                if (show) visible++;
+            });
+            document.getElementById("visibleCount").textContent = visible;
+        });
+
+        // Live preview
+        document.getElementById("tagName")?.addEventListener("input", updatePreview);
+        document.getElementById("tagColor")?.addEventListener("input", updatePreview);
+
+        // Swatches
+        document.querySelectorAll(".color-swatch").forEach(s => {
+            s.addEventListener("click", function () {
+                document.getElementById("tagColor").value = this.dataset.color;
+                document.querySelectorAll(".color-swatch").forEach(x => x.classList.remove("active"));
+                this.classList.add("active");
+                updatePreview();
+            });
+        });
+    });
+
+    function updatePreview() {
+        const name = document.getElementById("tagName").value.trim() || "Tag name";
+        const color = document.getElementById("tagColor").value || "#7B2CBF";
+        const chip = document.getElementById("tagPreview");
+        chip.style.background = color;
+        document.getElementById("tagPreviewLabel").textContent = name;
+    }
+
+    async function openTagModal(id) {
+        clearForm();
+        const modal = new bootstrap.Modal(document.getElementById("tagModal"));
+
+        if (!id || id <= 0) {
+            document.getElementById("tagModalTitle").textContent = "New Tag";
+            modal.show();
+            return;
+        }
+
+        try {
+            const resp = await fetch("/Tag/GetOne?id=" + id);
+            const data = await resp.json();
+            if (!data.success) {
+                Swal.fire({ icon: "error", title: "Error", text: data.message || "Not found", confirmButtonColor: "#4C1864" });
+                return;
+            }
+            const t = data.tag || data.category || {};
+            document.getElementById("tagModalTitle").textContent = "Edit Tag";
+            document.getElementById("tagId").value = t.tagID ?? t.TagID ?? 0;
+            document.getElementById("tagName").value = t.tagName ?? t.TagName ?? "";
+            document.getElementById("tagSlug").value = t.slug ?? t.Slug ?? "";
+            document.getElementById("tagColor").value = t.colorHex ?? t.ColorHex ?? "#7B2CBF";
+            document.getElementById("tagSortOrder").value = t.sortOrder ?? t.SortOrder ?? 0;
+            document.getElementById("tagActive").checked = t.isActive ?? t.IsActive ?? true;
+            updatePreview();
+            modal.show();
+        } catch (e) {
+            Swal.fire({ icon: "error", title: "Error", text: e.message, confirmButtonColor: "#4C1864" });
+        }
+    }
+
+    function clearForm() {
+        document.getElementById("tagId").value = 0;
+        document.getElementById("tagName").value = "";
+        document.getElementById("tagSlug").value = "";
+        document.getElementById("tagColor").value = "#7B2CBF";
+        document.getElementById("tagSortOrder").value = 0;
+        document.getElementById("tagActive").checked = true;
+        updatePreview();
+    }
+
+    async function saveTag() {
+        const name = document.getElementById("tagName").value.trim();
+        if (!name) {
+            Swal.fire({ icon: "warning", title: "Required", text: "Tag name is required.", confirmButtonColor: "#4C1864" });
+            return;
+        }
+
+        const btn = document.getElementById("tagSaveBtn");
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
+
+        const payload = {
+            TagID: parseInt(document.getElementById("tagId").value) || 0,
+            TagName: name,
+            Slug: document.getElementById("tagSlug").value.trim(),
+            ColorHex: document.getElementById("tagColor").value,
+            SortOrder: parseInt(document.getElementById("tagSortOrder").value) || 0,
+            IsActive: document.getElementById("tagActive").checked
+        };
+
+        try {
+            const resp = await fetch("/Tag/Save", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+            const ok = data.success || data.Success;
+            const msg = data.message || data.Message || (ok ? "Saved." : "Save failed.");
+            if (ok) {
+                Swal.fire({ icon: "success", title: "Saved", text: msg, timer: 1400, showConfirmButton: false })
+                    .then(() => location.reload());
+            } else {
+                Swal.fire({ icon: "error", title: "Error", text: msg, confirmButtonColor: "#4C1864" });
+            }
+        } catch (e) {
+            Swal.fire({ icon: "error", title: "Error", text: e.message, confirmButtonColor: "#4C1864" });
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Tag';
+        }
+    }
+
+    async function toggleStatus(id, btn) {
+        try {
+            const resp = await fetch("/Tag/ToggleStatus", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ Id: parseInt(id) })
+            });
+            const data = await resp.json();
+            const ok = data.success || data.Success;
+            if (!ok) {
+                Swal.fire({ icon: "error", title: "Failed", text: data.message || "Toggle failed.", confirmButtonColor: "#4C1864" });
+                return;
+            }
+            Swal.fire({ icon: "success", title: "Updated", timer: 800, showConfirmButton: false })
+                .then(() => location.reload());
+        } catch (e) {
+            Swal.fire({ icon: "error", title: "Error", text: e.message, confirmButtonColor: "#4C1864" });
+        }
+    }
+
+    async function deleteTag(id, name) {
+        const result = await Swal.fire({
+            title: `Delete "${name}"?`,
+            html: `<p style="color:#6b7280;font-size:14px;">
+                          This action <strong style="color:#dc2626;">cannot be undone</strong>.<br>
+                          Delete is blocked if the tag is in use by any course.
+                       </p>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc2626',
+            cancelButtonColor: '#6b7280',
+            confirmButtonText: 'Yes, delete it',
+            cancelButtonText: 'Cancel'
+        });
+
+        if (!result.isConfirmed) return;
+
+        try {
+            const resp = await fetch("/Tag/Delete", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ Id: parseInt(id) })
+            });
+            const data = await resp.json();
+            const ok = data.success || data.Success;
+            const msg = data.message || data.Message || (ok ? "Deleted." : "Delete failed.");
+            if (ok) {
+                Swal.fire({ icon: "success", title: "Deleted", text: msg, timer: 1400, showConfirmButton: false })
+                    .then(() => location.reload());
+            } else {
+                Swal.fire({ icon: "error", title: "Cannot delete", text: msg, confirmButtonColor: "#4C1864" });
+            }
+        } catch (e) {
+            Swal.fire({ icon: "error", title: "Error", text: e.message, confirmButtonColor: "#4C1864" });
+        }
+    }
+</script>

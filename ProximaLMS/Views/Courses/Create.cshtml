@@ -1,0 +1,1953 @@
+﻿@*
+    ProximaLMS/Views/Courses/Create.cshtml
+    ───────────────────────────────────────────────────────────────────────────
+    Course wizard — 3 steps: General · Media · Content
+    ───────────────────────────────────────────────────────────────────────────
+*@
+@model ProximaLMS.Models.CreateCourseViewModel
+@{
+    ViewData["Title"] = (Model.CourseID ?? 0) > 0 ? "Edit Course" : "Create Course";
+    Layout = "_Layout";
+
+    bool isEdit = (Model.CourseID ?? 0) > 0;
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --cw-grape: #4C1864;
+        --cw-grape-dark: #2D0F4E;
+        --cw-violet: #7B2CBF;
+        --cw-violet-soft: #9F4FE8;
+        --cw-lavender: #EDE9F8;
+        --cw-lavender-2: #F5F0FB;
+        --cw-pale: #FAF7FE;
+        --cw-ink: #1A1035;
+        --cw-ink-2: #4B4369;
+        --cw-muted: #7B7691;
+        --cw-faint: #B5B0C7;
+        --cw-line: #ECE8F4;
+        --cw-line-2: #E0DAEE;
+        --cw-bg: #F6F2FB;
+        --cw-surface: #FFFFFF;
+        --cw-surface-alt: #FBFAFE;
+        --cw-success: #059669;
+        --cw-success-bg: #D1FAE5;
+        --cw-warn: #B45309;
+        --cw-warn-bg: #FEF3C7;
+        --cw-danger: #DC2626;
+        --cw-danger-bg: #FEE2E2;
+        --cw-font-display: 'Fraunces', Georgia, serif;
+        --cw-font-body: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        --cw-r-sm: 6px;
+        --cw-r-md: 10px;
+        --cw-r-lg: 14px;
+        --cw-r-xl: 18px;
+        --cw-shadow-sm: 0 1px 3px rgba(76,24,100,.06), 0 4px 12px rgba(76,24,100,.04);
+        --cw-shadow-md: 0 2px 6px rgba(76,24,100,.06), 0 10px 24px rgba(76,24,100,.07);
+        --cw-shadow-lg: 0 4px 10px rgba(76,24,100,.08), 0 24px 48px rgba(76,24,100,.10);
+        --cw-focus: 0 0 0 4px rgba(123,44,191,.15);
+    }
+
+    .cw-page {
+        font-family: var(--cw-font-body);
+        background: var(--cw-bg);
+        color: var(--cw-ink);
+        min-height: calc(100vh - 60px);
+        padding-bottom: 60px;
+    }
+
+    /* HERO */
+    .cw-hero {
+        position: relative;
+        overflow: hidden;
+        padding: 32px 36px 90px;
+        background: radial-gradient(circle at 85% -10%, rgba(159, 79, 232, .32) 0, transparent 55%), linear-gradient(135deg, var(--cw-grape-dark) 0%, var(--cw-grape) 50%, var(--cw-violet) 100%);
+        color: #fff;
+    }
+
+        .cw-hero::before {
+            content: '';
+            position: absolute;
+            width: 380px;
+            height: 380px;
+            border-radius: 50%;
+            top: -100px;
+            right: -80px;
+            background: radial-gradient(circle, rgba(159, 79, 232, .25) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+    .cw-hero__inner {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .cw-crumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: rgba(255,255,255,.65);
+        margin-bottom: 6px;
+    }
+
+        .cw-crumb a {
+            color: rgba(255,255,255,.75);
+            text-decoration: none;
+        }
+
+            .cw-crumb a:hover {
+                color: #fff;
+            }
+
+    .cw-crumb__sep {
+        opacity: .5;
+    }
+
+    .cw-hero h1 {
+        font-family: var(--cw-font-display);
+        font-size: clamp(26px, 3vw, 34px);
+        font-weight: 600;
+        letter-spacing: -.5px;
+        margin: 0;
+        line-height: 1.15;
+    }
+
+    .cw-hero p {
+        font-size: 14px;
+        color: rgba(255,255,255,.7);
+        margin: 6px 0 0;
+        max-width: 560px;
+    }
+
+    .cw-code-badge {
+        background: rgba(255,255,255,.14);
+        border: 1px solid rgba(255,255,255,.22);
+        padding: 8px 14px;
+        border-radius: 999px;
+        font-size: 12.5px;
+        font-weight: 600;
+        backdrop-filter: blur(6px);
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        white-space: nowrap;
+    }
+
+    /* BODY */
+    .cw-body {
+        max-width: 1200px;
+        margin: -64px auto 0;
+        padding: 0 36px;
+        position: relative;
+        z-index: 5;
+    }
+
+    .cw-card {
+        background: var(--cw-surface);
+        border: 1px solid var(--cw-line);
+        border-radius: var(--cw-r-xl);
+        box-shadow: var(--cw-shadow-md);
+        margin-bottom: 24px;
+        overflow: hidden;
+    }
+
+    /* STEPPER */
+    .cw-stepper {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0;
+        border-bottom: 1px solid var(--cw-line);
+        background: var(--cw-surface-alt);
+    }
+
+    .cw-step {
+        position: relative;
+        padding: 20px 24px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        cursor: pointer;
+        border-right: 1px solid var(--cw-line);
+        transition: background .15s;
+        background: var(--cw-surface);
+    }
+
+        .cw-step:last-child {
+            border-right: none;
+        }
+
+        .cw-step:hover {
+            background: var(--cw-lavender-2);
+        }
+
+        .cw-step.is-active {
+            background: linear-gradient(135deg, var(--cw-grape), var(--cw-violet));
+            color: #fff;
+        }
+
+        .cw-step.is-done .cw-step__num {
+            background: var(--cw-success);
+            color: #fff;
+        }
+
+    .cw-step__num {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: var(--cw-lavender);
+        color: var(--cw-grape);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 14px;
+        flex-shrink: 0;
+        transition: all .15s;
+    }
+
+    .cw-step.is-active .cw-step__num {
+        background: rgba(255,255,255,.2);
+        color: #fff;
+    }
+
+    .cw-step.is-done .cw-step__num::before {
+        content: '✓';
+    }
+
+    .cw-step.is-done .cw-step__num span {
+        display: none;
+    }
+
+    .cw-step__name {
+        font-weight: 700;
+        font-size: 14px;
+        line-height: 1.2;
+    }
+
+    .cw-step__sub {
+        font-size: 11.5px;
+        font-weight: 500;
+        color: var(--cw-muted);
+        margin-top: 2px;
+    }
+
+    .cw-step.is-active .cw-step__sub {
+        color: rgba(255,255,255,.75);
+    }
+
+    .cw-progress {
+        height: 4px;
+        background: var(--cw-line);
+        overflow: hidden;
+    }
+
+    .cw-progress__fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--cw-grape), var(--cw-violet));
+        transition: width .35s ease;
+    }
+
+    /* PANES */
+    .cw-pane {
+        padding: 28px 32px;
+    }
+
+        .cw-pane[hidden] {
+            display: none;
+        }
+
+    .cw-section-title {
+        font-family: var(--cw-font-display);
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--cw-violet);
+        text-transform: uppercase;
+        letter-spacing: 1.2px;
+        margin: 0 0 16px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+        .cw-section-title::before {
+            content: '';
+            width: 4px;
+            height: 16px;
+            background: var(--cw-violet);
+            border-radius: 2px;
+        }
+
+    .cw-grid {
+        display: grid;
+        grid-template-columns: repeat(12, 1fr);
+        gap: 18px;
+    }
+
+    .cw-col-12 {
+        grid-column: span 12;
+    }
+
+    .cw-col-6 {
+        grid-column: span 6;
+    }
+
+    .cw-col-4 {
+        grid-column: span 4;
+    }
+
+    @@media (max-width: 768px) {
+        .cw-col-6, .cw-col-4 {
+            grid-column: span 12;
+        }
+    }
+
+    .cw-field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .cw-label {
+        font-size: 12.5px;
+        font-weight: 600;
+        color: var(--cw-ink-2);
+        letter-spacing: .2px;
+    }
+
+    .cw-req {
+        color: var(--cw-danger);
+        margin-left: 3px;
+    }
+
+    .cw-hint {
+        font-size: 11.5px;
+        color: var(--cw-muted);
+        margin-top: 3px;
+    }
+
+    .cw-err {
+        font-size: 12px;
+        color: var(--cw-danger);
+        margin-top: 4px;
+        min-height: 14px;
+    }
+
+    .cw-input, .cw-select, .cw-textarea {
+        width: 100%;
+        padding: 11px 14px;
+        border: 1px solid var(--cw-line-2);
+        border-radius: var(--cw-r-md);
+        background: var(--cw-surface);
+        font-family: inherit;
+        font-size: 13.5px;
+        color: var(--cw-ink);
+        transition: border .15s, box-shadow .15s;
+        box-sizing: border-box;
+    }
+
+        .cw-input::placeholder, .cw-textarea::placeholder {
+            color: var(--cw-faint);
+        }
+
+        .cw-input:focus, .cw-select:focus, .cw-textarea:focus {
+            outline: none;
+            border-color: var(--cw-violet);
+            box-shadow: var(--cw-focus);
+        }
+
+        .cw-input.is-invalid, .cw-select.is-invalid, .cw-textarea.is-invalid {
+            border-color: var(--cw-danger);
+            background: #FFFAFA;
+        }
+
+    .cw-textarea {
+        resize: vertical;
+        min-height: 80px;
+        line-height: 1.5;
+    }
+
+    .cw-select {
+        appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%237B7691'%3e%3cpath d='M4 6l4 4 4-4z'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        padding-right: 36px;
+    }
+
+    .cw-counter {
+        font-size: 11px;
+        color: var(--cw-muted);
+        text-align: right;
+        margin-top: 2px;
+        font-variant-numeric: tabular-nums;
+    }
+
+        .cw-counter.is-near {
+            color: var(--cw-warn);
+            font-weight: 600;
+        }
+
+        .cw-counter.is-over {
+            color: var(--cw-danger);
+            font-weight: 700;
+        }
+
+    /* TAG PICKER (single, unified version) */
+    .cw-tag-picker {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        padding: 6px 0;
+        min-height: 40px;
+    }
+
+    .cw-tag-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12.5px;
+        font-weight: 600;
+        cursor: pointer;
+        user-select: none;
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--cw-line-2);
+        color: var(--cw-ink-2);
+        background: #fff;
+        transition: .15s;
+    }
+
+        .cw-tag-chip i {
+            font-size: 10px;
+            opacity: .55;
+        }
+
+        .cw-tag-chip:hover {
+            border-color: var(--chip, var(--cw-violet));
+            color: var(--chip, var(--cw-violet));
+        }
+
+        .cw-tag-chip.is-on {
+            background: var(--chip, var(--cw-violet));
+            border-color: var(--chip, var(--cw-violet));
+            color: #fff;
+        }
+
+            .cw-tag-chip.is-on i {
+                opacity: 1;
+            }
+
+    .cw-no-tags {
+        font-size: 12.5px;
+        color: var(--cw-muted);
+        padding: 6px 0;
+    }
+
+    /* FILE DROP */
+    .cw-file {
+        position: relative;
+        display: block;
+        border: 1.5px dashed var(--cw-line-2);
+        border-radius: var(--cw-r-lg);
+        padding: 14px;
+        background: var(--cw-surface-alt);
+        transition: border .15s, background .15s;
+    }
+
+        .cw-file:hover {
+            border-color: var(--cw-violet);
+            background: var(--cw-lavender-2);
+        }
+
+        .cw-file input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            inset: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+    .cw-file__inner {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        text-align: center;
+        padding: 18px 10px;
+        color: var(--cw-muted);
+        font-size: 12.5px;
+        pointer-events: none;
+    }
+
+        .cw-file__inner i {
+            font-size: 28px;
+            color: var(--cw-violet);
+            margin-bottom: 2px;
+        }
+
+        .cw-file__inner b {
+            color: var(--cw-ink);
+            font-size: 13px;
+        }
+
+    .cw-preview {
+        margin-top: 12px;
+        background: var(--cw-surface);
+        border: 1px solid var(--cw-line);
+        border-radius: var(--cw-r-md);
+        padding: 10px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+        .cw-preview img, .cw-preview video {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+            background: #000;
+            flex-shrink: 0;
+        }
+
+    .cw-preview__meta {
+        flex: 1;
+        min-width: 0;
+        font-size: 12px;
+        color: var(--cw-muted);
+    }
+
+        .cw-preview__meta b {
+            color: var(--cw-ink);
+            font-size: 12.5px;
+            display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-bottom: 2px;
+        }
+
+    .cw-preview__tag {
+        display: inline-block;
+        background: var(--cw-warn-bg);
+        color: var(--cw-warn);
+        font-size: 10.5px;
+        font-weight: 700;
+        padding: 2px 7px;
+        border-radius: 999px;
+        margin-right: 6px;
+        text-transform: uppercase;
+        letter-spacing: .3px;
+    }
+
+        .cw-preview__tag.is-new {
+            background: var(--cw-success-bg);
+            color: var(--cw-success);
+        }
+
+    /* LESSON BLOCKS */
+    .cw-content-list {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+    }
+
+    .cw-content {
+        background: var(--cw-surface);
+        border: 1px solid var(--cw-line);
+        border-radius: var(--cw-r-lg);
+        padding: 16px 18px;
+        position: relative;
+    }
+
+        .cw-content.is-existing {
+            background: var(--cw-surface-alt);
+            border-color: var(--cw-line-2);
+        }
+
+    .cw-content__head {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        padding-bottom: 10px;
+        border-bottom: 1px dashed var(--cw-line);
+    }
+
+    .cw-content__grip {
+        cursor: grab;
+        color: var(--cw-faint);
+        font-size: 14px;
+        padding: 2px 4px;
+    }
+
+        .cw-content__grip:active {
+            cursor: grabbing;
+        }
+
+    .cw-content__num {
+        font-family: var(--cw-font-display);
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--cw-violet);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+        .cw-content__num::before {
+            content: attr(data-num);
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: var(--cw-lavender);
+            color: var(--cw-grape);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--cw-font-body);
+            font-size: 12px;
+            font-weight: 800;
+        }
+
+    .cw-content__del {
+        margin-left: auto;
+        background: transparent;
+        border: 1px solid var(--cw-line-2);
+        color: var(--cw-muted);
+        width: 30px;
+        height: 30px;
+        border-radius: var(--cw-r-sm);
+        cursor: pointer;
+        font-size: 13px;
+        transition: all .15s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+        .cw-content__del:hover {
+            border-color: var(--cw-danger);
+            color: var(--cw-danger);
+            background: var(--cw-danger-bg);
+        }
+
+    /* Lesson-type tabs inside a content block */
+    .cw-lt-tabs {
+        display: flex;
+        gap: 6px;
+    }
+
+    .cw-lt-opt {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+        user-select: none;
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--cw-ink-2);
+        padding: 5px 11px;
+        border: 1px solid var(--cw-line-2);
+        border-radius: 999px;
+        background: #fff;
+        transition: .15s;
+    }
+
+        .cw-lt-opt i {
+            font-size: 11px;
+        }
+
+        .cw-lt-opt input {
+            display: none;
+        }
+
+        .cw-lt-opt.is-on {
+            background: linear-gradient(90deg, var(--cw-grape), var(--cw-violet));
+            border-color: transparent;
+            color: #fff;
+        }
+
+    .cw-lt-section {
+        margin-top: 10px;
+    }
+
+    .cw-duration {
+        font-size: 12px;
+        color: var(--cw-success);
+        font-weight: 600;
+        margin-top: 6px;
+    }
+
+    .cw-existing-tag {
+        font-size: 11px;
+        font-weight: 700;
+        color: var(--cw-violet);
+        background: var(--cw-lavender);
+        padding: 3px 9px;
+        border-radius: 999px;
+        margin-left: 4px;
+    }
+
+    .cw-existing-meta {
+        font-size: 12px;
+        color: var(--cw-muted);
+        margin-top: 4px;
+    }
+
+    /* BUTTONS */
+    .cw-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        padding: 11px 20px;
+        border-radius: var(--cw-r-md);
+        border: none;
+        font-family: inherit;
+        font-size: 13.5px;
+        font-weight: 700;
+        cursor: pointer;
+        text-decoration: none;
+        line-height: 1;
+        transition: all .15s;
+        white-space: nowrap;
+    }
+
+    .cw-btn--primary {
+        background: linear-gradient(135deg, var(--cw-grape), var(--cw-violet));
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(76,24,100,.22);
+    }
+
+        .cw-btn--primary:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 8px 20px rgba(76,24,100,.32);
+            color: #fff;
+        }
+
+    .cw-btn--ghost {
+        background: #fff;
+        color: var(--cw-ink-2);
+        border: 1px solid var(--cw-line-2);
+    }
+
+        .cw-btn--ghost:hover {
+            border-color: var(--cw-violet);
+            color: var(--cw-violet);
+        }
+
+    .cw-btn--add {
+        background: var(--cw-lavender);
+        color: var(--cw-grape);
+        font-size: 12.5px;
+        padding: 9px 16px;
+    }
+
+        .cw-btn--add:hover {
+            background: #e2dafc;
+            color: var(--cw-grape);
+        }
+
+    .cw-controls {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 24px;
+        padding-top: 22px;
+        border-top: 1px solid var(--cw-line);
+    }
+
+    /* LOADER */
+    .cw-loader {
+        position: fixed;
+        inset: 0;
+        background: rgba(76, 24, 100, .55);
+        backdrop-filter: blur(4px);
+        z-index: 99999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity .25s, visibility .25s;
+    }
+
+        .cw-loader.is-on {
+            opacity: 1;
+            visibility: visible;
+        }
+
+    .cw-loader__box {
+        background: #fff;
+        padding: 28px 36px;
+        border-radius: var(--cw-r-xl);
+        text-align: center;
+        box-shadow: 0 20px 60px rgba(0,0,0,.4);
+    }
+
+    .cw-loader__ring {
+        width: 48px;
+        height: 48px;
+        border: 4px solid var(--cw-lavender);
+        border-top-color: var(--cw-violet);
+        border-radius: 50%;
+        animation: cwSpin 1s linear infinite;
+        margin: 0 auto 14px;
+    }
+
+    @@keyframes cwSpin {
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .cw-loader__title {
+        font-family: var(--cw-font-display);
+        font-weight: 700;
+        font-size: 16px;
+        color: var(--cw-grape);
+    }
+
+    .cw-loader__sub {
+        font-size: 12.5px;
+        color: var(--cw-muted);
+        margin-top: 3px;
+    }
+
+    /* TOAST */
+    .cw-toast-host {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 5000;
+    }
+
+    .cw-toast {
+        background: var(--cw-ink);
+        color: #fff;
+        padding: 13px 18px 13px 14px;
+        border-radius: var(--cw-r-md);
+        font-size: 13px;
+        box-shadow: 0 12px 32px rgba(0,0,0,.32);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        max-width: 380px;
+        border-left: 4px solid var(--cw-violet);
+        animation: cwToastIn .25s ease;
+    }
+
+        .cw-toast.is-success {
+            border-left-color: var(--cw-success);
+        }
+
+        .cw-toast.is-error {
+            border-left-color: var(--cw-danger);
+        }
+
+    @@keyframes cwToastIn {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+
+    .cw-toast i {
+        font-size: 15px;
+    }
+
+    .cw-toast.is-success i {
+        color: #5EEAD4;
+    }
+
+    .cw-toast.is-error i {
+        color: #FCA5A5;
+    }
+
+    .cw-toast__close {
+        background: transparent;
+        border: none;
+        color: rgba(255,255,255,.6);
+        cursor: pointer;
+        font-size: 14px;
+        margin-left: 4px;
+        padding: 0 4px;
+    }
+
+        .cw-toast__close:hover {
+            color: #fff;
+        }
+
+    .sortable-ghost {
+        opacity: .45;
+    }
+</style>
+
+<!-- Loader -->
+<div class="cw-loader" id="cwLoader">
+    <div class="cw-loader__box">
+        <div class="cw-loader__ring"></div>
+        <div class="cw-loader__title">Proxima LMS</div>
+        <div class="cw-loader__sub">Saving your course…</div>
+    </div>
+</div>
+
+<!-- Toasts -->
+<div class="cw-toast-host" id="cwToastHost">
+    @if (TempData["Success"] != null)
+    {
+        <div class="cw-toast is-success">
+            <i class="fas fa-check-circle"></i>
+            <span>@TempData["Success"]</span>
+            <button class="cw-toast__close" onclick="this.parentElement.remove()">&times;</button>
+        </div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="cw-toast is-error">
+            <i class="fas fa-exclamation-triangle"></i>
+            <span>@TempData["Error"]</span>
+            <button class="cw-toast__close" onclick="this.parentElement.remove()">&times;</button>
+        </div>
+    }
+</div>
+
+<div class="cw-page">
+
+    @* HERO *@
+    <header class="cw-hero">
+        <div class="cw-hero__inner">
+            <div>
+                <div class="cw-crumb">
+                    <a asp-action="List">Courses</a>
+                    <span class="cw-crumb__sep">›</span>
+                    <span style="color:#fff;">@(isEdit ? "Edit" : "New")</span>
+                </div>
+                <h1>@(isEdit ? "Edit course" : "Create a new course")</h1>
+                <p>Walk through three quick steps — fill in the basics, upload your media, then add lesson content.</p>
+            </div>
+            <div class="cw-code-badge">
+                <i class="fas fa-fingerprint"></i> @Model.CourseCode
+            </div>
+        </div>
+    </header>
+
+    @* BODY *@
+    <div class="cw-body">
+        <div class="cw-card">
+
+            @* Stepper *@
+            <div class="cw-stepper" id="cwStepper">
+                <div class="cw-step is-active" data-step="1">
+                    <div class="cw-step__num"><span>1</span></div>
+                    <div>
+                        <div class="cw-step__name">General</div>
+                        <div class="cw-step__sub">Details &amp; pricing</div>
+                    </div>
+                </div>
+                <div class="cw-step" data-step="2">
+                    <div class="cw-step__num"><span>2</span></div>
+                    <div>
+                        <div class="cw-step__name">Media</div>
+                        <div class="cw-step__sub">Logo, cover, promo</div>
+                    </div>
+                </div>
+                <div class="cw-step" data-step="3">
+                    <div class="cw-step__num"><span>3</span></div>
+                    <div>
+                        <div class="cw-step__name">Content</div>
+                        <div class="cw-step__sub">Lesson media</div>
+                    </div>
+                </div>
+            </div>
+            <div class="cw-progress"><div class="cw-progress__fill" id="cwProgress" style="width:33.33%"></div></div>
+
+            <form asp-action="Create" method="post" enctype="multipart/form-data" id="cwForm" novalidate>
+                @Html.AntiForgeryToken()
+                <input asp-for="CourseID" type="hidden" />
+                <input asp-for="CourseCode" type="hidden" />
+                <input asp-for="ExistingLogoFileName" type="hidden" />
+                <input asp-for="ExistingCoverFileName" type="hidden" />
+                <input asp-for="ExistingPromoFileName" type="hidden" />
+
+                @* ═══════════ STEP 1 — GENERAL ═══════════ *@
+                <div class="cw-pane" data-pane="1">
+                    <h2 class="cw-section-title">Basic details</h2>
+                    <div class="cw-grid">
+                        <div class="cw-col-12">
+                            <div class="cw-field">
+                                <label class="cw-label" asp-for="CourseTitle">
+                                    Course title <span class="cw-req">*</span>
+                                </label>
+                                <input asp-for="CourseTitle" class="cw-input"
+                                       placeholder="e.g. Mastering React from the Ground Up"
+                                       maxlength="160" />
+                                <div class="cw-err" data-err-for="CourseTitle"></div>
+                            </div>
+                        </div>
+
+                        <div class="cw-col-6">
+                            <div class="cw-field">
+                                <label class="cw-label" asp-for="CategoryId">
+                                    Category <span class="cw-req">*</span>
+                                </label>
+                                <select asp-for="CategoryId" asp-items="Model.Categories" class="cw-select"></select>
+                                <div class="cw-err" data-err-for="CategoryId"></div>
+                            </div>
+                        </div>
+
+                        <div class="cw-col-6">
+                            <div class="cw-field">
+                                <label class="cw-label" asp-for="InstructorId">
+                                    Instructor <span class="cw-req">*</span>
+                                </label>
+                                <select asp-for="InstructorId" asp-items="Model.Instructors" class="cw-select"></select>
+                                <div class="cw-err" data-err-for="InstructorId"></div>
+                            </div>
+                        </div>
+
+                        <div class="cw-col-6">
+                            <div class="cw-field">
+                                <label class="cw-label" asp-for="CourseLevel">
+                                    Skill level <span class="cw-req">*</span>
+                                </label>
+                                <select asp-for="CourseLevel" asp-items="Model.Levels" class="cw-select"></select>
+                                <div class="cw-err" data-err-for="CourseLevel"></div>
+                            </div>
+                        </div>
+
+                        <div class="cw-col-6">
+                            <div class="cw-field">
+                                <label class="cw-label" asp-for="LanguageId">
+                                    Language <span class="cw-req">*</span>
+                                </label>
+                                <select asp-for="LanguageId" asp-items="Model.Languages" class="cw-select"></select>
+                                <div class="cw-err" data-err-for="LanguageId"></div>
+                            </div>
+                        </div>
+
+                        <div class="cw-col-6">
+                            <div class="cw-field">
+                                <label class="cw-label" asp-for="CourseStartDate">
+                                    Start date <span class="cw-req">*</span>
+                                </label>
+                                <input asp-for="CourseStartDate" type="date" class="cw-input" id="cwStart" />
+                                <div class="cw-err" data-err-for="CourseStartDate"></div>
+                            </div>
+                        </div>
+
+                        <div class="cw-col-6">
+                            <div class="cw-field">
+                                <label class="cw-label" asp-for="CourseEndDate">
+                                    End date <span class="cw-req">*</span>
+                                </label>
+                                <input asp-for="CourseEndDate" type="date" class="cw-input" id="cwEnd" />
+                                <div class="cw-err" data-err-for="CourseEndDate"></div>
+                            </div>
+                        </div>
+
+                        <div class="cw-col-4">
+                            <div class="cw-field">
+                                <label class="cw-label" asp-for="Price">Price (₹)</label>
+                                <input asp-for="Price" type="number" min="0" step="0.01"
+                                       class="cw-input" placeholder="0 for free" />
+                                <div class="cw-hint">Leave 0 or blank to make this a free course.</div>
+                            </div>
+                        </div>
+
+                        <div class="cw-col-4">
+                            <div class="cw-field">
+                                <label class="cw-label" asp-for="EnrollmentLimit">Enrollment limit</label>
+                                <input asp-for="EnrollmentLimit" type="number" min="0"
+                                       class="cw-input" placeholder="0 for unlimited" />
+                            </div>
+                        </div>
+
+                        <div class="cw-col-4">
+                            <div class="cw-field">
+                                <label class="cw-label" asp-for="CourseDurationHours">Duration (hrs)</label>
+                                <input asp-for="CourseDurationHours" type="number" min="0"
+                                       class="cw-input" placeholder="e.g. 12" />
+                            </div>
+                        </div>
+
+                        <div class="cw-col-12">
+                            <div class="cw-field">
+                                <label class="cw-label" asp-for="SmallDescription">
+                                    One-line description
+                                    <span class="cw-hint" style="font-weight:400;">(max 100 characters)</span>
+                                </label>
+                                <input asp-for="SmallDescription" class="cw-input"
+                                       maxlength="100" id="cwSmallDesc"
+                                       placeholder="A short hook that appears on course cards" />
+                                <div class="cw-counter" id="cwSmallDescCount">0 / 100</div>
+                            </div>
+                        </div>
+
+                        @* ── Tags (single picker) ── *@
+                        <div class="cw-col-12">
+                            <div class="cw-field">
+                                <label class="cw-label">Tags <span class="cw-hint" style="font-weight:400;">(optional, click to toggle)</span></label>
+                                <div class="cw-tag-picker" id="cwTagPicker">
+                                    @if (Model.AllTags != null && Model.AllTags.Any())
+                                    {
+                                        foreach (var tag in Model.AllTags)
+                                        {
+                                            var on = Model.SelectedTagIds != null && Model.SelectedTagIds.Contains(tag.TagId);
+                                            <span class="cw-tag-chip @(on ? "is-on" : "")"
+                                                  data-tag-id="@tag.TagId"
+                                                  style="--chip:@tag.ColorHex">
+                                                <i class="fa-solid fa-tag"></i> @tag.TagName
+                                            </span>
+                                        }
+                                    }
+                                    else
+                                    {
+                                        <span class="cw-no-tags">No tags yet — add some under Settings → Tags.</span>
+                                    }
+                                </div>
+                                <div id="cwTagHidden">
+                                    @if (Model.SelectedTagIds != null)
+                                    {
+                                        foreach (var sid in Model.SelectedTagIds)
+                                        {
+                                            <input type="hidden" name="SelectedTagIds" value="@sid" />
+                                        }
+                                    }
+                                </div>
+                                <div class="cw-hint">Tags power search &amp; filtering.</div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div class="cw-controls">
+                        <span></span>
+                        <button type="button" class="cw-btn cw-btn--primary" data-go="2">
+                            Continue to media <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                @* ═══════════ STEP 2 — MEDIA ═══════════ *@
+                <div class="cw-pane" data-pane="2" hidden>
+                    <h2 class="cw-section-title">Course media</h2>
+                    <div class="cw-grid">
+
+                        <div class="cw-col-4">
+                            <div class="cw-field">
+                                <label class="cw-label">
+                                    Course logo
+                                    @if (!isEdit)
+                                    {
+                                        <span class="cw-req">*</span>
+                                    }
+                                </label>
+                                <label class="cw-file" id="cwLogoDrop">
+                                    <input asp-for="CourseLogo" type="file" accept="image/*"
+                                           id="cwLogoInput" data-preview="cwLogoPreview" />
+                                    <div class="cw-file__inner">
+                                        <i class="fas fa-image"></i>
+                                        <b>Choose logo image</b>
+                                        <span>PNG / JPG · square works best</span>
+                                    </div>
+                                </label>
+                                <div id="cwLogoPreview">
+                                    @if (!string.IsNullOrEmpty(Model.ExistingLogoFileName))
+                                    {
+                                        <div class="cw-preview">
+                                            <img src="@Url.Content("~/uploads/" + Model.ExistingLogoFileName)" alt="Current logo" />
+                                            <div class="cw-preview__meta">
+                                                <b>@Model.ExistingLogoFileName</b>
+                                                <span class="cw-preview__tag">Current</span>Pick a new file to replace it
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="cw-err" data-err-for="CourseLogo"></div>
+                            </div>
+                        </div>
+
+                        <div class="cw-col-4">
+                            <div class="cw-field">
+                                <label class="cw-label">
+                                    Cover image
+                                    @if (!isEdit)
+                                    {
+                                        <span class="cw-req">*</span>
+                                    }
+                                </label>
+                                <label class="cw-file" id="cwCoverDrop">
+                                    <input asp-for="CoverImage" type="file" accept="image/*"
+                                           id="cwCoverInput" data-preview="cwCoverPreview" />
+                                    <div class="cw-file__inner">
+                                        <i class="fas fa-panorama"></i>
+                                        <b>Choose cover image</b>
+                                        <span>JPG · 16:9 wide banner</span>
+                                    </div>
+                                </label>
+                                <div id="cwCoverPreview">
+                                    @if (!string.IsNullOrEmpty(Model.ExistingCoverFileName))
+                                    {
+                                        <div class="cw-preview">
+                                            <img src="@Url.Content("~/uploads/" + Model.ExistingCoverFileName)" alt="Current cover" />
+                                            <div class="cw-preview__meta">
+                                                <b>@Model.ExistingCoverFileName</b>
+                                                <span class="cw-preview__tag">Current</span>Pick a new file to replace it
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="cw-err" data-err-for="CoverImage"></div>
+                            </div>
+                        </div>
+
+                        <div class="cw-col-4">
+                            <div class="cw-field">
+                                <label class="cw-label">
+                                    Promotional video
+                                    @if (!isEdit)
+                                    {
+                                        <span class="cw-req">*</span>
+                                    }
+                                </label>
+                                <label class="cw-file" id="cwPromoDrop">
+                                    <input asp-for="PromotionalVideo" type="file" accept="video/*"
+                                           id="cwPromoInput" data-preview="cwPromoPreview" data-isvideo="1" />
+                                    <div class="cw-file__inner">
+                                        <i class="fas fa-film"></i>
+                                        <b>Choose promo video</b>
+                                        <span>MP4 · keep it under 60 seconds</span>
+                                    </div>
+                                </label>
+                                <div id="cwPromoPreview">
+                                    @if (!string.IsNullOrEmpty(Model.ExistingPromoFileName))
+                                    {
+                                        <div class="cw-preview">
+                                            <video src="@Url.Content("~/uploads/" + Model.ExistingPromoFileName)" muted></video>
+                                            <div class="cw-preview__meta">
+                                                <b>@Model.ExistingPromoFileName</b>
+                                                <span class="cw-preview__tag">Current</span>Pick a new file to replace it
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                <div class="cw-err" data-err-for="PromotionalVideo"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="cw-controls">
+                        <button type="button" class="cw-btn cw-btn--ghost" data-go="1">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                        <button type="button" class="cw-btn cw-btn--primary" data-go="3">
+                            Continue to content <i class="fas fa-arrow-right"></i>
+                        </button>
+                    </div>
+                </div>
+
+                @* ═══════════ STEP 3 — CONTENT ═══════════ *@
+                <div class="cw-pane" data-pane="3" hidden>
+                    <h2 class="cw-section-title">Lesson content</h2>
+
+                    <div class="cw-content-list" id="cwContentList">
+                        @if (Model.ExistingContents != null && Model.ExistingContents.Any())
+                        {
+                            @* Render saved lessons — read-only summary (cannot edit media inline; delete & re-add to replace) *@
+                            @for (int i = 0; i < Model.ExistingContents.Count; i++)
+                            {
+                                var content = Model.ExistingContents[i];
+                                var ft = string.IsNullOrEmpty(content.FileType) ? "Video" : content.FileType;
+                                var icon = ft.Equals("PDF", StringComparison.OrdinalIgnoreCase) ? "fa-file-pdf"
+                                : ft.Equals("Text", StringComparison.OrdinalIgnoreCase) ? "fa-align-left"
+                                : "fa-video";
+
+                                <div class="cw-content is-existing"
+                                     data-existing="1"
+                                     data-content-id="@content.ContentID"
+                                     data-index="@i">
+                                    <div class="cw-content__head">
+                                        <span class="cw-content__grip" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></span>
+                                        <span class="cw-content__num" data-num="@(i + 1)">Lesson @(i + 1)</span>
+                                        <span class="cw-existing-tag">
+                                            <i class="fa-solid @icon"></i> @ft
+                                        </span>
+                                        <button type="button" class="cw-content__del" title="Delete this lesson"
+                                                onclick="cwDeleteExisting(@content.ContentID, this)">
+                                            &times;
+                                        </button>
+                                    </div>
+
+                                    <div class="cw-field">
+                                        <label class="cw-label">Title</label>
+                                        <input type="text" class="cw-input" value="@content.ContentTitle" readonly />
+                                    </div>
+                                    @if (!string.IsNullOrEmpty(content.Description))
+                                    {
+                                        <div class="cw-field" style="margin-top:10px;">
+                                            <label class="cw-label">Description</label>
+                                            <textarea class="cw-textarea" rows="2" readonly>@content.Description</textarea>
+                                        </div>
+                                    }
+                                    @if (!string.IsNullOrEmpty(content.ContentFile))
+                                    {
+                                        <div class="cw-existing-meta">
+                                            <i class="fa-solid fa-paperclip"></i> @content.ContentFile
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        }
+
+                        @* Always render one new-lesson template (so admins can add lessons in both create AND edit mode) *@
+                        @{
+                            // index starts at ExistingContents.Count if any, else 0
+                            int startIdx = Model.ExistingContents?.Count ?? 0;
+                        }
+                        <div class="cw-content"
+                             data-existing="0"
+                             data-index="@startIdx">
+                            <div class="cw-content__head">
+                                <span class="cw-content__grip" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></span>
+                                <span class="cw-content__num" data-num="@(startIdx + 1)">New lesson</span>
+
+                                <div class="cw-lt-tabs" style="margin-left:8px;">
+                                    <label class="cw-lt-opt is-on">
+                                        <input type="radio" name="Videos[@startIdx].LessonType" value="Video" checked onchange="cwOnLessonType(this)">
+                                        <i class="fa-solid fa-video"></i> Video
+                                    </label>
+                                    <label class="cw-lt-opt">
+                                        <input type="radio" name="Videos[@startIdx].LessonType" value="PDF" onchange="cwOnLessonType(this)">
+                                        <i class="fa-solid fa-file-pdf"></i> PDF
+                                    </label>
+                                    <label class="cw-lt-opt">
+                                        <input type="radio" name="Videos[@startIdx].LessonType" value="Text" onchange="cwOnLessonType(this)">
+                                        <i class="fa-solid fa-align-left"></i> Text
+                                    </label>
+                                </div>
+
+                                <button type="button" class="cw-content__del" title="Remove this lesson" style="display:none;">&times;</button>
+                            </div>
+
+                            <input type="hidden" name="Videos[@startIdx].ContentID" value="0" />
+
+                            <div class="cw-grid">
+                                <div class="cw-col-12">
+                                    <div class="cw-field">
+                                        <label class="cw-label">Title</label>
+                                        <input name="Videos[@startIdx].ContentTitle" class="cw-input"
+                                               placeholder="e.g. Setting up your dev environment" />
+                                    </div>
+                                </div>
+                                <div class="cw-col-12">
+                                    <div class="cw-field">
+                                        <label class="cw-label">Description</label>
+                                        <textarea name="Videos[@startIdx].Description" rows="2"
+                                                  class="cw-textarea"
+                                                  placeholder="What will the learner take away from this lesson?"></textarea>
+                                    </div>
+                                </div>
+
+                                @* ── VIDEO inputs (visible by default) ── *@
+                                <div class="cw-col-12 cw-lt-section cw-lt-video">
+                                    <div class="cw-grid">
+                                        <div class="cw-col-6">
+                                            <div class="cw-field">
+                                                <label class="cw-label">Thumbnail</label>
+                                                <label class="cw-file">
+                                                    <input name="Videos[@startIdx].VideoThumbnail" type="file"
+                                                           accept="image/*"
+                                                           data-preview="cwThumbPreview-@startIdx" />
+                                                    <div class="cw-file__inner">
+                                                        <i class="fas fa-image"></i>
+                                                        <b>Choose a thumbnail</b>
+                                                        <span>Optional</span>
+                                                    </div>
+                                                </label>
+                                                <div id="cwThumbPreview-@startIdx"></div>
+                                            </div>
+                                        </div>
+                                        <div class="cw-col-6">
+                                            <div class="cw-field">
+                                                <label class="cw-label">Video</label>
+                                                <label class="cw-file">
+                                                    <input name="Videos[@startIdx].CourseVideo" type="file"
+                                                           accept="video/*"
+                                                           data-preview="cwVideoPreview-@startIdx" data-isvideo="1"
+                                                           onchange="cwDetectDuration(this)" />
+                                                    <div class="cw-file__inner">
+                                                        <i class="fas fa-film"></i>
+                                                        <b>Choose a video</b>
+                                                        <span>MP4 lesson recording</span>
+                                                    </div>
+                                                </label>
+                                                <div id="cwVideoPreview-@startIdx"></div>
+                                                <div class="cw-duration" style="display:none;"></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                @* ── PDF input ── *@
+                                <div class="cw-col-12 cw-lt-section cw-lt-pdf" style="display:none;">
+                                    <div class="cw-field">
+                                        <label class="cw-label">PDF file</label>
+                                        <label class="cw-file">
+                                            <input name="Videos[@startIdx].LessonFile" type="file"
+                                                   accept="application/pdf,.pdf"
+                                                   data-preview="cwPdfPreview-@startIdx" />
+                                            <div class="cw-file__inner">
+                                                <i class="fas fa-file-pdf"></i>
+                                                <b>Choose a PDF</b>
+                                                <span>The full lesson document</span>
+                                            </div>
+                                        </label>
+                                        <div id="cwPdfPreview-@startIdx"></div>
+                                    </div>
+                                </div>
+
+                                @* ── TEXT input ── *@
+                                <div class="cw-col-12 cw-lt-section cw-lt-text" style="display:none;">
+                                    <div class="cw-field">
+                                        <label class="cw-label">Lesson text</label>
+                                        <textarea name="Videos[@startIdx].TextBody" rows="6" class="cw-textarea"
+                                                  placeholder="Write the lesson content here…"></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style="text-align:center; margin: 18px 0 4px;">
+                        <button type="button" class="cw-btn cw-btn--add" id="cwAddLesson">
+                            <i class="fas fa-plus"></i> Add another lesson
+                        </button>
+                    </div>
+
+                    <div class="cw-controls">
+                        <button type="button" class="cw-btn cw-btn--ghost" data-go="2">
+                            <i class="fas fa-arrow-left"></i> Back
+                        </button>
+                        <button type="submit" class="cw-btn cw-btn--primary" id="cwPublish">
+                            <i class="fas fa-rocket"></i> @(isEdit ? "Save changes" : "Publish course")
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
+
+    <script>
+        (function () {
+            'use strict';
+
+            // ── constants used by reorder ──
+            const COURSE_ID = @(Model.CourseID ?? 0);
+            const REORDER_URL = '@Url.Action("ReorderContent", "Courses")';
+            const DELETE_URL = '@Url.Action("DeleteContent", "Courses")';
+            const isEdit = @(isEdit ? "true" : "false");
+
+            // ── Toast helper ──
+            const toastHost = document.getElementById('cwToastHost');
+            function toast(msg, kind) {
+                kind = kind || '';
+                const cls = kind === 'success' ? 'is-success' : kind === 'error' ? 'is-error' : '';
+                const icon = kind === 'success' ? 'fa-check-circle' : kind === 'error' ? 'fa-exclamation-triangle' : 'fa-info-circle';
+                const el = document.createElement('div');
+                el.className = 'cw-toast ' + cls;
+                el.innerHTML = '<i class="fas ' + icon + '"></i><span>' +
+                    String(msg).replace(/</g, '&lt;') +
+                    '</span><button class="cw-toast__close">&times;</button>';
+                el.querySelector('.cw-toast__close').onclick = () => el.remove();
+                toastHost.appendChild(el);
+                setTimeout(() => el.remove(), 5000);
+            }
+
+            // ── Loader ──
+            const loader = document.getElementById('cwLoader');
+            function showLoader() { loader.classList.add('is-on'); }
+            function hideLoader() { loader.classList.remove('is-on'); }
+
+            // ── Stepper navigation ──
+            const steps = document.querySelectorAll('#cwStepper .cw-step');
+            const panes = document.querySelectorAll('.cw-pane');
+            const progress = document.getElementById('cwProgress');
+            let currentStep = 1;
+
+            function paintStep(n) {
+                currentStep = n;
+                steps.forEach(s => {
+                    const sn = +s.dataset.step;
+                    s.classList.toggle('is-active', sn === n);
+                    s.classList.toggle('is-done', sn < n);
+                });
+                panes.forEach(p => p.hidden = (+p.dataset.pane !== n));
+                progress.style.width = (n / 3 * 100) + '%';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+
+            function goToStep(target) {
+                if (target > currentStep) {
+                    for (let s = currentStep; s < target; s++) {
+                        if (!validateStep(s)) return;
+                    }
+                }
+                paintStep(target);
+            }
+
+            document.querySelectorAll('[data-go]').forEach(b =>
+                b.addEventListener('click', () => goToStep(+b.dataset.go))
+            );
+            steps.forEach(s =>
+                s.addEventListener('click', () => goToStep(+s.dataset.step))
+            );
+
+            // ── Validation ──
+            function setErr(name, msg) {
+                const el = document.querySelector('[data-err-for="' + name + '"]');
+                if (el) el.textContent = msg || '';
+                const input = document.querySelector('[name="' + name + '"]');
+                if (input) input.classList.toggle('is-invalid', !!msg);
+            }
+            function clearErrs() {
+                document.querySelectorAll('[data-err-for]').forEach(e => e.textContent = '');
+                document.querySelectorAll('.cw-input, .cw-select, .cw-textarea')
+                    .forEach(i => i.classList.remove('is-invalid'));
+            }
+
+            function validateStep(n) {
+                clearErrs();
+                let ok = true;
+                let firstErrorEl = null;
+                const fail = (name, msg, el) => {
+                    setErr(name, msg);
+                    if (!firstErrorEl) firstErrorEl = el || document.querySelector('[name="' + name + '"]');
+                    ok = false;
+                };
+
+                if (n === 1) {
+                    const title = (document.querySelector('[name="CourseTitle"]').value || '').trim();
+                    if (!title) fail('CourseTitle', 'Course title is required.');
+
+                    [
+                        ['CategoryId', 'Pick a category.'],
+                        ['InstructorId', 'Pick an instructor.'],
+                        ['CourseLevel', 'Pick a skill level.'],
+                        ['LanguageId', 'Pick a language.']
+                    ].forEach(([n, m]) => {
+                        const v = document.querySelector('[name="' + n + '"]').value;
+                        if (!v || v === '0') fail(n, m);
+                    });
+
+                    const start = document.querySelector('[name="CourseStartDate"]').value;
+                    const end = document.querySelector('[name="CourseEndDate"]').value;
+                    if (!start) fail('CourseStartDate', 'Start date is required.');
+                    if (!end) fail('CourseEndDate', 'End date is required.');
+                    if (start && end && new Date(end) <= new Date(start))
+                        fail('CourseEndDate', 'End date must be after the start date.');
+                }
+
+                if (n === 2 && !isEdit) {
+                    if (!document.getElementById('cwLogoInput').files.length) fail('CourseLogo', 'Please pick a logo image.');
+                    if (!document.getElementById('cwCoverInput').files.length) fail('CoverImage', 'Please pick a cover image.');
+                    if (!document.getElementById('cwPromoInput').files.length) fail('PromotionalVideo', 'Please pick a promotional video.');
+                }
+
+                if (!ok) {
+                    toast('Please fix the highlighted fields first.', 'error');
+                    if (firstErrorEl && firstErrorEl.scrollIntoView)
+                        firstErrorEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                return ok;
+            }
+
+            // ── Date guard ──
+            const startEl = document.getElementById('cwStart');
+            const endEl = document.getElementById('cwEnd');
+            function syncDates() {
+                if (startEl.value) endEl.min = startEl.value;
+                if (startEl.value && endEl.value && new Date(endEl.value) <= new Date(startEl.value)) {
+                    setErr('CourseEndDate', 'End date must be after the start date.');
+                } else {
+                    setErr('CourseEndDate', '');
+                }
+            }
+            startEl.addEventListener('change', syncDates);
+            endEl.addEventListener('change', syncDates);
+
+            // ── One-line description counter ──
+            const sd = document.getElementById('cwSmallDesc');
+            const sdCount = document.getElementById('cwSmallDescCount');
+            function updateCounter() {
+                const n = sd.value.length;
+                sdCount.textContent = n + ' / 100';
+                sdCount.classList.toggle('is-near', n >= 80 && n < 100);
+                sdCount.classList.toggle('is-over', n >= 100);
+            }
+            sd.addEventListener('input', updateCounter);
+            updateCounter();
+
+            // ── File previews ──
+            function buildPreview(file, isVideo) {
+                const url = URL.createObjectURL(file);
+                const sizeKb = (file.size / 1024).toFixed(0);
+                const sizeStr = sizeKb > 1024
+                    ? (sizeKb / 1024).toFixed(2) + ' MB'
+                    : sizeKb + ' KB';
+                const media = isVideo
+                    ? '<video src="' + url + '" muted></video>'
+                    : '<img src="' + url + '" alt="preview" />';
+                return '<div class="cw-preview">' + media +
+                    '<div class="cw-preview__meta"><b>' +
+                    String(file.name).replace(/</g, '&lt;') +
+                    '</b><span class="cw-preview__tag is-new">New</span>' +
+                    sizeStr + '</div></div>';
+            }
+
+            function wireFileInput(inp) {
+                inp.addEventListener('change', () => {
+                    const previewId = inp.dataset.preview;
+                    if (!previewId) return;
+                    const host = document.getElementById(previewId);
+                    if (!host) return;
+                    const f = inp.files && inp.files[0];
+                    if (!f) { host.innerHTML = ''; return; }
+                    host.innerHTML = buildPreview(f, inp.dataset.isvideo === '1');
+                });
+            }
+            document.querySelectorAll('input[type="file"]').forEach(wireFileInput);
+
+            // ── Tag picker (click to toggle, hidden inputs hold the IDs) ──
+            const tagPicker = document.getElementById('cwTagPicker');
+            const tagHidden = document.getElementById('cwTagHidden');
+
+            function rebuildTagInputs() {
+                tagHidden.innerHTML = '';
+                tagPicker.querySelectorAll('.cw-tag-chip.is-on').forEach(c => {
+                    const hid = document.createElement('input');
+                    hid.type = 'hidden';
+                    hid.name = 'SelectedTagIds';
+                    hid.value = c.getAttribute('data-tag-id');
+                    tagHidden.appendChild(hid);
+                });
+            }
+            tagPicker.addEventListener('click', e => {
+                const chip = e.target.closest('.cw-tag-chip');
+                if (!chip) return;
+                chip.classList.toggle('is-on');
+                rebuildTagInputs();
+            });
+
+            // ════════════════════════════════════════════════════════════
+            //  LESSON CONTENT — type tabs, duration, add/remove, reorder
+            // ════════════════════════════════════════════════════════════
+            const contentList = document.getElementById('cwContentList');
+            const addLessonBtn = document.getElementById('cwAddLesson');
+
+            // expose helpers used from inline onchange/onclick
+            window.cwOnLessonType = function (radio) {
+                const block = radio.closest('.cw-content');
+                block.querySelectorAll('.cw-lt-opt').forEach(o => o.classList.remove('is-on'));
+                radio.closest('.cw-lt-opt').classList.add('is-on');
+
+                const type = radio.value; // Video | PDF | Text
+                block.querySelector('.cw-lt-video').style.display = (type === 'Video') ? '' : 'none';
+                block.querySelector('.cw-lt-pdf').style.display = (type === 'PDF') ? '' : 'none';
+                block.querySelector('.cw-lt-text').style.display = (type === 'Text') ? '' : 'none';
+            };
+
+            function fmtDuration(s) {
+                const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+                return (h > 0 ? h + 'h ' : '') + (m > 0 ? m + 'm ' : '') + sec + 's';
+            }
+            window.cwDetectDuration = function (input) {
+                const block = input.closest('.cw-content');
+                const out = block.querySelector('.cw-duration');
+                const file = input.files && input.files[0];
+                if (!file) { if (out) out.style.display = 'none'; delete input.dataset.seconds; recomputeTotal(); return; }
+
+                const url = URL.createObjectURL(file);
+                const v = document.createElement('video');
+                v.preload = 'metadata';
+                v.onloadedmetadata = function () {
+                    URL.revokeObjectURL(url);
+                    const secs = Math.round(v.duration || 0);
+                    input.dataset.seconds = secs;
+                    if (out) {
+                        out.style.display = 'block';
+                        out.textContent = '⏱ Detected: ' + fmtDuration(secs);
+                    }
+                    recomputeTotal();
+                };
+                v.onerror = function () { if (out) out.style.display = 'none'; recomputeTotal(); };
+                v.src = url;
+            };
+
+            function recomputeTotal() {
+                let total = 0;
+                document.querySelectorAll('input[name$=".CourseVideo"]').forEach(v => {
+                    if (v.dataset.seconds) total += parseInt(v.dataset.seconds, 10);
+                });
+                const durInput = document.querySelector('[name="CourseDurationHours"]');
+                if (durInput && total > 0) durInput.value = Math.max(1, Math.round(total / 3600));
+            }
+
+            // ── delete-existing (edit mode) ──
+            window.cwDeleteExisting = function (contentId, btn) {
+                if (!confirm('Delete this lesson? This cannot be undone.')) return;
+                fetch(DELETE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'contentId=' + encodeURIComponent(contentId)
+                }).then(r => r.json()).then(d => {
+                    if (d.success) {
+                        btn.closest('.cw-content').remove();
+                        renumberAll();
+                        toast('Lesson deleted', 'success');
+                    } else {
+                        toast(d.message || 'Could not delete', 'error');
+                    }
+                }).catch(e => toast(e.message, 'error'));
+            };
+
+            // ── add new lesson ──
+            function buildNewBlock(i) {
+                return `
+                    <div class="cw-content" data-existing="0" data-index="${i}">
+                        <div class="cw-content__head">
+                            <span class="cw-content__grip" title="Drag to reorder"><i class="fa-solid fa-grip-vertical"></i></span>
+                            <span class="cw-content__num" data-num="${i + 1}">New lesson</span>
+                            <div class="cw-lt-tabs" style="margin-left:8px;">
+                                <label class="cw-lt-opt is-on">
+                                    <input type="radio" name="Videos[${i}].LessonType" value="Video" checked onchange="cwOnLessonType(this)">
+                                    <i class="fa-solid fa-video"></i> Video
+                                </label>
+                                <label class="cw-lt-opt">
+                                    <input type="radio" name="Videos[${i}].LessonType" value="PDF" onchange="cwOnLessonType(this)">
+                                    <i class="fa-solid fa-file-pdf"></i> PDF
+                                </label>
+                                <label class="cw-lt-opt">
+                                    <input type="radio" name="Videos[${i}].LessonType" value="Text" onchange="cwOnLessonType(this)">
+                                    <i class="fa-solid fa-align-left"></i> Text
+                                </label>
+                            </div>
+                            <button type="button" class="cw-content__del" title="Remove">&times;</button>
+                        </div>
+                        <input type="hidden" name="Videos[${i}].ContentID" value="0" />
+                        <div class="cw-grid">
+                            <div class="cw-col-12">
+                                <div class="cw-field">
+                                    <label class="cw-label">Title</label>
+                                    <input name="Videos[${i}].ContentTitle" class="cw-input" placeholder="e.g. Setting up your dev environment" />
+                                </div>
+                            </div>
+                            <div class="cw-col-12">
+                                <div class="cw-field">
+                                    <label class="cw-label">Description</label>
+                                    <textarea name="Videos[${i}].Description" rows="2" class="cw-textarea" placeholder="What will the learner take away?"></textarea>
+                                </div>
+                            </div>
+                            <div class="cw-col-12 cw-lt-section cw-lt-video">
+                                <div class="cw-grid">
+                                    <div class="cw-col-6">
+                                        <div class="cw-field">
+                                            <label class="cw-label">Thumbnail</label>
+                                            <label class="cw-file">
+                                                <input name="Videos[${i}].VideoThumbnail" type="file" accept="image/*" data-preview="cwThumbPreview-${i}" />
+                                                <div class="cw-file__inner"><i class="fas fa-image"></i><b>Choose a thumbnail</b><span>Optional</span></div>
+                                            </label>
+                                            <div id="cwThumbPreview-${i}"></div>
+                                        </div>
+                                    </div>
+                                    <div class="cw-col-6">
+                                        <div class="cw-field">
+                                            <label class="cw-label">Video</label>
+                                            <label class="cw-file">
+                                                <input name="Videos[${i}].CourseVideo" type="file" accept="video/*" data-preview="cwVideoPreview-${i}" data-isvideo="1" onchange="cwDetectDuration(this)" />
+                                                <div class="cw-file__inner"><i class="fas fa-film"></i><b>Choose a video</b><span>MP4 lesson recording</span></div>
+                                            </label>
+                                            <div id="cwVideoPreview-${i}"></div>
+                                            <div class="cw-duration" style="display:none;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="cw-col-12 cw-lt-section cw-lt-pdf" style="display:none;">
+                                <div class="cw-field">
+                                    <label class="cw-label">PDF file</label>
+                                    <label class="cw-file">
+                                        <input name="Videos[${i}].LessonFile" type="file" accept="application/pdf,.pdf" data-preview="cwPdfPreview-${i}" />
+                                        <div class="cw-file__inner"><i class="fas fa-file-pdf"></i><b>Choose a PDF</b><span>The full lesson document</span></div>
+                                    </label>
+                                    <div id="cwPdfPreview-${i}"></div>
+                                </div>
+                            </div>
+                            <div class="cw-col-12 cw-lt-section cw-lt-text" style="display:none;">
+                                <div class="cw-field">
+                                    <label class="cw-label">Lesson text</label>
+                                    <textarea name="Videos[${i}].TextBody" rows="6" class="cw-textarea" placeholder="Write the lesson content here…"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+            }
+
+            function nextNewIndex() {
+                // index is contiguous across all .cw-content (existing first, then new)
+                return contentList.querySelectorAll('.cw-content').length;
+            }
+
+            addLessonBtn.addEventListener('click', () => {
+                const i = nextNewIndex();
+                const tmp = document.createElement('div');
+                tmp.innerHTML = buildNewBlock(i).trim();
+                const node = tmp.firstElementChild;
+                contentList.appendChild(node);
+                node.querySelectorAll('input[type="file"]').forEach(wireFileInput);
+                renumberAll();
+                node.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            });
+
+            // Delete (new blocks only)
+            contentList.addEventListener('click', e => {
+                const btn = e.target.closest('.cw-content__del');
+                if (!btn) return;
+                const block = btn.closest('.cw-content');
+                if (!block) return;
+                // existing blocks have their own handler (cwDeleteExisting)
+                if (block.dataset.existing === '1') return;
+
+                // don't allow removing the only new block when there are no existing ones
+                const newBlocks = contentList.querySelectorAll('.cw-content[data-existing="0"]');
+                const existingBlocks = contentList.querySelectorAll('.cw-content[data-existing="1"]');
+                if (newBlocks.length === 1 && existingBlocks.length === 0) {
+                    toast('At least one lesson is required.', 'error');
+                    return;
+                }
+                block.remove();
+                renumberAll();
+            });
+
+            // ── Renumbering & visibility for delete buttons ──
+            function renumberAll() {
+                let i = 0;
+                contentList.querySelectorAll('.cw-content').forEach(block => {
+                    block.setAttribute('data-index', i);
+                    const numEl = block.querySelector('.cw-content__num');
+                    if (numEl) {
+                        numEl.setAttribute('data-num', i + 1);
+                        if (block.dataset.existing !== '1') numEl.textContent = 'New lesson';
+                        else numEl.textContent = 'Lesson ' + (i + 1);
+                    }
+
+                    // Rename Videos[n].* fields ONLY on new blocks (existing rows have no submitted fields)
+                    if (block.dataset.existing !== '1') {
+                        block.querySelectorAll('input, textarea').forEach(el => {
+                            const name = el.getAttribute('name');
+                            if (!name) return;
+                            el.setAttribute('name', name.replace(/Videos\[\d+\]/, 'Videos[' + i + ']'));
+
+                            // Also rename file-preview hosts so they stay unique
+                            const pid = el.dataset.preview;
+                            if (pid) {
+                                const newPid = pid.replace(/-\d+$/, '-' + i);
+                                el.dataset.preview = newPid;
+                                const wrap = el.closest('.cw-field');
+                                if (wrap) {
+                                    const host = wrap.querySelector('[id^="cwThumbPreview-"], [id^="cwVideoPreview-"], [id^="cwPdfPreview-"]');
+                                    if (host) host.id = newPid;
+                                }
+                            }
+                        });
+                    }
+                    i++;
+                });
+
+                // Show ✕ on new blocks only if there's more than one *removable* block
+                const newBlocks = contentList.querySelectorAll('.cw-content[data-existing="0"]');
+                const existingBlocks = contentList.querySelectorAll('.cw-content[data-existing="1"]');
+                newBlocks.forEach((b, idx) => {
+                    const x = b.querySelector('.cw-content__del');
+                    if (x) x.style.display = (newBlocks.length > 1 || existingBlocks.length > 0) ? '' : 'none';
+                });
+            }
+            renumberAll();
+
+            // ── Persist reorder of EXISTING lessons (edit mode only) ──
+            function persistExistingOrder() {
+                if (!COURSE_ID) return;
+                const ids = [];
+                contentList.querySelectorAll('.cw-content[data-existing="1"]').forEach(b => {
+                    const id = b.getAttribute('data-content-id');
+                    if (id) ids.push(parseInt(id, 10));
+                });
+                if (ids.length === 0) return;
+
+                fetch(REORDER_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ CourseID: COURSE_ID, ContentIDs: ids })
+                }).catch(() => { /* non-fatal */ });
+            }
+
+            // ── SortableJS — drag-to-reorder ──
+            if (window.Sortable) {
+                new Sortable(contentList, {
+                    handle: '.cw-content__grip',
+                    animation: 150,
+                    ghostClass: 'sortable-ghost',
+                    onEnd: function () {
+                        renumberAll();
+                        persistExistingOrder();
+                    }
+                });
+            }
+
+            // ── FORM SUBMIT ──
+            document.getElementById('cwForm').addEventListener('submit', e => {
+                if (!validateStep(1)) { e.preventDefault(); paintStep(1); return; }
+                if (!validateStep(2)) { e.preventDefault(); paintStep(2); return; }
+                renumberAll();
+                showLoader();
+            });
+
+            // ── Hydrate server-side ModelState errors (edit mode validation failure) ──
+        @if (!ViewData.ModelState.IsValid)
+        {
+            foreach (var entry in ViewData.ModelState)
+            {
+                foreach (var err in entry.Value.Errors)
+                {
+                    <text>setErr(@Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(entry.Key)),
+                        @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(err.ErrorMessage))); </text>
+                }
+            }
+        }
+
+            })();
+    </script>
+}

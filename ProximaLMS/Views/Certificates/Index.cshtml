@@ -1,0 +1,160 @@
+@{
+    ViewData["Title"] = "My Certificates";
+    Layout = "_Layout";
+    var certs = ViewBag.Certificates as Newtonsoft.Json.Linq.JArray ?? new Newtonsoft.Json.Linq.JArray();
+}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--g1:#4C1864;--g2:#7B2CBF;--g3:#9D4EDD;--ink:#1a1523;--sub:#4b5563;--muted:#94a3b8;--border:#ede9fe;--bg:#f8f5ff;--card:#fff;--sh:0 2px 12px rgba(76,24,100,.07);--sh-md:0 8px 28px rgba(76,24,100,.13);}
+*{box-sizing:border-box;}
+.ct-pg{display:flex;flex-direction:column;gap:22px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;padding-bottom:40px;}
+
+/* HERO */
+.ct-hero{background:linear-gradient(135deg,#0a2540 0%,#4C1864 35%,#7B2CBF 70%,#E879F9 130%);border-radius:24px;padding:32px 36px;color:#fff;position:relative;overflow:hidden;box-shadow:0 14px 50px rgba(76,24,100,.28);}
+.ct-hero::before{content:'🎓';position:absolute;right:40px;bottom:-10px;font-size:130px;opacity:.1;line-height:1;pointer-events:none;}
+.ct-hero::after{content:'';position:absolute;width:260px;height:260px;border-radius:50%;background:rgba(232,121,249,.12);top:-80px;right:-50px;pointer-events:none;}
+.ct-hero-inner{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;}
+.ct-hero-left h1{margin:0 0 6px;font-size:1.9rem;font-weight:900;}
+.ct-hero-left p{margin:0;font-size:.9rem;opacity:.82;}
+.ct-hero-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:16px;padding:14px 24px;text-align:center;}
+.ct-hero-pill-val{font-size:1.7rem;font-weight:900;line-height:1;}
+.ct-hero-pill-lbl{font-size:.72rem;font-weight:600;opacity:.8;margin-top:3px;}
+
+/* GRID */
+.ct-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px;}
+@@media(max-width:720px){.ct-grid{grid-template-columns:1fr;}}
+
+/* CARD */
+.ct-card{background:var(--card);border:1px solid var(--border);border-radius:22px;overflow:hidden;box-shadow:var(--sh);transition:transform .2s,box-shadow .2s;display:flex;flex-direction:column;}
+.ct-card:hover{transform:translateY(-3px);box-shadow:var(--sh-md);}
+
+/* RIBBON (top decorative band) */
+.ct-ribbon{background:linear-gradient(135deg,#2d0a50,#7B2CBF,#9D4EDD);padding:22px 22px 18px;position:relative;overflow:hidden;}
+.ct-ribbon::before{content:'';position:absolute;width:140px;height:140px;border-radius:50%;background:rgba(255,255,255,.07);top:-50px;right:-30px;}
+.ct-ribbon-inner{position:relative;z-index:1;display:flex;align-items:center;gap:14px;}
+.ct-ribbon-ico{width:52px;height:52px;border-radius:14px;background:rgba(255,255,255,.18);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;font-size:22px;color:#fff;flex-shrink:0;}
+.ct-ribbon-title{font-size:1rem;font-weight:800;color:#fff;line-height:1.3;}
+.ct-ribbon-sub{font-size:.75rem;color:rgba(255,255,255,.75);margin-top:3px;}
+.ct-ribbon-badge{position:absolute;top:12px;right:14px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;font-size:.68rem;font-weight:800;padding:3px 10px;border-radius:20px;letter-spacing:.04em;}
+
+/* BODY */
+.ct-body{padding:18px 20px;flex:1;display:flex;flex-direction:column;gap:10px;}
+.ct-meta-row{display:flex;align-items:center;gap:8px;font-size:.82rem;color:var(--sub);}
+.ct-meta-row i{color:var(--g3);font-size:.78rem;width:14px;text-align:center;}
+.ct-meta-row strong{color:var(--ink);font-weight:700;}
+.ct-no{background:#f5f3ff;border:1px solid var(--border);border-radius:10px;padding:8px 14px;font-size:.75rem;color:var(--g1);font-weight:700;font-family:monospace;letter-spacing:.04em;display:flex;align-items:center;gap:8px;}
+.ct-no i{color:var(--g2);}
+
+/* ACTIONS */
+.ct-actions{padding:14px 20px;border-top:1px solid #f5f3ff;display:flex;gap:8px;}
+.ct-btn{flex:1;display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:10px 12px;border-radius:12px;font-size:.8rem;font-weight:700;border:none;cursor:pointer;text-decoration:none;transition:transform .15s,box-shadow .15s;}
+.ct-btn:hover{transform:translateY(-1px);}
+.ct-btn-pdf{background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;box-shadow:0 4px 14px rgba(76,24,100,.25);}
+.ct-btn-pdf:hover{color:#fff;box-shadow:0 7px 20px rgba(76,24,100,.35);}
+.ct-btn-verify{background:#f5f3ff;color:var(--g1);border:1px solid var(--border);}
+.ct-btn-verify:hover{background:var(--border);color:var(--g1);}
+.ct-btn-email{background:#fff;color:var(--g2);border:1px solid var(--border);}
+.ct-btn-email:hover{background:#faf5ff;color:var(--g2);}
+
+/* EMPTY */
+.ct-empty{background:var(--card);border:1px dashed #d8b4fe;border-radius:22px;padding:64px 24px;text-align:center;color:var(--muted);}
+.ct-empty-ico{font-size:64px;margin-bottom:16px;}
+.ct-empty h3{font-size:1.2rem;font-weight:800;color:var(--ink);margin:0 0 8px;}
+.ct-empty p{font-size:.85rem;margin:0 0 20px;}
+.ct-empty-cta{display:inline-flex;align-items:center;gap:8px;padding:12px 24px;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;border-radius:12px;font-weight:700;font-size:.85rem;text-decoration:none;box-shadow:0 6px 18px rgba(76,24,100,.28);}
+.ct-empty-cta:hover{color:#fff;box-shadow:0 10px 26px rgba(76,24,100,.38);}
+</style>
+
+<div class="ct-pg">
+
+    <!-- HERO -->
+    <div class="ct-hero">
+        <div class="ct-hero-inner">
+            <div class="ct-hero-left">
+                <h1><i class="fa-solid fa-certificate me-2"></i>My Certificates</h1>
+                <p>Download, verify, or share your earned certificates</p>
+            </div>
+            <div class="ct-hero-pill">
+                <div class="ct-hero-pill-val">@certs.Count</div>
+                <div class="ct-hero-pill-lbl">Certificates</div>
+            </div>
+        </div>
+    </div>
+
+    @if (certs.Count == 0)
+    {
+        <div class="ct-empty">
+            <div class="ct-empty-ico">🏆</div>
+            <h3>No certificates yet</h3>
+            <p>Complete a course or pass an exam to earn your first certificate.</p>
+            <a asp-controller="Courses" asp-action="List" class="ct-empty-cta">
+                <i class="fa-solid fa-play-circle"></i> Go to My Courses
+            </a>
+        </div>
+    }
+    else
+    {
+        <div class="ct-grid">
+            @foreach (var c in certs)
+            {
+                var id     = (int?)c["CertificateID"] ?? 0;
+                var no     = (string?)c["CertificateNo"] ?? "";
+                var title  = (string?)c["CourseTitle"] ?? "Course";
+                var src    = (string?)c["Source"] ?? "COURSE";
+                var token  = (string?)c["VerifyToken"] ?? "";
+                var issued = (DateTime?)c["IssuedDate"];
+                var srcLabel = src == "EXAM" ? "Exam Passed" : src == "MANUAL" ? "Awarded" : "Course Completed";
+                var srcIcon  = src == "EXAM" ? "fa-solid fa-file-pen" : src == "MANUAL" ? "fa-solid fa-star" : "fa-solid fa-graduation-cap";
+                <div class="ct-card">
+                    <div class="ct-ribbon">
+                        <div class="ct-ribbon-badge">@srcLabel</div>
+                        <div class="ct-ribbon-inner">
+                            <div class="ct-ribbon-ico"><i class="fa-solid fa-certificate"></i></div>
+                            <div>
+                                <div class="ct-ribbon-title">@title</div>
+                                <div class="ct-ribbon-sub"><i class="@srcIcon me-1"></i>@srcLabel</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ct-body">
+                        @if (issued.HasValue)
+                        {
+                            <div class="ct-meta-row"><i class="fa-solid fa-calendar-check"></i>Issued on <strong>@issued.Value.ToString("dd MMMM yyyy")</strong></div>
+                        }
+                        <div class="ct-no"><i class="fa-solid fa-hashtag"></i>@no</div>
+                    </div>
+                    <div class="ct-actions">
+                        <a class="ct-btn ct-btn-pdf" asp-action="Download" asp-route-id="@id">
+                            <i class="fa-solid fa-download"></i>PDF
+                        </a>
+                        <a class="ct-btn ct-btn-verify" href="/verify/@token" target="_blank">
+                            <i class="fa-solid fa-shield-halved"></i>Verify
+                        </a>
+                        <button class="ct-btn ct-btn-email" onclick="emailCert(@id, this)">
+                            <i class="fa-solid fa-envelope"></i>Email
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@section Scripts {
+<script>
+function emailCert(id, btn) {
+    const old = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending…';
+    fetch('/Certificates/Email?id=' + id, { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+            btn.innerHTML = d.success
+                ? '<i class="fa-solid fa-check"></i> Sent!'
+                : '<i class="fa-solid fa-xmark"></i> Failed';
+            setTimeout(() => { btn.disabled = false; btn.innerHTML = old; }, 2800);
+        })
+        .catch(() => { btn.disabled = false; btn.innerHTML = old; });
+}
+</script>
+}

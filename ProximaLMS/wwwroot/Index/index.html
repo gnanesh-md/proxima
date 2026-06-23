@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+ <head>
+ <meta charset="UTF-8" />
+ <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+ <title>ProximaLMS - Home</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins&display=swap" rel="stylesheet">
+
+ <script src="https://cdn.tailwindcss.com"></script>
+ <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+ <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+ <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+
+ <!-- Standard Favicon -->
+<link rel="icon" href="favicon_io/favicon.ico" type="image/x-icon">
+
+<!-- For High-Res Devices -->
+<link rel="icon" type="image/png" sizes="32x32" href="favicon_io/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon_io/favicon-16x16.png">
+
+<!-- Apple Touch Icon (for iOS) -->
+<link rel="apple-touch-icon" sizes="180x180" href="favicon_io/apple-touch-icon.png">
+
+<link rel="stylesheet" href="Style/index.css">
+<link rel="stylesheet" href="Style/scrollbar.css">
+<link rel="stylesheet" href="Style/hero.css">
+ </head>
+
+
+ <body class="bg-gradient-to-r from-indigo-900 via-purple-900 to-pink-900 text-white">
+
+<!-- Navigation Bar (Responsive) -->
+<nav class="bg-[#f8f6ff] sticky top-0 z-50 p-6 shadow-md">
+  <div class="flex items-center justify-between">
+
+    <!-- Brand -->
+    <a href="/" class="hover:opacity-80 transition-opacity">
+      <img src="images/Proximalms_Logo.png" alt="ProximaLMS Logo" class="h-12" />
+    </a>
+
+<!-- Hamburger/X Button (mobile only) -->
+<button id="menu-btn"
+  class="text-[#FF6B22] md:hidden text-4xl focus:outline-none border-2 border-black rounded-md shadow-lg px-3 py-2 bg-white
+         hover:bg-[#FFF8F3] hover:shadow-xl hover:scale-105 transition-all duration-300 ease-in-out">
+  <span id="menu-icon">&#9776;</span>
+</button>
+
+
+
+    <!-- Desktop Navigation Links -->
+    <div id="menu" class="hidden md:flex space-x-6 text-xl font-semibold text-gray-800 items-center">
+      <a href="/" class="hover:text-[#FF6B22] transition-colors">Home</a>
+      <a href="about.html" class="hover:text-[#FF6B22] transition-colors">About Us</a>
+      <a href="features.html" class="hover:text-[#FF6B22] transition-colors">Features</a>
+      <a href="courses.html" class="hover:text-[#FF6B22] transition-colors">Courses</a>
+      <a href="/Home/Index"
+         class="text-white px-4 py-2 rounded transition-all" 
+         style="background-color: #FF6B22;"
+         onmouseover="this.style.boxShadow='0 0 15px #FF6B22'" 
+         onmouseout="this.style.boxShadow='none'">
+         Login LMS
+      </a>
+    </div>
+  </div>
+
+
+
+</nav>
+
+
+<!-- Overlay (blurred background) -->
+<div id="overlay" class="fixed inset-0 bg-black bg-opacity-30 backdrop-blur-sm z-40 hidden md:hidden"></div>
+
+<!-- Off-Canvas Mobile Menu -->
+<div id="mobile-menu" class="fixed top-0 right-0 h-full w-80 bg-white shadow-lg z-50 transform translate-x-full transition-transform duration-300 ease-in-out md:hidden">
+  <div class="flex flex-col p-6 space-y-6 text-lg font-semibold text-gray-800">
+    <button id="close-menu" class="self-end text-5xl text-[#FF6B22] focus:outline-none">&times;</button>
+    <a href="/" class="hover:text-[#FF6B22] transition-colors">Home</a>
+    <a href="/about.html" class="hover:text-[#FF6B22] transition-colors">About Us</a>
+    <a href="/features.html" class="hover:text-[#FF6B22] transition-colors">Features</a>
+    <a href="/courses.html" class="hover:text-[#FF6B22] transition-colors">Courses</a>
+    <a href="/Home/Index" 
+       class="text-white text-left px-4 py-2 rounded-md bg-[#FF6B22] hover:bg-[#e65a1b] transition-all">
+       Login LMS
+    </a>
+  </div>
+</div>
+
+
+
+<script>
+  const menuBtn = document.getElementById("menu-btn");
+  const mobileMenu = document.getElementById("mobile-menu");
+  const closeBtn = document.getElementById("close-menu");
+  const overlay = document.getElementById("overlay");
+
+  function openMenu() {
+    mobileMenu.classList.remove("translate-x-full");
+    mobileMenu.classList.add("translate-x-0");
+    overlay.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
+  }
+
+  function closeMenu() {
+    mobileMenu.classList.add("translate-x-full");
+    mobileMenu.classList.remove("translate-x-0");
+    overlay.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden");
+  }
+
+  menuBtn.addEventListener("click", openMenu);
+  closeBtn.addEventListener("click", closeMenu);
+  overlay.addEventListener("click", closeMenu);
+</script>
+
+
+
+  <!-- HERO SECTION -->
+  <section class="hero">
+    <div class="hero-text">
+      <h1>
+        Does your college need <br>
+        <span class="typewriter-container">
+          <span id="typewriter"></span><span class="cursor"></span>
+        </span>
+      </h1>
+
+      <!-- ISO Certification Image -->
+      <div class="iso-logo">
+        <img src="images/iso-2-1-logo-svgrepo-com.svg" alt="ISO Certified">
+      </div>
+
+     
+      <a href="courses.html" class="cta-button">Explore Courses</a>
+
+      <!-- OUR IMPACT SECTION now placed inside hero-text -->
+      <section class="impact-section">
+        <h2 class="impact-heading">Our Impact</h2>
+        <div class="impact-grid">
+          <div class="impact-item">
+            <h3>2000+</h3>
+            <p>Hiring Partners</p>
+          </div>
+          <div class="impact-item">
+            <h3>98%</h3>
+            <p>Placement Rate</p>
+          </div>
+          <div class="impact-item">
+            <h3>1000+</h3>
+            <p>Industry Experts</p>
+          </div>
+          <div class="impact-item">
+            <h3>3000+</h3>
+            <p>Students Placed</p>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <div class="hero-image">
+      <img src="images/Hero section img.png" alt="Students with laptop">
+    </div>
+  </section>
+
+<!-- About Us Preview Section -->
+<section class="bg-white py-16 px-6 text-black">
+  <div class="max-w-6xl mx-auto text-center" data-aos="fade-up">
+    <h2 class="text-4xl md:text-5xl font-semibold mb-6" >
+      About ProximaLMS
+    </h2>
+    <p class="text-lg md:text-xl text-black mb-12">
+      Bridging the gap between academic learning and industry needs, ProximaLMS equips learners with real-world skills through hands-on projects, expert mentorship, and smart learning tools.
+    </p>
+
+    <!-- Core Pillars -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
+      
+      <!-- Project-Based Learning -->
+      <div class="bg-white bg-opacity-10 p-6 rounded-xl shadow-md hover:shadow-xl transition duration-300">
+        <div class="text-4xl mb-4" style="color: #FF6B22;">
+          <i class="fas fa-project-diagram"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-2">Project-Based Learning</h3>
+        <p class="text-sm text-black">
+          Build practical, real-world projects to create a strong portfolio that employers actually value.
+        </p>
+      </div>
+
+      <!-- Industry Mentorship -->
+      <div class="bg-white bg-opacity-10 p-6 rounded-xl shadow-md hover:shadow-xl transition duration-300">
+        <div class="text-4xl mb-4" style="color: #FF6B22;">
+          <i class="fas fa-user-tie"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-2">Industry Mentorship</h3>
+        <p class="text-sm text-black">
+          Learn directly from professionals who guide, challenge, and mentor you through your journey.
+        </p>
+      </div>
+
+      <!-- Smart LMS System -->
+      <div class="bg-white bg-opacity-10 p-6 rounded-xl shadow-md hover:shadow-xl transition duration-300">
+        <div class="text-4xl mb-4" style="color: #FF6B22;">
+          <i class="fas fa-brain"></i>
+        </div>
+        <h3 class="text-xl font-bold mb-2">Smart LMS System</h3>
+        <p class="text-sm text-black">
+          An intelligent LMS that tracks progress, delivers feedback, and personalizes your learning path.
+        </p>
+      </div>
+    </div>
+
+    <!-- Call to Action -->
+    <a href="/about.html" 
+   class="inline-block text-white font-semibold py-3 px-8 rounded-full shadow-md transition duration-300 hover:shadow-[0_0_15px_#FF6B22]" 
+   style="background-color: #FF6B22;">
+   Learn More About Us
+</a>
+
+  </div>
+</section>
+
+<!-- Collaborators Section -->
+ <section id="collaborators" class="px-8 py-16 bg-gradient-to-br from-purple-900 to-indigo-800">
+ <h2 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-center mb-8 md:mb-16 animate-pulse">  Our Collaborators</h2>
+ <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-12 max-w-7xl mx-auto">
+ <a href="https://www.google.com/" target="_blank" class="tooltip-container glass p-8 rounded-2xl text-center relative collab-hover" data-aos="zoom-in">
+ <img src="https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg" alt="Service Now Logo" class="mx-auto h-20 mb-4 animate-bounce" />
+ <h3 class="text-xl font-bold text-[#FF6B22] mb-2 transition-transform">Google</h3>
+ <p class="text-sm text-white">Empowering digital learning through AI, infrastructure, and classroom tools like Google Workspace for Education.</p>
+ <span class="tooltip">Google - Education in AI</span>
+ </a>
+ <a href="https://www.microsoft.com" target="_blank" class="tooltip-container glass p-8 rounded-2xl text-center relative collab-hover" data-aos="zoom-in" data-aos-delay="100">
+ <img src="https://upload.wikimedia.org/wikipedia/commons/4/44/Microsoft_logo.svg" alt="Microsoft Logo" class="mx-auto h-20 mb-4 animate-bounce" />
+ <h3 class="text-xl font-bold text-[#FF6B22] mb-2 transition-transform">Microsoft</h3>
+ <p class="text-sm text-white">Partnering for secure cloud services, Microsoft Teams integration</p>
+ <span class="tooltip">Microsoft - Hybrid Tools</span>
+ </a>
+ <a href="https://aws.amazon.com" target="_blank" class="tooltip-container glass p-8 rounded-2xl text-center relative collab-hover" data-aos="zoom-in" data-aos-delay="200">
+ <img src="https://cdn.worldvectorlogo.com/logos/amazon-web-services-2.svg" alt="AWS Logo" class="mx-auto h-20 mb-4 animate-bounce" />
+ <h3 class="text-xl font-bold text-[#FF6B22] mb-2 transition-transform">AWS</h3>
+ <p class="text-sm text-white">Robust infrastructure for scalable deployments, AI model training, and secure backups for all LMS services.</p>
+ <span class="tooltip">AWS - Cloud & AI Backbone</span>
+ </a>
+ <a href="https://www.mrec.ac.in/"target="_blank" class="tooltip-container glass p-8 rounded-2xl text-center relative collab-hover" data-aos="zoom-in" data-aos-delay="300">
+ <img src="https://mrecacademics.com/img/MREC_logo.jpg" alt="Mrec University Logo" class="mx-auto h-20 mb-4 animate-bounce" />
+ <h3 class="text-xl font-bold text-[#FF6B22] mb-2 transition-transform">Mrec-Education&Institution</h3>
+ <p class="text-sm text-white">Real-time tools for collaborative learning, data visualization, and analytics driven by Google Cloud services.</p>
+ <span class="tooltip">Mrec-Educational Institutions</span>
+ </a>
+ </div>
+ </section>
+
+
+
+
+<!-- HOW IT WORKS SECTION -->
+<section class="bg-white text-black py-20 px-6 md:px-20">
+  <div class="max-w-6xl mx-auto text-center">
+    <h2 class="text-4xl md:text-5xl font-bold mb-16 ">How It Works ?</h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-10 text-left">
+      
+      <!-- Step 1 -->
+      <div class="bg-[#111] p-8 rounded-2xl border border-gray-700 shadow-lg hover:shadow-yellow-500/20 transition duration-300">
+        <div class=" text-4xl mb-4" style="color: #FF6B22;">
+          <i class="fas fa-book-open"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-3 text-white">Choose a Course</h3>
+        <p class="text-gray-300">Select a curated course designed for hands-on, job-relevant learning.</p>
+      </div>
+
+      <!-- Step 2 -->
+      <div class="bg-[#111] p-8 rounded-2xl border border-gray-700 shadow-lg hover:shadow-yellow-500/20 transition duration-300">
+        <div class="text-[#FF6B22] text-4xl mb-4" style="color: #FF6B22;">
+          <i class="fas fa-tools"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-3 text-white">Learn & Build</h3>
+        <p class="text-gray-300">Watch lessons, complete projects, and apply your skills in real-world scenarios.</p>
+      </div>
+
+      <!-- Step 3 -->
+      <div class="bg-[#111] p-8 rounded-2xl border border-gray-700 shadow-lg hover:shadow-yellow-500/20 transition duration-300">
+        <div class="text-[#FF6B22] text-4xl mb-4" style="color: #FF6B22;">
+          <i class="fas fa-certificate"></i>
+        </div>
+        <h3 class="text-xl font-semibold mb-3 text-white">Get Certified</h3>
+        <p class="text-gray-300">Earn certificates and mentorship that boost your resume and job readiness.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+ <!-- Testimonial SECTION -->
+<section class="bg-black text-white py-20 px-6 md:px-20">
+  <div class="max-w-6xl mx-auto text-center">
+    <h2 class="text-4xl md:text-5xl font-bold mb-12">
+      What Our Learners Say <i class="fas fa-star text-[#FF6B22] mr-2" style="color: #FF6B22;"></i>
+    </h2>
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+      
+      <!-- Testimonial 1 -->
+       <div class="bg-gray-900 p-6 rounded-xl shadow-lg hover:shadow-2xl transition duration-300 relative">
+  <div class="flex items-center gap-3 mb-4">
+    <i class="fas fa-user-circle text-[#FF6B22] text-3xl"></i>
+    <div class="text-left">
+      <h4 class="font-bold text-[#FF6B22]">Aisha M.</h4>
+      <p class="text-sm text-gray-400">Web Developer</p>
+    </div>
+  </div>
+
+  <div class="flex items-start text-gray-300 italic mb-4">
+    <i class="fas fa-quote-left text-[#FF6B22] mr-2 mt-1"></i>
+    <p class="text-left">ProximaLMS helped me transition from college to career with real skills and mentorship.</p>
+  </div>
+</div>
+      
+      <!-- Testimonial 2 -->
+      <div class="bg-gray-900 p-6 rounded-xl shadow-lg hover:shadow-2xl transition duration-300 relative">
+  <div class="flex items-center gap-3 mb-4">
+    <i class="fas fa-user-circle text-[#FF6B22] text-3xl"></i>
+    <div class="text-left">
+      <h4 class="font-bold text-[#FF6B22]">Rohit K.</h4>
+      <p class="text-sm text-gray-400">Data Analyst</p>
+    </div>
+  </div>
+
+  <div class="flex items-start text-gray-300 italic mb-4">
+    <i class="fas fa-quote-left text-[#FF6B22] mr-2 mt-1"></i>
+    <p class="text-left">The courses are practical and engaging. I built a portfolio that actually got me hired.</p>
+  </div>
+</div>
+
+      
+      <!-- Testimonial 3 -->
+<div class="bg-gray-900 p-6 rounded-xl shadow-lg hover:shadow-2xl transition duration-300 relative">
+  <div class="flex items-center gap-3 mb-4">
+    <i class="fas fa-user-circle text-[#FF6B22] text-3xl"></i>
+    <div class="text-left">
+      <h4 class="font-bold text-[#FF6B22]">Sneha R.</h4>
+      <p class="text-sm text-gray-400">UI/UX Designer</p>
+    </div>
+  </div>
+
+  <div class="flex items-start text-gray-300 italic mb-4">
+    <i class="fas fa-quote-left text-[#FF6B22] mr-2 mt-1"></i>
+    <p class="text-left">The mentorship and hands-on projects gave me the confidence to crack interviews with ease.</p>
+  </div>
+</div>
+
+
+
+    </div>
+  </div>
+</section>
+
+<!-- PREMIUM CTA SECTION -->
+<section class="relative bg-white text-black py-20 px-6 md:px-20 overflow-hidden">
+  <!-- Background Glow -->
+  <div class="absolute top-0 left-1/2 transform -translate-x-1/2 w-[600px] h-[600px] bg-[#FF6B22] opacity-10 rounded-full blur-3xl pointer-events-none"></div>
+  
+  <!-- Content -->
+  <div class="relative z-10 w-full backdrop-blur-md bg-[#FFF8F3] p-10 rounded-2xl border border-[#FF6B22] shadow-[0_0_60px_rgba(255,107,34,0.2)]">
+    <h2 class="text-4xl font-extrabold mb-6 text-[#FF6B22] text-center">Ready to Go Pro?</h2>
+    <p class="text-lg md:text-xl text-gray-700 mb-8 text-center">Unlock expert-led learning, hands-on projects, and career guidance that gets results. Don’t just learn—lead.</p>
+    <div class="flex justify-center">
+      <a href="https://learn.proximalms.com/RegisterStudent.aspx" class="inline-block bg-[#FF6B22] text-white px-8 py-4 rounded-full font-semibold text-lg hover:bg-orange-600 transition-all duration-300 shadow-lg hover:shadow-[0_0_30px_rgba(255,107,34,0.5)]">
+        🚀 Join ProximaLMS Now
+      </a>
+    </div>
+  </div>
+</section>
+
+
+
+
+<!-- Footer -->
+<footer class="bg-black text-white pt-12 px-6 md:px-20">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-10">
+
+    <!-- Logo, Description, Contact & Socials -->
+    <div>
+      <img src="images/Proximalms_Logo_Footer.png" alt="ProximaLMS Logo" class="h-20 mb-4" />
+      <p class="text-gray-400 mb-6">
+        Bridging the gap between academia and industry with project-based, mentor-driven, real-world learning experiences.
+      </p>
+
+      <!-- Contact Info -->
+      <div class="space-y-3 text-base text-gray-400">
+        <div class="flex items-center">
+          <i class="fa-solid fa-phone text-[#FF6B22] mr-2"></i>
+          <a href="tel:+12819425455" class="hover:text-[#FF6B22]">+1 281-942-5455</a>
+        </div>
+        <div class="flex items-center">
+          <i class="fa-solid fa-phone text-[#FF6B22] mr-2"></i>
+          <a href="tel:+918341345668" class="hover:text-[#FF6B22]">+91 83413 45668</a>
+        </div>
+        <div class="flex items-center">
+          <i class="fa-solid fa-phone text-[#FF6B22] mr-2"></i>
+          <a href="tel:+919704761116" class="hover:text-[#FF6B22]">+91 97047 61116</a>
+        </div>
+        <div class="flex items-center">
+          <i class="fas fa-envelope text-[#FF6B22] mr-2"></i>
+          <a href="mailto:sales@proximalms.com" class="hover:text-[#FF6B22]">sales@proximalms.com</a>
+        </div>
+      </div>
+
+      <!-- Social Icons -->
+      <div class="mt-4 flex space-x-3 text-white">
+  <a href="#" class="bg-[#FF6B22] hover:bg-white hover:text-[#FF6B22] transition-all duration-300 w-10 h-10 flex items-center justify-center rounded-full">
+    <i class="fab fa-facebook-f"></i>
+  </a>
+  <a href="#" class="bg-[#FF6B22] hover:bg-white hover:text-[#FF6B22] transition-all duration-300 w-10 h-10 flex items-center justify-center rounded-full">
+    <i class="fab fa-twitter"></i>
+  </a>
+  <a href="#" class="bg-[#FF6B22] hover:bg-white hover:text-[#FF6B22] transition-all duration-300 w-10 h-10 flex items-center justify-center rounded-full">
+    <i class="fab fa-linkedin-in"></i>
+  </a>
+  <a href="#" class="bg-[#FF6B22] hover:bg-white hover:text-[#FF6B22] transition-all duration-300 w-10 h-10 flex items-center justify-center rounded-full">
+    <i class="fab fa-instagram"></i>
+  </a>
+  <a href="#" class="bg-[#FF6B22] hover:bg-white hover:text-[#FF6B22] transition-all duration-300 w-10 h-10 flex items-center justify-center rounded-full">
+    <i class="fab fa-youtube"></i>
+  </a>
+</div>
+
+    </div>
+
+    <!-- Navigation -->
+    <div>
+      <h3 class="text-xl font-semibold mb-4">Quick Links</h3>
+      <ul class="space-y-3 text-gray-400">
+        <li>
+          <a href="about.html" class="hover:text-[#FF6B22] transition-colors">
+            <i class="fas fa-users mr-2"></i>About Us
+          </a>
+        </li>
+        <li>
+          <a href="features.html" class="hover:text-[#FF6B22] transition-colors">
+            <i class="fas fa-star mr-2"></i>Features
+          </a>
+        </li>
+        <li>
+          <a href="courses.html" class="hover:text-[#FF6B22] transition-colors">
+            <i class="fas fa-book mr-2"></i>Courses
+          </a>
+        </li>
+        <li>
+          <a href="https://learn.proximalms.com/login.aspx" class="hover:text-[#FF6B22] transition-colors">
+            <i class="fas fa-sign-in-alt mr-2"></i>Login
+          </a>
+        </li>
+        <li>
+          <a href="https://learn.proximalms.com/RegisterStudent.aspx" class="hover:text-[#FF6B22] transition-colors">
+            <i class="fas fa-user-plus mr-2"></i>Register
+          </a>
+        </li>
+      </ul>
+    </div>
+
+    <!-- Address Only -->
+    <div>
+      <h3 class="text-xl font-semibold mb-4">Office Locations</h3>
+      <ul class="space-y-5 text-gray-400 mb-6 text-base leading-relaxed">
+        <!-- USA Address -->
+        <li class="flex items-start">
+          <i class="fas fa-map-marker-alt text-[#FF6B22] mt-1 mr-3 text-lg"></i>
+          <div>
+            <span class="font-semibold text-white">USA:</span><br />
+            13111 Westheimer Rd., Suite 311, Houston, TX, 77077
+          </div>
+        </li>
+
+        <!-- India Address -->
+        <li class="flex items-start">
+          <i class="fas fa-map-marker-alt text-[#FF6B22] mt-1 mr-3 text-lg"></i>
+          <div>
+            <span class="font-semibold text-white">India:</span><br />
+            Flat no.102, Revathi Apartment, Mythrivanam, Ameerpet, Hyderabad - 500038
+          </div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Divider -->
+  <div class="border-t border-gray-700 mt-12 pt-6 text-center text-gray-500 text-sm pb-6">
+  <p>
+    <i class="fa-solid fa-copyright mr-1 text-[#FF6B22]"></i>
+    <span id="current-year"></span>
+    <span class="text-[#FF6B22] font-semibold">ProximaLMS</span>. All rights reserved.
+  </p>
+</div>
+
+<script>
+  // Set current year automatically
+  document.getElementById('current-year').textContent = new Date().getFullYear();
+</script>
+
+
+
+
+</footer>
+
+<!-- Scroll to Top Button (Square) -->
+<button id="scrollToTopBtn"
+  class="fixed bottom-6 right-6 z-50 bg-[#FF6B22] text-white w-10 h-10 shadow-xl hover:bg-[#e65a1b] transition-all duration-300 hidden"
+  aria-label="Scroll to top">
+  <i class="fa-solid fa-angle-up text-2xl"></i>
+</button>
+
+
+
+
+
+<script src="Scripts/home.js"></script>
+<script src="Scripts/herosection.js"></script>
+ <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+ <script>AOS.init();</script>
+ <script src="Scripts/mobilenav.js"></script>
+ <script src="Scripts/scrolltotop.js"></script>
+ </body>
+</html>

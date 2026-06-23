@@ -1,0 +1,18 @@
+# ── Build output ──
+bin/
+obj/
+[Bb]in/
+[Oo]bj/
+
+# ── IDE / user-specific ──
+.vs/
+*.user
+*.suo
+
+# ── Secrets ──
+# Real secrets live in .NET User Secrets (per-developer, outside the repo)
+# or environment variables — never in tracked files. These patterns block
+# accidental commits of local secret overrides.
+secrets.json
+appsettings.*.local.json
+*.local.json

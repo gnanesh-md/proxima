@@ -1,0 +1,12 @@
+::-webkit-scrollbar-thumb {
+  background-color: #A6193C;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background-color: #8f1534;
+}
+
+/* Firefox */
+* {
+  scrollbar-color: #A6193C #f1f1f1;
+}

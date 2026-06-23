@@ -1,0 +1,60 @@
+
+ /* Vibrant Body background for a professional and modern look */
+ body {
+ background: linear-gradient(135deg, #1a0833, #5a0a7f, #b92b68); /* Deeper, richer gradient */
+ color: white;
+  font-family: 'Poppins', sans-serif;
+ min-height: 100vh; /* Ensure body takes full height for gradient */
+ }
+ /* Enhanced Glassmorphism effect */
+ .glass {
+ background: rgba(255, 255, 255, 0.08); /* Slightly less opaque for better depth */
+ backdrop-filter: blur(15px); /* Increased blur for more prominent effect */
+ border: 1px solid rgba(255, 255, 255, 0.15); /* Stronger border */
+ border-radius: 1rem; /* Ensure rounded corners */
+ transition: all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1); /* Smoother, more complex transition */
+ box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.08); /* Subtle initial shadow */
+ }
+ .glass:hover {
+ transform: translateY(-8px) scale(1.03); /* Lifts, scales up slightly */
+ box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5), 0 0 20px #FFD700; /* Deeper shadow with a golden glow */
+ border-color: rgba(255, 255, 255, 0.3);
+ }
+ /* Icon animation on card hover */
+ .glass:hover i {
+ transform: rotateY(15deg) scale(1.1); /* Rotate and slightly scale */
+ transition: transform 0.4s ease-in-out;
+ }
+
+ /* Bounce-in animation for main titles */
+ @keyframes bounceIn {
+ 0% { opacity: 0; transform: scale(0.7); }
+ 60% { opacity: 1; transform: scale(1.08); }
+ 80% { transform: scale(0.98); }
+ 100% { transform: scale(1); }
+ }
+ .bounce-in {
+ animation: bounceIn 1.0s ease-out forwards; /* Longer duration, forwards to keep final state */
+ }
+
+ /* Scroll animation for elements appearing on scroll */
+ .scroll-animate {
+ opacity: 0;
+ transform: translateY(50px) scale(0.9); /* More pronounced initial state for staggered reveal */
+ transition: opacity 0.8s cubic-bezier(0.25, 0.8, 0.25, 1), transform 0.8s cubic-bezier(0.25, 0.8, 0.25, 1);
+ }
+ .scroll-animate.visible {
+ opacity: 1;
+ transform: translateY(0) scale(1);
+ }
+
+ /* Professional yellow color definition */
+ .text-professional-yellow {
+ color: #FFD700; /* Gold */
+ }
+ .bg-professional-yellow {
+ background-color: #FFD700;
+ }
+ .hover\:text-professional-yellow-darker:hover {
+ color: #FFC700; /* Slightly darker shade for hover effect */
+ }

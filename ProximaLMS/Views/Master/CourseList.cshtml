@@ -1,0 +1,945 @@
+﻿@*
+    /Views/Master/CourseList.cshtml  (or Courses/List.cshtml — whichever your route hits)
+    ─────────────────────────────────────────────────────────────────
+    Redesigned in the Proxima design system.
+    Fixes (May 2026):
+      • Search box now filters table rows (was looking for .course-item which doesn't exist)
+      • Toggle hits the correct API endpoint with the right field casing
+      • Confirmation dialog before flipping status
+      • Failure surfaces the API's actual error message
+      • Inline empty state, search count, status filter
+    ─────────────────────────────────────────────────────────────────
+*@
+@model List<ProximaLMS.Models.CourseViewModel>
+@{
+    ViewData["Title"] = "All Courses";
+    Layout = "_Layout";
+
+    var total = Model?.Count ?? 0;
+    var active = Model?.Count(c => c.IsActive) ?? 0;
+    var inactive = total - active;
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --cl-grape: #4C1864;
+        --cl-grape-dark: #2D0F4E;
+        --cl-violet: #7B2CBF;
+        --cl-violet-soft: #9F4FE8;
+        --cl-lavender: #EDE9F8;
+        --cl-lavender-2: #F5F0FB;
+        --cl-ink: #1A1035;
+        --cl-ink-2: #4B4369;
+        --cl-muted: #7B7691;
+        --cl-faint: #B5B0C7;
+        --cl-line: #ECE8F4;
+        --cl-line-2: #E0DAEE;
+        --cl-bg: #F6F2FB;
+        --cl-surface: #FFFFFF;
+        --cl-surface-alt: #FBFAFE;
+        --cl-success: #059669;
+        --cl-success-bg: #D1FAE5;
+        --cl-warn: #B45309;
+        --cl-warn-bg: #FEF3C7;
+        --cl-danger: #DC2626;
+        --cl-danger-bg: #FEE2E2;
+        --cl-info: #1D4ED8;
+        --cl-info-bg: #DBEAFE;
+        --cl-font-display: 'Fraunces', Georgia, serif;
+        --cl-font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+        --cl-r-md: 10px;
+        --cl-r-lg: 14px;
+        --cl-r-xl: 18px;
+        --cl-shadow-sm: 0 1px 3px rgba(76,24,100,.06), 0 4px 12px rgba(76,24,100,.04);
+        --cl-shadow-md: 0 2px 6px rgba(76,24,100,.06), 0 10px 24px rgba(76,24,100,.07);
+        --cl-shadow-lg: 0 4px 10px rgba(76,24,100,.08), 0 24px 48px rgba(76,24,100,.10);
+        --cl-focus: 0 0 0 4px rgba(123,44,191,.15);
+    }
+
+    .cl-page {
+        font-family: var(--cl-font-body);
+        background: var(--cl-bg);
+        color: var(--cl-ink);
+        min-height: calc(100vh - 60px);
+        padding-bottom: 60px;
+    }
+
+    /* ── HERO ─────────────────────────────────────────────────── */
+    .cl-hero {
+        position: relative;
+        overflow: hidden;
+        padding: 32px 36px 96px;
+        background: radial-gradient(circle at 85% -10%, rgba(159,79,232,.32) 0, transparent 55%), linear-gradient(135deg, var(--cl-grape-dark) 0%, var(--cl-grape) 50%, var(--cl-violet) 100%);
+        color: #fff;
+    }
+
+        .cl-hero::before {
+            content: '';
+            position: absolute;
+            width: 380px;
+            height: 380px;
+            border-radius: 50%;
+            top: -100px;
+            right: -80px;
+            background: radial-gradient(circle, rgba(159,79,232,.25) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+    .cl-hero__inner {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        flex-wrap: wrap;
+        max-width: 1300px;
+        margin: 0 auto;
+    }
+
+    .cl-crumb {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12px;
+        color: rgba(255,255,255,.65);
+        margin-bottom: 6px;
+    }
+
+        .cl-crumb a {
+            color: rgba(255,255,255,.75);
+            text-decoration: none;
+        }
+
+            .cl-crumb a:hover {
+                color: #fff;
+            }
+
+    .cl-crumb__sep {
+        opacity: .5;
+    }
+
+    .cl-hero h1 {
+        font-family: var(--cl-font-display);
+        font-size: clamp(26px, 3vw, 34px);
+        font-weight: 600;
+        letter-spacing: -.5px;
+        margin: 0;
+    }
+
+    .cl-hero p {
+        font-size: 14px;
+        color: rgba(255,255,255,.7);
+        margin: 6px 0 0;
+        max-width: 560px;
+    }
+
+    .cl-hero__btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 22px;
+        border-radius: var(--cl-r-md);
+        background: #fff;
+        color: var(--cl-grape);
+        font-weight: 700;
+        font-size: 13.5px;
+        text-decoration: none;
+        box-shadow: 0 6px 20px rgba(0,0,0,.18);
+        transition: transform .15s, box-shadow .15s;
+    }
+
+        .cl-hero__btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(0,0,0,.25);
+            color: var(--cl-grape);
+        }
+
+    /* ── BODY ─────────────────────────────────────────────────── */
+    .cl-body {
+        max-width: 1300px;
+        margin: -64px auto 0;
+        padding: 0 36px;
+        position: relative;
+        z-index: 5;
+    }
+
+    @@media (max-width: 640px) {
+        .cl-body {
+            padding: 0 18px;
+        }
+    }
+
+    /* ── STAT TILES ────────────────────────────────────────────── */
+    .cl-stat-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 16px;
+        margin-bottom: 22px;
+    }
+
+    @@media (max-width: 768px) {
+        .cl-stat-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .cl-stat {
+        background: var(--cl-surface);
+        border: 1px solid var(--cl-line);
+        border-radius: var(--cl-r-xl);
+        padding: 20px 22px;
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        box-shadow: var(--cl-shadow-md);
+        transition: transform .2s, box-shadow .2s;
+    }
+
+        .cl-stat:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--cl-shadow-lg);
+        }
+
+    .cl-stat__icon {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        flex-shrink: 0;
+    }
+
+    .cl-stat__icon--grape {
+        background: var(--cl-lavender);
+        color: var(--cl-grape);
+    }
+
+    .cl-stat__icon--green {
+        background: var(--cl-success-bg);
+        color: var(--cl-success);
+    }
+
+    .cl-stat__icon--rose {
+        background: var(--cl-danger-bg);
+        color: var(--cl-danger);
+    }
+
+    .cl-stat__num {
+        font-family: var(--cl-font-display);
+        font-size: 28px;
+        font-weight: 700;
+        color: var(--cl-ink);
+        line-height: 1;
+        font-variant-numeric: tabular-nums;
+        letter-spacing: -.5px;
+    }
+
+    .cl-stat__lbl {
+        font-size: 11.5px;
+        font-weight: 700;
+        color: var(--cl-muted);
+        text-transform: uppercase;
+        letter-spacing: .6px;
+        margin-top: 5px;
+    }
+
+    /* ── ALERTS ───────────────────────────────────────────────── */
+    .cl-alert {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 13px 16px;
+        border-radius: var(--cl-r-md);
+        font-size: 13.5px;
+        margin-bottom: 16px;
+        border: 1px solid;
+        border-left-width: 4px;
+        background: #FEF2F2;
+        border-color: var(--cl-danger);
+        color: #7F1D1D;
+    }
+
+        .cl-alert i {
+            font-size: 16px;
+            flex-shrink: 0;
+            margin-top: 1px;
+        }
+
+    /* ── CARD / TABLE ─────────────────────────────────────────── */
+    .cl-card {
+        background: var(--cl-surface);
+        border: 1px solid var(--cl-line);
+        border-radius: var(--cl-r-xl);
+        box-shadow: var(--cl-shadow-sm);
+        overflow: hidden;
+    }
+
+    .cl-toolbar {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+        padding: 16px 22px;
+        background: var(--cl-surface);
+        border-bottom: 1px solid var(--cl-line);
+        flex-wrap: wrap;
+    }
+
+    .cl-search {
+        position: relative;
+        flex: 1;
+        min-width: 220px;
+        max-width: 380px;
+    }
+
+        .cl-search input {
+            width: 100%;
+            height: 40px;
+            padding: 0 14px 0 38px;
+            border: 1px solid var(--cl-line-2);
+            border-radius: var(--cl-r-md);
+            background: var(--cl-surface-alt);
+            font-family: inherit;
+            font-size: 13.5px;
+            color: var(--cl-ink);
+            transition: border .15s, box-shadow .15s, background .15s;
+        }
+
+            .cl-search input:focus {
+                outline: none;
+                border-color: var(--cl-violet);
+                background: #fff;
+                box-shadow: var(--cl-focus);
+            }
+
+            .cl-search input::placeholder {
+                color: var(--cl-faint);
+            }
+
+    .cl-search__icon {
+        position: absolute;
+        left: 13px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--cl-faint);
+        font-size: 13px;
+        pointer-events: none;
+    }
+
+    .cl-select {
+        height: 40px;
+        padding: 0 32px 0 14px;
+        border: 1px solid var(--cl-line-2);
+        border-radius: var(--cl-r-md);
+        background-color: var(--cl-surface-alt);
+        font-family: inherit;
+        font-size: 13px;
+        color: var(--cl-ink);
+        cursor: pointer;
+        appearance: none;
+        -webkit-appearance: none;
+        background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%237B2CBF'%3e%3cpath d='M4 6l4 4 4-4z'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        min-width: 160px;
+    }
+
+        .cl-select:focus {
+            outline: none;
+            border-color: var(--cl-violet);
+            background-color: #fff;
+            box-shadow: var(--cl-focus);
+        }
+
+    .cl-toolbar__spacer {
+        flex: 1;
+    }
+
+    .cl-toolbar__count {
+        font-size: 12.5px;
+        color: var(--cl-muted);
+        background: var(--cl-lavender-2);
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-weight: 600;
+    }
+
+    .cl-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+        font-size: 13.5px;
+        color: var(--cl-ink);
+    }
+
+        .cl-table thead th {
+            background: var(--cl-surface-alt);
+            color: var(--cl-muted);
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: .7px;
+            padding: 14px 18px;
+            text-align: left;
+            border-bottom: 1px solid var(--cl-line);
+            white-space: nowrap;
+        }
+
+        .cl-table tbody td {
+            padding: 14px 18px;
+            border-bottom: 1px solid var(--cl-line);
+            vertical-align: middle;
+            background: var(--cl-surface);
+        }
+
+        .cl-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .cl-table tbody tr {
+            transition: background .15s;
+        }
+
+            .cl-table tbody tr:hover td {
+                background: var(--cl-lavender-2);
+            }
+
+    .cl-id {
+        font-family: 'JetBrains Mono', ui-monospace, monospace;
+        font-size: 11.5px;
+        color: var(--cl-muted);
+    }
+
+    .cl-course {
+        font-weight: 600;
+        color: var(--cl-ink);
+    }
+
+    .cl-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 11.5px;
+        font-weight: 600;
+        white-space: nowrap;
+    }
+
+    .cl-chip--level {
+        background: var(--cl-lavender);
+        color: var(--cl-grape);
+    }
+
+    .cl-chip--instr {
+        background: var(--cl-info-bg);
+        color: var(--cl-info);
+    }
+
+    .cl-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 4px 11px;
+        border-radius: 999px;
+        font-size: 11.5px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+        .cl-pill::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+            opacity: .9;
+        }
+
+    .cl-pill--success {
+        background: var(--cl-success-bg);
+        color: var(--cl-success);
+    }
+
+    .cl-pill--off {
+        background: #EEEAF4;
+        color: var(--cl-ink-2);
+    }
+
+    /* ── Toggle switch (purple themed) ────────────────────────── */
+    .cl-switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+    }
+
+        .cl-switch input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: auto;
+            cursor: pointer;
+            inset: 0;
+            margin: 0;
+            z-index: 1;
+        }
+
+    .cl-switch__track {
+        position: absolute;
+        inset: 0;
+        background: #D6D2E5;
+        border-radius: 999px;
+        transition: background .2s;
+    }
+
+        .cl-switch__track::before {
+            content: '';
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 18px;
+            height: 18px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,.18);
+            transition: transform .2s;
+        }
+
+    .cl-switch input:checked + .cl-switch__track {
+        background: var(--cl-violet);
+    }
+
+        .cl-switch input:checked + .cl-switch__track::before {
+            transform: translateX(20px);
+        }
+
+    .cl-switch input:disabled {
+        cursor: wait;
+    }
+
+        .cl-switch input:disabled + .cl-switch__track {
+            opacity: .55;
+        }
+
+    /* ── Empty state ──────────────────────────────────────────── */
+    .cl-empty {
+        text-align: center;
+        padding: 60px 24px;
+        color: var(--cl-muted);
+    }
+
+    .cl-empty__icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: var(--cl-lavender-2);
+        color: var(--cl-violet);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 28px;
+        margin: 0 auto 14px;
+    }
+
+    .cl-empty__title {
+        font-family: var(--cl-font-display);
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--cl-ink);
+        margin: 0 0 6px;
+    }
+
+    .cl-empty__sub {
+        font-size: 13.5px;
+        color: var(--cl-muted);
+        max-width: 360px;
+        margin: 0 auto 16px;
+    }
+
+    .cl-foot {
+        padding: 14px 22px;
+        border-top: 1px solid var(--cl-line);
+        background: var(--cl-surface-alt);
+        font-size: 12.5px;
+        color: var(--cl-muted);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* ── Toast ────────────────────────────────────────────────── */
+    .cl-toast-host {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 5000;
+    }
+
+    .cl-toast {
+        background: var(--cl-ink);
+        color: #fff;
+        padding: 13px 18px;
+        border-radius: var(--cl-r-md);
+        font-size: 13.5px;
+        box-shadow: 0 12px 32px rgba(0,0,0,.32);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        max-width: 380px;
+        border-left: 4px solid var(--cl-violet);
+        animation: clIn .25s ease;
+    }
+
+        .cl-toast.is-success {
+            border-left-color: var(--cl-success);
+        }
+
+        .cl-toast.is-error {
+            border-left-color: var(--cl-danger);
+        }
+
+        .cl-toast i {
+            font-size: 15px;
+        }
+
+        .cl-toast.is-success i {
+            color: #5EEAD4;
+        }
+
+        .cl-toast.is-error i {
+            color: #FCA5A5;
+        }
+
+    @@keyframes clIn {
+        from {
+            opacity: 0;
+            transform: translateY(8px);
+        }
+
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+</style>
+
+
+<div class="cl-page">
+
+    @* ═══════════════ HERO ═══════════════ *@
+    <header class="cl-hero">
+        <div class="cl-hero__inner">
+            <div>
+                <div class="cl-crumb">
+                    <a asp-controller="Dashboard" asp-action="Index">Dashboard</a>
+                    <span class="cl-crumb__sep">›</span>
+                    <span style="color:#fff;">Courses</span>
+                </div>
+                <h1>All Courses</h1>
+                <p>Every course in your catalog — toggle visibility, edit, or add a new one.</p>
+            </div>
+            <a href="@Url.Action("Create", "Courses")" class="cl-hero__btn">
+                <i class="fa-solid fa-plus"></i> Add course
+            </a>
+        </div>
+    </header>
+
+    @* ═══════════════ BODY ═══════════════ *@
+    <div class="cl-body">
+
+        @* ── STAT TILES ────────────────────────────────────────── *@
+        <div class="cl-stat-grid">
+            <div class="cl-stat">
+                <div class="cl-stat__icon cl-stat__icon--grape"><i class="fa-solid fa-book-open"></i></div>
+                <div>
+                    <div class="cl-stat__num">@total</div>
+                    <div class="cl-stat__lbl">Total Courses</div>
+                </div>
+            </div>
+            <div class="cl-stat">
+                <div class="cl-stat__icon cl-stat__icon--green"><i class="fa-solid fa-circle-check"></i></div>
+                <div>
+                    <div class="cl-stat__num">@active</div>
+                    <div class="cl-stat__lbl">Active</div>
+                </div>
+            </div>
+            <div class="cl-stat">
+                <div class="cl-stat__icon cl-stat__icon--rose"><i class="fa-solid fa-circle-xmark"></i></div>
+                <div>
+                    <div class="cl-stat__num">@inactive</div>
+                    <div class="cl-stat__lbl">Inactive</div>
+                </div>
+            </div>
+        </div>
+
+        @* ── ALERT ─────────────────────────────────────────────── *@
+        @if (TempData["Error"] != null)
+        {
+            <div class="cl-alert">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <div>@TempData["Error"]</div>
+            </div>
+        }
+
+        @* ── TABLE CARD ────────────────────────────────────────── *@
+        <div class="cl-card">
+
+            <div class="cl-toolbar">
+                <div class="cl-search">
+                    <i class="fa-solid fa-search cl-search__icon"></i>
+                    <input type="text" id="cl-search-input"
+                           placeholder="Search by title, level or instructor…" autocomplete="off" />
+                </div>
+                <select class="cl-select" id="cl-status-filter">
+                    <option value="">All statuses</option>
+                    <option value="active">Active only</option>
+                    <option value="inactive">Inactive only</option>
+                </select>
+                <div class="cl-toolbar__spacer"></div>
+                <span class="cl-toolbar__count" id="cl-visible-count">@total shown</span>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table class="cl-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 70px;">ID</th>
+                            <th>Course</th>
+                            <th style="width: 140px;">Level</th>
+                            <th>Instructor</th>
+                            <th style="width: 120px;">Status</th>
+                            <th style="width: 110px; text-align: center;">Toggle</th>
+                            <th style="width: 230px; text-align: center;">Exams</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cl-tbody">
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var s in Model)
+                            {
+                                <tr class="cl-row" data-active="@(s.IsActive ? "1" : "0")"
+                                    data-search="@($"{s.CourseTitle} {s.CourseLevel} {s.Instructor}".ToLower())">
+                                    <td><span class="cl-id">#@s.CourseID</span></td>
+                                    <td><span class="cl-course">@s.CourseTitle</span></td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(s.CourseLevel))
+                                        {
+                                            <span class="cl-chip cl-chip--level">
+                                                <i class="fa-solid fa-signal" style="font-size:9px;"></i>
+                                                @s.CourseLevel
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="cl-id">—</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(s.Instructor))
+                                        {
+                                            <span class="cl-chip cl-chip--instr">
+                                                <i class="fa-solid fa-user-tie" style="font-size:9px;"></i>
+                                                @s.Instructor
+                                            </span>
+                                        }
+                                        else
+                                        {
+                                            <span class="cl-id">—</span>
+                                        }
+                                    </td>
+                                    <td>
+                                        <span class="cl-pill @(s.IsActive ? "cl-pill--success" : "cl-pill--off") cl-status">
+                                            @(s.IsActive ? "Active" : "Inactive")
+                                        </span>
+                                    </td>
+                                    <td style="text-align: center;">
+                                        <label class="cl-switch">
+                                            <input type="checkbox"
+                                                   class="cl-toggle"
+                                                   data-id="@s.CourseID"
+                                                   data-title="@s.CourseTitle"
+                                            @(s.IsActive ? "checked" : "") />
+                                            <span class="cl-switch__track"></span>
+                                        </label>
+                                    </td>
+                                    <td style="text-align: center; white-space: nowrap;">
+                                        <a href="@Url.Action("Builder", "Exam", new { courseId = s.CourseID })"
+                                           class="cl-chip cl-chip--level" style="text-decoration:none;cursor:pointer;"
+                                           title="Build exam / paper for this course">
+                                            <i class="fa-solid fa-file-pen" style="font-size:9px;"></i> Exam
+                                        </a>
+                                        <a href="@Url.Action("Bank", "Exam", new { courseId = s.CourseID })"
+                                           class="cl-chip cl-chip--instr" style="text-decoration:none;cursor:pointer;margin-left:6px;"
+                                           title="Question bank for this course">
+                                            <i class="fa-solid fa-layer-group" style="font-size:9px;"></i> Bank
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr id="cl-empty-server">
+                                <td colspan="7">
+                                    <div class="cl-empty">
+                                        <div class="cl-empty__icon"><i class="fa-solid fa-book-open"></i></div>
+                                        <div class="cl-empty__title">No courses yet</div>
+                                        <p class="cl-empty__sub">Add your first course to start building your catalog.</p>
+                                        <a href="@Url.Action("Create", "Courses")" class="cl-hero__btn" style="box-shadow:0 4px 12px rgba(76,24,100,.22); background: linear-gradient(135deg, var(--cl-grape), var(--cl-violet)); color:#fff;">
+                                            <i class="fa-solid fa-plus"></i> Add course
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                        <tr id="cl-empty-filter" style="display: none;">
+                            <td colspan="7">
+                                <div class="cl-empty">
+                                    <div class="cl-empty__icon"><i class="fa-solid fa-magnifying-glass"></i></div>
+                                    <div class="cl-empty__title">No courses match your search</div>
+                                    <p class="cl-empty__sub">Try a different keyword or clear your filters.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="cl-foot">
+                <span>Showing <strong id="cl-foot-count" style="color: var(--cl-grape);">@total</strong> of <strong style="color: var(--cl-grape);">@total</strong> courses</span>
+                <span>Updated just now</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@* Toast host *@
+<div class="cl-toast-host" id="cl-toast-host"></div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function () {
+            const tbody = document.getElementById('cl-tbody');
+            const search = document.getElementById('cl-search-input');
+            const statusF = document.getElementById('cl-status-filter');
+            const visCount = document.getElementById('cl-visible-count');
+            const footCount = document.getElementById('cl-foot-count');
+            const emptyF = document.getElementById('cl-empty-filter');
+            const emptyS = document.getElementById('cl-empty-server');
+            const toastHost = document.getElementById('cl-toast-host');
+
+            const totalRows = tbody.querySelectorAll('.cl-row').length;
+
+            function toast(msg, kind) {
+                const icon = kind === 'success' ? 'fa-circle-check'
+                    : kind === 'error' ? 'fa-triangle-exclamation'
+                        : 'fa-circle-info';
+                const cls = kind === 'success' ? 'is-success'
+                    : kind === 'error' ? 'is-error' : '';
+                const el = document.createElement('div');
+                el.className = 'cl-toast ' + cls;
+                el.innerHTML = `<i class="fa-solid ${icon}"></i><span>${msg.replace(/</g, '&lt;')}</span>`;
+                toastHost.appendChild(el);
+                setTimeout(() => el.remove(), 3500);
+            }
+
+            // ── FILTERING ──────────────────────────────────────────────
+            // Original code searched `.course-item` which doesn't exist —
+            // now we filter actual rows by combined search keys + status.
+            function applyFilter() {
+                if (!totalRows) return;          // server-side empty, nothing to filter
+                const q = (search.value || '').toLowerCase().trim();
+                const st = statusF.value;
+                let shown = 0;
+
+                tbody.querySelectorAll('.cl-row').forEach(row => {
+                    const matchesQ = !q || (row.dataset.search || '').includes(q);
+                    const isActive = row.dataset.active === '1';
+                    const matchesS = !st || (st === 'active' && isActive) || (st === 'inactive' && !isActive);
+                    const visible = matchesQ && matchesS;
+                    row.style.display = visible ? '' : 'none';
+                    if (visible) shown++;
+                });
+
+                visCount.textContent = shown + ' shown';
+                footCount.textContent = shown;
+                emptyF.style.display = (shown === 0 && totalRows > 0) ? '' : 'none';
+                if (emptyS) emptyS.style.display = '';
+            }
+
+            search.addEventListener('input', applyFilter);
+            statusF.addEventListener('change', applyFilter);
+
+            // ── STATUS TOGGLE ──────────────────────────────────────────
+            // Original POSTed form-urlencoded to /Master/UpdateCourseStatus.
+            // The actual API is POST /api/Master/course/status with JSON
+            // { Id, IsActive }. Fixed both the URL and payload casing.
+            tbody.addEventListener('change', async (e) => {
+                const cb = e.target;
+                if (!cb.classList.contains('cl-toggle')) return;
+
+                const courseId = parseInt(cb.dataset.id, 10);
+                const courseTtl = cb.dataset.title || 'this course';
+                const isActive = cb.checked;
+                const row = cb.closest('tr');
+                const pill = row.querySelector('.cl-status');
+
+                // Confirm before flipping
+                const confirmed = await Swal.fire({
+                    title: isActive ? 'Activate course?' : 'Deactivate course?',
+                    html: `<b>${courseTtl.replace(/</g, '&lt;')}</b> will be ${isActive ? 'visible' : 'hidden'} to students.`,
+                    icon: isActive ? 'question' : 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: isActive ? '#7B2CBF' : '#DC2626',
+                    confirmButtonText: isActive ? 'Activate' : 'Deactivate',
+                    cancelButtonText: 'Cancel'
+                }).then(r => r.isConfirmed);
+
+                if (!confirmed) {
+                    cb.checked = !isActive;   // revert
+                    return;
+                }
+
+                cb.disabled = true;
+
+                try {
+                    const r = await fetch('@Url.Action("UpdateCourseStatus", "Master")', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                        body: JSON.stringify({ Id: courseId, IsActive: isActive })
+                    });
+
+                    let d = null;
+                    try { d = await r.json(); } catch { /* empty body is OK */ }
+
+                    const ok = r.ok && (d == null || d.success !== false);
+                    if (ok) {
+                        row.dataset.active = isActive ? '1' : '0';
+                        pill.textContent = isActive ? 'Active' : 'Inactive';
+                        pill.classList.toggle('cl-pill--success', isActive);
+                        pill.classList.toggle('cl-pill--off', !isActive);
+                        toast(isActive ? 'Course activated' : 'Course deactivated', 'success');
+                        applyFilter();   // refresh counts if filter is on
+                    } else {
+                        cb.checked = !isActive;
+                        toast((d && d.message) || 'Could not update status.', 'error');
+                    }
+                } catch (err) {
+                    cb.checked = !isActive;
+                    toast('Network error: ' + (err.message || 'try again'), 'error');
+                } finally {
+                    cb.disabled = false;
+                }
+            });
+
+            applyFilter();   // paint the initial count
+        })();
+    </script>
+}

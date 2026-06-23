@@ -1,0 +1,323 @@
+@using Newtonsoft.Json.Linq
+@{
+    ViewData["Title"] = "Notification Preferences";
+    Layout = "_Layout";
+    var p = ViewBag.Prefs as JObject ?? new JObject();
+    bool em = ((int?)p["EmailEnabled"] ?? 1) == 1;
+    bool sm = ((int?)p["SmsEnabled"] ?? 1) == 1;
+    bool ia = ((int?)p["InAppEnabled"] ?? 1) == 1;
+    var muted = (string?)p["MutedEvents"] ?? "";
+}
+
+<style>
+    .np-wrap {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 8px 0 40px;
+    }
+
+    /* ── Hero banner ── */
+    .np-hero {
+        background: linear-gradient(135deg, #3b0764 0%, #7B2CBF 55%, #9D4EDD 100%);
+        border-radius: 20px;
+        padding: 32px 36px;
+        color: #fff;
+        margin-bottom: 28px;
+        position: relative;
+        overflow: hidden;
+    }
+    .np-hero::before {
+        content: '';
+        position: absolute;
+        width: 260px; height: 260px;
+        background: rgba(255,255,255,.06);
+        border-radius: 50%;
+        right: -60px; top: -80px;
+    }
+    .np-hero::after {
+        content: '';
+        position: absolute;
+        width: 160px; height: 160px;
+        background: rgba(255,255,255,.04);
+        border-radius: 50%;
+        right: 80px; bottom: -60px;
+    }
+    .np-hero-inner { position: relative; z-index: 1; display: flex; align-items: center; gap: 20px; }
+    .np-hero-icon {
+        width: 64px; height: 64px; border-radius: 16px;
+        background: rgba(255,255,255,.18);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 28px; flex-shrink: 0;
+        backdrop-filter: blur(8px);
+    }
+    .np-hero h1 { font-size: 1.6rem; font-weight: 900; margin: 0 0 4px; }
+    .np-hero p { opacity: .82; margin: 0; font-size: .92rem; }
+
+    /* ── Alert ── */
+    .np-alert {
+        display: flex; align-items: center; gap: 10px;
+        background: linear-gradient(135deg, #d1fae5, #ecfdf5);
+        border: 1px solid #6ee7b7;
+        border-radius: 12px;
+        padding: 14px 18px;
+        color: #065f46;
+        font-weight: 600;
+        font-size: .9rem;
+        margin-bottom: 20px;
+        animation: slideIn .35s ease;
+    }
+    @@keyframes slideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
+
+    /* ── Section card ── */
+    .np-section {
+        background: #fff;
+        border: 1px solid #ede9fe;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 4px 24px rgba(76,24,100,.06);
+        margin-bottom: 20px;
+    }
+    .np-section-head {
+        padding: 16px 24px;
+        background: #faf5ff;
+        border-bottom: 1px solid #ede9fe;
+        display: flex; align-items: center; gap: 10px;
+    }
+    .np-section-head .sh-icon {
+        width: 32px; height: 32px; border-radius: 8px;
+        background: linear-gradient(135deg, #7B2CBF, #9D4EDD);
+        display: flex; align-items: center; justify-content: center;
+        color: #fff; font-size: 13px;
+    }
+    .np-section-head h6 { margin: 0; font-size: .82rem; font-weight: 800; color: #4C1864; text-transform: uppercase; letter-spacing: .06em; }
+
+    /* ── Toggle row ── */
+    .np-row {
+        display: flex; align-items: center; gap: 16px;
+        padding: 20px 24px;
+        border-bottom: 1px solid #f8f5ff;
+        transition: background .15s;
+    }
+    .np-row:last-child { border-bottom: none; }
+    .np-row:hover { background: #faf5ff; }
+
+    .np-row-icon {
+        width: 44px; height: 44px; border-radius: 12px;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 18px; flex-shrink: 0;
+    }
+    .np-row-icon.email  { background: #eff6ff; color: #3b82f6; }
+    .np-row-icon.sms    { background: #f0fdf4; color: #22c55e; }
+    .np-row-icon.inapp  { background: #fdf4ff; color: #a855f7; }
+    .np-row-icon.push   { background: #fff7ed; color: #f97316; }
+    .np-row-icon.digest { background: #fef2f2; color: #ef4444; }
+
+    .np-row-text { flex: 1; }
+    .np-row-text strong { display: block; font-weight: 700; color: #1a1523; font-size: .95rem; }
+    .np-row-text span   { font-size: .8rem; color: #64748b; }
+
+    /* ── Toggle switch ── */
+    .np-toggle { position: relative; width: 52px; height: 28px; flex-shrink: 0; }
+    .np-toggle input { display: none; }
+    .np-toggle label {
+        position: absolute; inset: 0;
+        background: #d1d5db;
+        border-radius: 20px;
+        cursor: pointer;
+        transition: background .25s;
+    }
+    .np-toggle label::before {
+        content: '';
+        position: absolute;
+        width: 22px; height: 22px;
+        left: 3px; top: 3px;
+        background: #fff;
+        border-radius: 50%;
+        transition: transform .25s;
+        box-shadow: 0 1px 4px rgba(0,0,0,.18);
+    }
+    .np-toggle input:checked + label { background: linear-gradient(135deg, #7B2CBF, #9D4EDD); }
+    .np-toggle input:checked + label::before { transform: translateX(24px); }
+
+    .np-toggle-state {
+        font-size: .72rem;
+        font-weight: 700;
+        color: #9ca3af;
+        width: 24px;
+        text-align: center;
+        flex-shrink: 0;
+        transition: color .2s;
+    }
+    .np-toggle input:checked ~ .np-toggle-state { color: #7B2CBF; }
+
+    /* ── Save button ── */
+    .np-save-bar {
+        background: #fff;
+        border: 1px solid #ede9fe;
+        border-radius: 18px;
+        padding: 20px 24px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        box-shadow: 0 4px 24px rgba(76,24,100,.06);
+    }
+    .np-save-hint { font-size: .82rem; color: #64748b; }
+    .np-save-hint strong { color: #4C1864; }
+    .np-save-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 28px;
+        background: linear-gradient(135deg, #4C1864, #7B2CBF);
+        color: #fff;
+        border: none;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: .92rem;
+        cursor: pointer;
+        transition: transform .15s, box-shadow .15s;
+        box-shadow: 0 4px 14px rgba(123,44,191,.35);
+    }
+    .np-save-btn:hover { transform: translateY(-1px); box-shadow: 0 7px 20px rgba(123,44,191,.45); }
+    .np-save-btn:active { transform: translateY(0); }
+</style>
+
+<div class="np-wrap">
+
+    <!-- Hero -->
+    <div class="np-hero">
+        <div class="np-hero-inner">
+            <div class="np-hero-icon"><i class="fa-solid fa-bell"></i></div>
+            <div>
+                <h1>Notification Preferences</h1>
+                <p>Control how and when ProximaLMS contacts you</p>
+            </div>
+        </div>
+    </div>
+
+    @if (TempData["PrefSaved"] != null)
+    {
+        <div class="np-alert">
+            <i class="fa-solid fa-circle-check fa-lg"></i>
+            @TempData["PrefSaved"]
+        </div>
+    }
+
+    <form asp-action="Preferences" method="post">
+        @Html.AntiForgeryToken()
+        <input type="hidden" name="MutedEvents" value="@muted" />
+
+        <!-- Delivery channels -->
+        <div class="np-section">
+            <div class="np-section-head">
+                <div class="sh-icon"><i class="fa-solid fa-satellite-dish"></i></div>
+                <h6>Delivery Channels</h6>
+            </div>
+
+            <!-- Email -->
+            <div class="np-row">
+                <div class="np-row-icon email"><i class="fa-solid fa-envelope"></i></div>
+                <div class="np-row-text">
+                    <strong>Email Notifications</strong>
+                    <span>Enrollment confirmations, exam results, certificates &amp; payment receipts</span>
+                </div>
+                <div class="np-toggle">
+                    <input type="checkbox" id="em" name="EmailEnabled" value="true" @(em ? "checked" : "")>
+                    <label for="em"></label>
+                </div>
+                <div class="np-toggle-state" id="em-state">@(em ? "ON" : "OFF")</div>
+            </div>
+
+            <!-- SMS -->
+            <div class="np-row">
+                <div class="np-row-icon sms"><i class="fa-solid fa-comment-sms"></i></div>
+                <div class="np-row-text">
+                    <strong>SMS Notifications</strong>
+                    <span>OTP codes, payment confirmations &amp; certificate ready alerts</span>
+                </div>
+                <div class="np-toggle">
+                    <input type="checkbox" id="sm" name="SmsEnabled" value="true" @(sm ? "checked" : "")>
+                    <label for="sm"></label>
+                </div>
+                <div class="np-toggle-state" id="sm-state">@(sm ? "ON" : "OFF")</div>
+            </div>
+
+            <!-- In-app -->
+            <div class="np-row">
+                <div class="np-row-icon inapp"><i class="fa-solid fa-bell"></i></div>
+                <div class="np-row-text">
+                    <strong>In-App Notifications</strong>
+                    <span>The bell icon in the header — real-time alerts while you're logged in</span>
+                </div>
+                <div class="np-toggle">
+                    <input type="checkbox" id="ia" name="InAppEnabled" value="true" @(ia ? "checked" : "")>
+                    <label for="ia"></label>
+                </div>
+                <div class="np-toggle-state" id="ia-state">@(ia ? "ON" : "OFF")</div>
+            </div>
+        </div>
+
+        <!-- What you'll receive -->
+        <div class="np-section">
+            <div class="np-section-head">
+                <div class="sh-icon"><i class="fa-solid fa-list-check"></i></div>
+                <h6>What You'll Receive</h6>
+            </div>
+            <div class="np-row">
+                <div class="np-row-icon email"><i class="fa-solid fa-graduation-cap"></i></div>
+                <div class="np-row-text">
+                    <strong>Course &amp; Exam Updates</strong>
+                    <span>New material published, exam available, results released</span>
+                </div>
+                <span style="font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:20px;background:#ede9fe;color:#7B2CBF;">Always on</span>
+            </div>
+            <div class="np-row">
+                <div class="np-row-icon sms"><i class="fa-solid fa-credit-card"></i></div>
+                <div class="np-row-text">
+                    <strong>Payments &amp; Billing</strong>
+                    <span>Transaction receipts, refund status, subscription renewal</span>
+                </div>
+                <span style="font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:20px;background:#ede9fe;color:#7B2CBF;">Always on</span>
+            </div>
+            <div class="np-row">
+                <div class="np-row-icon inapp"><i class="fa-solid fa-trophy"></i></div>
+                <div class="np-row-text">
+                    <strong>Achievements &amp; Badges</strong>
+                    <span>When you earn a badge, hit a streak, or climb the leaderboard</span>
+                </div>
+                <span style="font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:20px;background:#f0fdf4;color:#15803d;">Follows channels</span>
+            </div>
+            <div class="np-row">
+                <div class="np-row-icon push"><i class="fa-solid fa-calendar-check"></i></div>
+                <div class="np-row-text">
+                    <strong>Deadline Reminders</strong>
+                    <span>Assignment due dates, exam windows closing, certificate expiry</span>
+                </div>
+                <span style="font-size:.78rem;font-weight:700;padding:3px 10px;border-radius:20px;background:#f0fdf4;color:#15803d;">Follows channels</span>
+            </div>
+        </div>
+
+        <!-- Save bar -->
+        <div class="np-save-bar">
+            <div class="np-save-hint">
+                <strong>Changes take effect immediately.</strong><br>
+                You can update these preferences at any time.
+            </div>
+            <button type="submit" class="np-save-btn">
+                <i class="fa-solid fa-floppy-disk"></i>
+                Save Preferences
+            </button>
+        </div>
+
+    </form>
+</div>
+
+<script>
+    document.querySelectorAll('.np-toggle input').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+            var stateEl = document.getElementById(this.id + '-state');
+            if (stateEl) stateEl.textContent = this.checked ? 'ON' : 'OFF';
+        });
+    });
+</script>

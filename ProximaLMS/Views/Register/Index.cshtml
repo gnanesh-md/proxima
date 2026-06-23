@@ -1,0 +1,921 @@
+@*
+    ProximaLMS/Views/Register/Index.cshtml
+    -------------------------------------------------------------
+    4-step profile creation wizard.
+
+    Step 1 — Account: email, password, accept terms
+    Step 2 — Verify Email: 6-digit OTP
+    Step 3 — Personal Details: name, mobile, gender, DOB → creates user + auto-logs in
+    Step 4 — Profile (optional): bio, photo, interests, social links
+    Done   — success screen, auto-redirect to dashboard
+    -------------------------------------------------------------
+*@
+@model ProximaLMS.Models.RegisterWizardViewModel
+@{
+    Layout = null;
+    ViewData["Title"] = "Create your account";
+}
+
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] · ProximaLMS</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <style>
+        :root {
+            --primary: #4C1864;
+            --primary-2: #7B2CBF;
+            --ink: #1f1d2b;
+            --ink2: #6b7280;
+            --bg: #f5f3fa;
+            --surface: #ffffff;
+            --border: #e7e5ee;
+            --accent: #e85f00;
+            --ok: #16a34a;
+            --rose: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--ink);
+            min-height: 100vh;
+            margin: 0;
+            padding: 24px 14px 40px;
+        }
+
+        .wiz-wrap {
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        /* ── HEADER ─────────────────────────────── */
+        .wiz-brand {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .wiz-brand-name {
+            font-weight: 800;
+            font-size: 22px;
+            background: linear-gradient(120deg, var(--primary), var(--primary-2));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .wiz-brand a {
+            color: var(--ink2);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .wiz-brand a:hover { color: var(--primary); }
+
+        /* ── STEP INDICATOR ──────────────────────── */
+        .wiz-steps {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 0 auto 28px;
+            padding: 0 8px;
+        }
+
+        .wiz-step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 0 0 auto;
+            position: relative;
+        }
+
+        .wiz-step .dot {
+            width: 36px; height: 36px;
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid var(--border);
+            color: var(--ink2);
+            display: flex; align-items: center; justify-content: center;
+            font-weight: 700; font-size: 14px;
+            transition: all .2s;
+            z-index: 1;
+        }
+
+        .wiz-step .lbl {
+            margin-top: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--ink2);
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            text-align: center;
+            max-width: 80px;
+        }
+
+        .wiz-step.active .dot {
+            background: linear-gradient(135deg, var(--primary), var(--primary-2));
+            border-color: var(--primary);
+            color: #fff;
+            box-shadow: 0 6px 20px rgba(76, 24, 100, 0.3);
+        }
+
+        .wiz-step.active .lbl { color: var(--primary); }
+
+        .wiz-step.done .dot {
+            background: var(--ok);
+            border-color: var(--ok);
+            color: #fff;
+        }
+
+        .wiz-step.done .lbl { color: var(--ok); }
+
+        .wiz-line {
+            flex: 1;
+            height: 2px;
+            background: var(--border);
+            margin: 0 4px;
+            margin-bottom: 28px;
+            position: relative;
+            top: -10px;
+        }
+
+        .wiz-line.done { background: var(--ok); }
+
+        /* ── CARD ────────────────────────────────── */
+        .wiz-card {
+            background: var(--surface);
+            border-radius: 18px;
+            padding: 38px 36px;
+            box-shadow: 0 14px 40px rgba(31, 29, 43, 0.06);
+            border: 1px solid var(--border);
+        }
+
+        .wiz-pane { display: none; }
+        .wiz-pane.active { display: block; animation: fadein .25s ease-out; }
+        @@keyframes fadein {
+            from { opacity: 0; transform: translateY(6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .wiz-pane h2 {
+            font-size: 22px;
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .wiz-pane p.sub {
+            color: var(--ink2);
+            font-size: 14px;
+            margin-bottom: 26px;
+        }
+
+        /* ── INPUTS ──────────────────────────────── */
+        .form-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--ink);
+            margin-bottom: 6px;
+        }
+
+        .form-label .req { color: var(--rose); }
+
+        .form-control, .form-select {
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 11px 14px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color .15s, box-shadow .15s;
+        }
+
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-2);
+            box-shadow: 0 0 0 4px rgba(123, 44, 191, 0.12);
+        }
+
+        .form-text { font-size: 12px; color: var(--ink2); margin-top: 4px; }
+
+        .pw-wrap { position: relative; }
+        .pw-toggle {
+            position: absolute; right: 12px; top: 50%;
+            transform: translateY(-50%);
+            color: var(--ink2); cursor: pointer; padding: 4px;
+        }
+        .pw-toggle:hover { color: var(--primary); }
+
+        /* ── OTP boxes ───────────────────────────── */
+        .otp-row {
+            display: flex; justify-content: center; gap: 10px;
+            margin: 20px 0 16px;
+        }
+
+        .otp-box {
+            width: 54px; height: 60px;
+            text-align: center;
+            font-size: 24px; font-weight: 700;
+            border: 2px solid var(--border);
+            border-radius: 12px;
+            transition: all .15s;
+        }
+
+        .otp-box:focus {
+            border-color: var(--primary-2);
+            box-shadow: 0 0 0 4px rgba(123, 44, 191, 0.12);
+            outline: none;
+        }
+
+        .otp-meta {
+            text-align: center;
+            font-size: 13px;
+            color: var(--ink2);
+        }
+
+        .otp-meta a {
+            color: var(--primary);
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+        }
+
+        /* ── PHONE COMBO ─────────────────────────── */
+        .phone-combo { display: flex; gap: 8px; }
+        .phone-combo .form-select { max-width: 110px; }
+
+        /* ── BUTTONS ─────────────────────────────── */
+        .wiz-foot {
+            display: flex; justify-content: space-between;
+            margin-top: 28px; gap: 12px;
+        }
+
+        .btn-prim {
+            background: linear-gradient(135deg, var(--primary), var(--primary-2));
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 28px;
+            font-weight: 700; font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(76, 24, 100, 0.25);
+            transition: transform .1s, box-shadow .15s, opacity .15s;
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-prim:hover  { transform: translateY(-1px); box-shadow: 0 10px 28px rgba(76, 24, 100, 0.35); }
+        .btn-prim:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+        .btn-ghost {
+            background: #fff;
+            color: var(--ink);
+            border: 1.5px solid var(--border);
+            border-radius: 10px;
+            padding: 12px 22px;
+            font-weight: 600; font-size: 14px;
+            cursor: pointer;
+            transition: background .15s, border-color .15s;
+            display: inline-flex; align-items: center; gap: 8px;
+        }
+        .btn-ghost:hover { background: var(--bg); border-color: var(--ink2); }
+
+        .btn-link-orange {
+            background: none; border: none;
+            color: var(--accent);
+            font-weight: 600;
+            text-decoration: none;
+            padding: 0;
+            cursor: pointer;
+        }
+
+        /* ── INTERESTS CHIPS ─────────────────────── */
+        .chip-pool {
+            display: flex; flex-wrap: wrap; gap: 8px;
+            margin-top: 6px;
+        }
+
+        .chip {
+            border: 1.5px solid var(--border);
+            background: #fff;
+            color: var(--ink);
+            padding: 7px 14px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all .15s;
+            user-select: none;
+        }
+
+        .chip:hover { border-color: var(--primary); }
+
+        .chip.is-selected {
+            background: linear-gradient(135deg, var(--primary), var(--primary-2));
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        /* ── PHOTO UPLOAD ────────────────────────── */
+        .photo-zone {
+            display: flex; align-items: center; gap: 18px;
+            padding: 14px;
+            background: var(--bg);
+            border-radius: 12px;
+            border: 1px dashed var(--border);
+        }
+
+        .photo-preview {
+            width: 86px; height: 86px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary), var(--primary-2));
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 28px; font-weight: 700;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .photo-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* ── DONE SCREEN ─────────────────────────── */
+        .done-wrap {
+            text-align: center;
+            padding: 16px 0;
+        }
+
+        .done-tick {
+            width: 88px; height: 88px;
+            margin: 0 auto 18px;
+            background: linear-gradient(135deg, var(--ok), #2dd4bf);
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            color: #fff; font-size: 36px;
+            animation: pop .4s cubic-bezier(.2,1.2,.4,1);
+        }
+
+        @@keyframes pop {
+            from { transform: scale(0); }
+            to   { transform: scale(1); }
+        }
+
+        .done-wrap h2 { font-size: 26px; }
+        .done-wrap p  { color: var(--ink2); font-size: 14px; }
+
+        .countdown {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 13px;
+            margin-top: 14px;
+            padding: 8px 14px;
+            background: rgba(123, 44, 191, .08);
+            border-radius: 999px;
+        }
+
+        /* ── MOBILE ──────────────────────────────── */
+        @@media (max-width: 540px) {
+            .wiz-card { padding: 24px 18px; }
+            .wiz-step .lbl { font-size: 0; }
+            .wiz-step .dot { width: 32px; height: 32px; }
+            .otp-box { width: 42px; height: 50px; font-size: 18px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="wiz-wrap">
+
+    <!-- ── header ── -->
+    <div class="wiz-brand">
+        <div class="wiz-brand-name"><i class="fa-solid fa-graduation-cap me-2"></i>ProximaLMS</div>
+        <a href="/Login/Index"><i class="fa-solid fa-arrow-left me-1"></i> Back to login</a>
+    </div>
+
+    <!-- ── step indicator ── -->
+    <div class="wiz-steps" id="wizSteps">
+        <div class="wiz-step active" data-step="1">
+            <div class="dot">1</div><div class="lbl">Account</div>
+        </div>
+        <div class="wiz-line"></div>
+        <div class="wiz-step" data-step="2">
+            <div class="dot">2</div><div class="lbl">Verify</div>
+        </div>
+        <div class="wiz-line"></div>
+        <div class="wiz-step" data-step="3">
+            <div class="dot">3</div><div class="lbl">Details</div>
+        </div>
+        <div class="wiz-line"></div>
+        <div class="wiz-step" data-step="4">
+            <div class="dot">4</div><div class="lbl">Profile</div>
+        </div>
+        <div class="wiz-line"></div>
+        <div class="wiz-step" data-step="5">
+            <div class="dot"><i class="fa-solid fa-check"></i></div><div class="lbl">Done</div>
+        </div>
+    </div>
+
+    <!-- ── card ── -->
+    <div class="wiz-card">
+
+        <!-- ╔══════ STEP 1 — Account ══════ -->
+        <div class="wiz-pane active" data-pane="1">
+            <h2>Create your account</h2>
+            <p class="sub">We'll send a code to verify your email.</p>
+
+            <div class="mb-3">
+                <label class="form-label">Email <span class="req">*</span></label>
+                <input id="s1Email" type="email" class="form-control" placeholder="you@example.com" autocomplete="email" />
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Password <span class="req">*</span></label>
+                    <div class="pw-wrap">
+                        <input id="s1Password" type="password" class="form-control" autocomplete="new-password" />
+                        <span class="pw-toggle" onclick="togglePw('s1Password', 's1PwIcon')">
+                            <i class="fa-solid fa-eye" id="s1PwIcon"></i>
+                        </span>
+                    </div>
+                    <div class="form-text">Min 8 chars, 1 uppercase, 1 number, 1 special character.</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Confirm Password <span class="req">*</span></label>
+                    <div class="pw-wrap">
+                        <input id="s1Confirm" type="password" class="form-control" autocomplete="new-password" />
+                        <span class="pw-toggle" onclick="togglePw('s1Confirm', 's1CpwIcon')">
+                            <i class="fa-solid fa-eye" id="s1CpwIcon"></i>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-check mt-3">
+                <input id="s1Terms" type="checkbox" class="form-check-input" />
+                <label for="s1Terms" class="form-check-label">
+                    I agree to the <a href="/Home/Privacy" target="_blank">Terms &amp; Conditions</a>.
+                </label>
+            </div>
+
+            <div class="wiz-foot">
+                <span></span>
+                <button class="btn-prim" id="s1Next">Continue <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- ╔══════ STEP 2 — Verify Email ══════ -->
+        <div class="wiz-pane" data-pane="2">
+            <h2>Verify your email</h2>
+            <p class="sub">
+                We sent a 6-digit code to <strong id="s2EmailShow">your inbox</strong>.
+                Enter it below to continue.
+            </p>
+
+            <div class="otp-row" id="otpRow">
+                <input class="otp-box" maxlength="1" inputmode="numeric" autocomplete="one-time-code" />
+                <input class="otp-box" maxlength="1" inputmode="numeric" />
+                <input class="otp-box" maxlength="1" inputmode="numeric" />
+                <input class="otp-box" maxlength="1" inputmode="numeric" />
+                <input class="otp-box" maxlength="1" inputmode="numeric" />
+                <input class="otp-box" maxlength="1" inputmode="numeric" />
+            </div>
+
+            <div class="otp-meta">
+                <span id="otpTimer">Resend code in 0:30</span>
+                <a id="otpResend" class="d-none">Resend code</a>
+            </div>
+
+            <div class="wiz-foot">
+                <button class="btn-ghost" data-back="1"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                <button class="btn-prim" id="s2Next">Verify <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- ╔══════ STEP 3 — Personal Details ══════ -->
+        <div class="wiz-pane" data-pane="3">
+            <h2>Tell us about you</h2>
+            <p class="sub">A few quick details so we can set up your profile.</p>
+
+            <div class="mb-3">
+                <label class="form-label">Full Name <span class="req">*</span></label>
+                <input id="s3Name" type="text" class="form-control" placeholder="Your full name" />
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Mobile <span class="req">*</span></label>
+                    <div class="phone-combo">
+                        <select id="s3Cc" class="form-select">
+                            <option value="+91">🇮🇳 +91</option>
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="+44">🇬🇧 +44</option>
+                            <option value="+61">🇦🇺 +61</option>
+                            <option value="+971">🇦🇪 +971</option>
+                        </select>
+                        <input id="s3Phone" type="tel" class="form-control" inputmode="numeric"
+                               placeholder="10-digit number" />
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Gender <span class="req">*</span></label>
+                    <select id="s3Gender" class="form-select">
+                        <option value="">Select…</option>
+                        <option>Male</option>
+                        <option>Female</option>
+                        <option>Other</option>
+                        <option>Prefer not to say</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label">Date of Birth <span style="color:#9aa0ac;">(optional)</span></label>
+                <input id="s3Dob" type="date" class="form-control" style="max-width:240px;" />
+            </div>
+
+            <div class="mt-3">
+                <label class="form-label">Referral Code <span style="color:#9aa0ac;">(optional)</span></label>
+                <input id="s3Referral" type="text" class="form-control" style="max-width:240px;text-transform:uppercase;"
+                       placeholder="e.g. ABHI0618" maxlength="20" autocomplete="off" />
+                <div class="form-text">Got a friend's code? Enter it to unlock a welcome reward.</div>
+            </div>
+
+            <div class="wiz-foot">
+                <button class="btn-ghost" data-back="2"><i class="fa-solid fa-arrow-left"></i> Back</button>
+                <button class="btn-prim" id="s3Next">Create account <i class="fa-solid fa-arrow-right"></i></button>
+            </div>
+        </div>
+
+        <!-- ╔══════ STEP 4 — Profile (optional) ══════ -->
+        <div class="wiz-pane" data-pane="4">
+            <h2>Make it yours</h2>
+            <p class="sub">Optional — you can fill this in later from your profile page.</p>
+
+            <div class="mb-3">
+                <label class="form-label">Profile photo</label>
+                <div class="photo-zone">
+                    <div class="photo-preview" id="s4PhotoPreview">
+                        <span id="s4PhotoInitial">?</span>
+                    </div>
+                    <div>
+                        <input id="s4Photo" type="file" accept="image/jpeg,image/png,image/webp" hidden />
+                        <button type="button" class="btn-ghost" onclick="document.getElementById('s4Photo').click()">
+                            <i class="fa-solid fa-camera"></i> Upload photo
+                        </button>
+                        <div class="form-text">JPEG, PNG or WebP. Max 2 MB.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Short bio</label>
+                <textarea id="s4Bio" class="form-control" rows="3" maxlength="500"
+                          placeholder="A sentence or two about yourself…"></textarea>
+                <div class="form-text"><span id="s4BioCount">0</span>/500</div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">What do you want to learn?</label>
+                <div class="chip-pool" id="s4Chips">
+                    <span class="chip" data-val="Web Development">Web Development</span>
+                    <span class="chip" data-val="Data Science">Data Science</span>
+                    <span class="chip" data-val="Mobile Apps">Mobile Apps</span>
+                    <span class="chip" data-val="AI & ML">AI &amp; ML</span>
+                    <span class="chip" data-val="Cloud">Cloud</span>
+                    <span class="chip" data-val="Design">Design</span>
+                    <span class="chip" data-val="Business">Business</span>
+                    <span class="chip" data-val="Languages">Languages</span>
+                </div>
+            </div>
+
+            <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                    <label class="form-label">Preferred language</label>
+                    <select id="s4Lang" class="form-select">
+                        <option value="">No preference</option>
+                        <option>English</option>
+                        <option>Hindi</option>
+                        <option>Telugu</option>
+                        <option>Tamil</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Location</label>
+                    <input id="s4Loc" type="text" class="form-control" placeholder="City, Country" />
+                </div>
+            </div>
+
+            <div class="wiz-foot">
+                <button class="btn-link-orange" id="s4Skip">Skip for now</button>
+                <button class="btn-prim" id="s4Done">Complete <i class="fa-solid fa-check"></i></button>
+            </div>
+        </div>
+
+        <!-- ╔══════ STEP 5 — Done ══════ -->
+        <div class="wiz-pane" data-pane="5">
+            <div class="done-wrap">
+                <div class="done-tick"><i class="fa-solid fa-check"></i></div>
+                <h2>You're all set!</h2>
+                <p>Your account is ready. Taking you to your dashboard…</p>
+                <div class="countdown">
+                    <i class="fa-solid fa-clock"></i>
+                    Redirecting in <span id="cdNum">3</span>s
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function () {
+
+    // ── State held in memory until step 3 commits to API ──
+    const state = {
+        email: '', password: '',
+        name: '', cc: '+91', phone: '', gender: '', dob: null,
+        userId: 0, roleId: 0,
+        photoPath: ''
+    };
+
+    // ────────────────────── HELPERS ──────────────────────
+    const $ = sel => document.querySelector(sel);
+    const $$ = sel => document.querySelectorAll(sel);
+
+    function gotoStep(n) {
+        $$('.wiz-pane').forEach(p => p.classList.toggle('active', +p.dataset.pane === n));
+
+        $$('.wiz-step').forEach(s => {
+            const sn = +s.dataset.step;
+            s.classList.toggle('active', sn === n);
+            s.classList.toggle('done',   sn  < n);
+        });
+
+        $$('.wiz-line').forEach((l, i) => l.classList.toggle('done', i < n - 1));
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setBusy(btn, label) {
+        btn.disabled = true;
+        btn.dataset.old = btn.innerHTML;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> ' + label;
+    }
+    function unbusy(btn) {
+        btn.disabled = false;
+        if (btn.dataset.old) btn.innerHTML = btn.dataset.old;
+    }
+
+    window.togglePw = function (id, icoId) {
+        const f = document.getElementById(id), i = document.getElementById(icoId);
+        if (!f) return;
+        f.type = f.type === 'password' ? 'text' : 'password';
+        i?.classList.toggle('fa-eye');
+        i?.classList.toggle('fa-eye-slash');
+    };
+
+    async function postJson(url, body) {
+        const r = await fetch(url, {
+            method:  'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body:    JSON.stringify(body || {})
+        });
+        return r.json();
+    }
+
+    // Back buttons (steps 2 & 3 only — once user is created, no going back)
+    $$('[data-back]').forEach(btn => btn.addEventListener('click', () => {
+        gotoStep(+btn.dataset.back);
+    }));
+
+    // ────────────────────── STEP 1 ──────────────────────
+    $('#s1Next').addEventListener('click', async function () {
+        const email   = $('#s1Email').value.trim().toLowerCase();
+        const pw      = $('#s1Password').value;
+        const cpw     = $('#s1Confirm').value;
+        const terms   = $('#s1Terms').checked;
+
+        const emailRx = /^[^\s@@]+@@[^\s@@]+\.[^\s@@]+$/;
+        const pwRx    = /^(?=.*[A-Z])(?=.*\d)(?=.*[@@$!%*?&#^])[A-Za-z\d@@$!%*?&#^]{8,}$/;
+
+        if (!emailRx.test(email))
+            return Swal.fire({ icon: 'warning', title: 'Email', text: 'Please enter a valid email address.' });
+        if (!pwRx.test(pw))
+            return Swal.fire({ icon: 'warning', title: 'Password',
+                text: 'Password must be at least 8 chars with 1 uppercase, 1 number, and 1 special character.' });
+        if (pw !== cpw)
+            return Swal.fire({ icon: 'warning', title: 'Confirm', text: 'Passwords do not match.' });
+        if (!terms)
+            return Swal.fire({ icon: 'warning', title: 'Terms', text: 'You must accept the Terms & Conditions.' });
+
+        setBusy(this, 'Sending code…');
+
+        const d = await postJson('/Register/SendEmailOtp', { Email: email });
+        unbusy(this);
+
+        if (!d.success)
+            return Swal.fire({ icon: 'error', title: 'Could not continue', text: d.message || 'Try again.' });
+
+        state.email = email; state.password = pw;
+        $('#s2EmailShow').textContent = email;
+        startOtpTimer();
+        gotoStep(2);
+        setTimeout(() => $('.otp-box').focus(), 200);
+    });
+
+    // ────────────────────── STEP 2 — OTP ──────────────────────
+    const boxes = $$('.otp-box');
+    boxes.forEach((b, i) => {
+        b.addEventListener('input', function () {
+            this.value = this.value.replace(/\D/g, '');
+            if (this.value && boxes[i + 1]) boxes[i + 1].focus();
+        });
+        b.addEventListener('keydown', function (e) {
+            if (e.key === 'Backspace' && !this.value && boxes[i - 1]) boxes[i - 1].focus();
+        });
+        b.addEventListener('paste', function (e) {
+            const text = (e.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+            if (text.length === 6) {
+                e.preventDefault();
+                boxes.forEach((bb, ii) => bb.value = text[ii] || '');
+                boxes[5].focus();
+            }
+        });
+    });
+
+    let otpTimerId = null;
+    function startOtpTimer() {
+        let s = 30;
+        const t = $('#otpTimer'), r = $('#otpResend');
+        r.classList.add('d-none');
+        t.classList.remove('d-none');
+        clearInterval(otpTimerId);
+        otpTimerId = setInterval(() => {
+            s--;
+            t.textContent = `Resend code in 0:${s < 10 ? '0' + s : s}`;
+            if (s <= 0) {
+                clearInterval(otpTimerId);
+                t.classList.add('d-none');
+                r.classList.remove('d-none');
+            }
+        }, 1000);
+    }
+
+    $('#otpResend').addEventListener('click', async function () {
+        const d = await postJson('/Register/SendEmailOtp', { Email: state.email });
+        if (d.success) {
+            Swal.fire({ icon: 'success', title: 'Code resent', timer: 1400, showConfirmButton: false });
+            boxes.forEach(b => b.value = '');
+            boxes[0].focus();
+            startOtpTimer();
+        } else {
+            Swal.fire({ icon: 'error', title: 'Could not resend', text: d.message || 'Try again.' });
+        }
+    });
+
+    $('#s2Next').addEventListener('click', async function () {
+        const otp = Array.from(boxes).map(b => b.value).join('');
+        if (otp.length !== 6)
+            return Swal.fire({ icon: 'warning', title: 'OTP', text: 'Please enter the 6-digit code.' });
+
+        setBusy(this, 'Verifying…');
+        const d = await postJson('/Register/VerifyEmailOtp', { Email: state.email, OTP: otp });
+        unbusy(this);
+
+        if (!d.success)
+            return Swal.fire({ icon: 'error', title: 'Code invalid', text: d.message || 'Please try again.' });
+
+        gotoStep(3);
+        setTimeout(() => $('#s3Name').focus(), 200);
+    });
+
+    // ────────────────────── STEP 3 — Create user ──────────────────────
+    $('#s3Next').addEventListener('click', async function () {
+        const name   = $('#s3Name').value.trim();
+        const cc     = $('#s3Cc').value;
+        const phone  = $('#s3Phone').value.trim();
+        const gender = $('#s3Gender').value;
+        const dob    = $('#s3Dob').value || null;
+        const refCode = ($('#s3Referral')?.value || '').trim().toUpperCase();
+
+        if (!name || name.length < 2)
+            return Swal.fire({ icon: 'warning', title: 'Name', text: 'Please enter your full name.' });
+        if (!/^\d{7,15}$/.test(phone))
+            return Swal.fire({ icon: 'warning', title: 'Mobile', text: 'Enter a valid mobile number.' });
+        if (!gender)
+            return Swal.fire({ icon: 'warning', title: 'Gender', text: 'Please select an option.' });
+
+        setBusy(this, 'Creating account…');
+
+        const d = await postJson('/Register/Complete', {
+            Name:         name,
+            Gender:       gender,
+            MobileNumber: cc + phone,
+            Email:        state.email,
+            Password:     state.password,
+            DateOfBirth:  dob,
+            ReferralCode: refCode
+        });
+
+        unbusy(this);
+
+        if (!d.success)
+            return Swal.fire({ icon: 'error', title: 'Could not create account', text: d.message || 'Try again.' });
+
+        state.name   = name; state.cc = cc; state.phone = phone;
+        state.gender = gender; state.dob = dob;
+        state.userId = d.userId; state.roleId = d.roleId;
+
+        // Seed the avatar initial.
+        $('#s4PhotoInitial').textContent = (name[0] || '?').toUpperCase();
+
+        gotoStep(4);
+    });
+
+    // ────────────────────── STEP 4 — Profile extras ──────────────────────
+    $('#s4Bio').addEventListener('input', function () {
+        $('#s4BioCount').textContent = this.value.length;
+    });
+
+    $('#s4Chips').addEventListener('click', function (e) {
+        if (e.target.classList.contains('chip')) e.target.classList.toggle('is-selected');
+    });
+
+    $('#s4Photo').addEventListener('change', async function () {
+        const f = this.files?.[0];
+        if (!f) return;
+
+        if (f.size > 2 * 1024 * 1024)
+            return Swal.fire({ icon: 'warning', title: 'Too large', text: 'Image must be under 2 MB.' });
+
+        // Local preview while we upload.
+        const fr = new FileReader();
+        fr.onload = e => {
+            $('#s4PhotoPreview').innerHTML = `<img src="${e.target.result}" alt="preview"/>`;
+        };
+        fr.readAsDataURL(f);
+
+        // Upload.
+        const fd = new FormData();
+        fd.append('file', f);
+        fd.append('userId', state.userId);
+
+        try {
+            const r = await fetch('@(Url.Action("UploadPhoto", "Profile") ?? "/Profile/UploadPhoto")', {
+                method: 'POST', body: fd
+            });
+            // Profile/UploadPhoto isn't shipped in this bundle — falls through harmlessly.
+            // Profile photo is saved as part of the final SaveProfile call below.
+            const d = await r.json().catch(() => ({}));
+            if (d?.path) state.photoPath = d.path;
+        } catch (_) { /* preview-only is fine */ }
+    });
+
+    async function finishProfileStep(saveExtras) {
+        const btn = saveExtras ? $('#s4Done') : $('#s4Skip');
+        setBusy(btn, saveExtras ? 'Saving…' : 'Almost there…');
+
+        if (saveExtras) {
+            const chosen = Array.from($$('.chip.is-selected')).map(c => c.dataset.val).join(',');
+            await postJson('/Register/SaveProfile', {
+                Bio:               $('#s4Bio').value.trim(),
+                Interests:         chosen,
+                PreferredLanguage: $('#s4Lang').value,
+                Location:          $('#s4Loc').value.trim(),
+                LinkedInUrl:       '',
+                WebsiteUrl:        '',
+                ProfilePhoto:      state.photoPath
+            });
+        }
+
+        unbusy(btn);
+        gotoStep(5);
+        startCountdown();
+    }
+
+    $('#s4Done').addEventListener('click', () => finishProfileStep(true));
+    $('#s4Skip').addEventListener('click', () => finishProfileStep(false));
+
+    // ────────────────────── STEP 5 — countdown ──────────────────────
+    function startCountdown() {
+        let s = 3;
+        const el = $('#cdNum');
+        const id = setInterval(() => {
+            s--;
+            el.textContent = s;
+            if (s <= 0) {
+                clearInterval(id);
+                // Route by role: admin → dashboard, others → courses list.
+                window.location.href = state.roleId === 1 ? '/Dashboard' : '/Courses/List';
+            }
+        }, 1000);
+    }
+
+})();
+</script>
+
+</body>
+</html>

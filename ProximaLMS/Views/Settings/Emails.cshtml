@@ -1,0 +1,292 @@
+@*  /Views/Settings/Emails.cshtml
+    ─────────────────────────────────────────
+    FIX (May 2026):
+      • Renamed from EmailTemplates.cshtml → Emails.cshtml
+        (controller action is Emails(), MVC looks for Emails.cshtml).
+      • Inline CSS removed → now relies on /css/admin-settings.css.
+      • Editor + Preview split into clearly labeled sections
+        instead of jammed inside one wrapper.
+    ───────────────────────────────────────── *@
+@model ProximaLMS.Models.SettingsPageVM
+@{
+    Layout = "_Layout"; ViewData["Title"] = Model.Title;
+}
+
+<div class="as-wrap">
+    <div class="as-head">
+        <h1><span class="ico"><i class="fa-solid fa-envelope"></i></span> Email Templates</h1>
+        <div class="as-crumb">
+            <a asp-action="Index">Settings</a> &rsaquo; Email Templates
+        </div>
+    </div>
+
+    <div class="as-split">
+        <!-- ── LEFT: list ──────────────────────────────────────── -->
+        <div class="as-card">
+            <div class="as-card-head">
+                <div class="as-card-title">Transactional emails</div>
+            </div>
+            <div class="as-card-body" id="listBody">
+                <div class="as-empty">Loading…</div>
+            </div>
+        </div>
+
+        <!-- ── RIGHT: editor ───────────────────────────────────── -->
+        <div class="as-card" id="editorCard" style="display:none;">
+            <div class="as-card-head">
+                <div class="as-card-title" id="editorTitle">Edit template</div>
+                <div class="d-flex gap-2">
+                    <button class="as-btn-ghost" id="btnRefreshPreview">
+                        <i class="fa-solid fa-rotate"></i> Refresh preview
+                    </button>
+                    <button class="as-btn" id="btnSave">
+                        <i class="fa-solid fa-floppy-disk"></i> Save
+                    </button>
+                </div>
+            </div>
+            <div class="as-card-body">
+                <input type="hidden" id="fId" value="0" />
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-5">
+                        <label class="as-label">Code</label>
+                        <input id="fCode" class="as-input" disabled
+                               style="background:#f9fafb;color:#6b7280;
+                                      font-family:ui-monospace,Menlo,monospace;font-size:13px;" />
+                    </div>
+                    <div class="col-md-5">
+                        <label class="as-label">Name</label>
+                        <input id="fName" class="as-input" />
+                    </div>
+                    <div class="col-md-2 d-flex align-items-end">
+                        <label class="as-switch">
+                            <input id="fActive" type="checkbox" checked />
+                            <span class="slider"></span>
+                        </label>
+                        <span style="margin-left:8px;font-size:12px;color:var(--as-ink2);">Active</span>
+                    </div>
+                    <div class="col-12">
+                        <label class="as-label">Subject <span class="req">*</span></label>
+                        <input id="fSubject" class="as-input"
+                               placeholder="e.g. Welcome to ProximaLMS, {{Name}}!" />
+                    </div>
+                </div>
+
+                @* ─── EDITOR + PREVIEW STACK (FIXED LAYOUT) ─────────── *@
+                <div class="as-edit-stack">
+
+                    @* Section 1: HTML editor *@
+                    <div class="stack-section">
+                        <div class="stack-section-head">
+                            <label class="as-label">HTML body <span class="req">*</span></label>
+                            <span class="stack-hint">Variables update preview live</span>
+                        </div>
+                        <div class="as-hint" id="varChips" style="margin-bottom:8px;">
+                            <i class="fa-solid fa-info-circle"></i>
+                            Click any variable to copy:
+                        </div>
+                        <textarea id="fHtml" class="as-code-editor" rows="14" spellcheck="false"></textarea>
+                    </div>
+
+                    @* Section 2: Live preview *@
+                    <div class="stack-section">
+                        <div class="stack-section-head">
+                            <label class="as-label">Email preview</label>
+                            <span class="stack-hint">Auto-refreshes as you type</span>
+                        </div>
+
+                        <!-- Mock email header + iframe -->
+                        <div style="background:#f5f3fa;border:1px solid var(--as-border);
+                                    border-radius:10px 10px 0 0;padding:10px 14px;
+                                    font-size:13px;color:#4b5563;">
+                            <div>
+                                <strong>Subject:</strong>
+                                <span id="prevSubject" style="color:#1f1d2b;">(none)</span>
+                            </div>
+                            <div style="font-size:12px;color:#6b7280;margin-top:2px;">
+                                From: ProximaLMS &lt;noreply@@proximalms.com&gt;
+                            </div>
+                        </div>
+                        <iframe id="prev" sandbox="allow-same-origin" title="preview"
+                                style="width:100%;min-height:340px;
+                                       border:1px solid var(--as-border);border-top:none;
+                                       border-radius:0 0 10px 10px;background:#fff;
+                                       display:block;"></iframe>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    (function () {
+        let rows = [];
+        let current = null;
+
+        // Sample values used for live preview.
+        const sample = {
+            '{{Name}}': 'Alex Kumar',
+            '{{Email}}': 'alex@example.com',
+            '{{OTP}}': '482190',
+            '{{CourseName}}': 'Mastering JavaScript',
+            '{{InstructorName}}': 'Priya Sharma',
+            '{{CompletionDate}}': new Date().toLocaleDateString(),
+            '{{ResetLink}}': 'https://proximalms.com/reset?token=abc123',
+            '{{LoginLink}}': 'https://proximalms.com/login',
+            '{{Year}}': new Date().getFullYear()
+        };
+
+        async function load() {
+            const lb = document.getElementById('listBody');
+            lb.innerHTML = '<div class="as-empty">Loading…</div>';
+            try {
+                const r = await fetch('@Url.Action("EmailList", "Settings")');
+                const d = await r.json();
+                rows = d.data || [];
+                renderList();
+            } catch { lb.innerHTML = '<div class="as-empty">Could not load.</div>'; }
+        }
+
+        function esc(s) {
+            return (s ?? '').toString().replace(/[<>&"]/g,
+                c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+        }
+
+        function renderList() {
+            const lb = document.getElementById('listBody');
+            if (!rows.length) {
+                lb.innerHTML = '<div class="as-empty">No email templates yet.</div>';
+                return;
+            }
+            lb.innerHTML = '<div class="as-list">' + rows.map(r => `
+                <div class="as-list-item ${current?.TemplateID === r.TemplateID ? 'active' : ''}"
+                     onclick="openTemplate(${r.TemplateID})">
+                    <div class="as-list-main">
+                        <code class="as-code">${esc(r.TemplateCode)}</code>
+                        <div style="margin-top:4px;"><strong>${esc(r.TemplateName)}</strong></div>
+                        <div style="font-size:12px;color:var(--as-ink2);margin-top:2px;">
+                            ${r.IsActive
+                    ? '<span style="color:#15803d">active</span>'
+                    : '<span style="color:#b91c1c">inactive</span>'}
+                        </div>
+                    </div>
+                </div>`).join('') + '</div>';
+        }
+
+        window.openTemplate = async function (id) {
+            try {
+                const r = await fetch('@Url.Action("EmailGet", "Settings")?id=' + id);
+                const d = await r.json();
+                current = d.data || rows.find(x => x.TemplateID === id);
+                if (!current) return;
+                showEditor();
+                renderList();
+            } catch { /* ignore */ }
+        };
+
+        function showEditor() {
+            document.getElementById('editorCard').style.display = '';
+            document.getElementById('editorTitle').textContent = 'Edit "' + current.TemplateName + '"';
+            document.getElementById('fId').value = current.TemplateID;
+            document.getElementById('fCode').value = current.TemplateCode;
+            document.getElementById('fName').value = current.TemplateName;
+            document.getElementById('fSubject').value = current.Subject || '';
+            document.getElementById('fHtml').value = current.HtmlBody || '';
+            document.getElementById('fActive').checked = !!current.IsActive;
+            renderVarChips(current.Variables || '');
+            refreshPreview();
+        }
+
+        function renderVarChips(varsCsv) {
+            const wrap = document.getElementById('varChips');
+            const baseHtml = '<i class="fa-solid fa-info-circle"></i> Click any variable to copy: ';
+            if (!varsCsv) {
+                wrap.innerHTML = baseHtml + '<span style="color:#9aa0ac">none defined</span>';
+                return;
+            }
+            wrap.innerHTML = baseHtml + varsCsv.split(',').map(v => v.trim()).filter(Boolean).map(v => {
+                const token = v.startsWith('{{') ? v : `{{${v}}}`;
+                return `<span class="as-chip" data-var="${esc(token)}">${esc(token)}</span>`;
+            }).join('');
+
+            wrap.querySelectorAll('.as-chip[data-var]').forEach(chip => {
+                chip.style.cursor = 'pointer';
+                chip.addEventListener('click', () => {
+                    const v = chip.dataset.var;
+                    navigator.clipboard?.writeText(v);
+                    const o = chip.textContent;
+                    chip.textContent = 'Copied!';
+                    setTimeout(() => chip.textContent = o, 700);
+                });
+            });
+        }
+
+        function mergeSample(s) {
+            let out = s;
+            Object.entries(sample).forEach(([k, v]) => { out = out.split(k).join(v); });
+            // Any remaining {{x}} gets a visual placeholder so users see they're unset.
+            return out.replace(/\{\{(\w+)\}\}/g,
+                '<span style="background:#fef3c7;padding:1px 4px;border-radius:3px;color:#b45309;">[$1]</span>');
+        }
+
+        function refreshPreview() {
+            const subj = document.getElementById('fSubject').value || '(no subject)';
+            const html = document.getElementById('fHtml').value || '';
+            document.getElementById('prevSubject').textContent =
+                subj.replace(/\{\{(\w+)\}\}/g, (_, k) => sample['{{' + k + '}}'] || '[' + k + ']');
+
+            const iframe = document.getElementById('prev');
+            const doc = iframe.contentDocument || iframe.contentWindow.document;
+            doc.open();
+            doc.write('<style>body{font-family:Arial,sans-serif;margin:0;padding:20px;color:#1f1d2b;}</style>'
+                + mergeSample(html));
+            doc.close();
+        }
+
+        document.getElementById('btnRefreshPreview').addEventListener('click', refreshPreview);
+
+        let to = null;
+        ['fHtml', 'fSubject'].forEach(id => {
+            document.getElementById(id).addEventListener('input', () => {
+                clearTimeout(to);
+                to = setTimeout(refreshPreview, 350);
+            });
+        });
+
+        document.getElementById('btnSave').addEventListener('click', async function () {
+            const name = document.getElementById('fName').value.trim();
+            const subj = document.getElementById('fSubject').value.trim();
+            const html = document.getElementById('fHtml').value;
+            if (!name) return Swal.fire({ icon: 'warning', title: 'Name required' });
+            if (!subj) return Swal.fire({ icon: 'warning', title: 'Subject required' });
+            if (!html.trim()) return Swal.fire({ icon: 'warning', title: 'HTML body required' });
+
+            const body = {
+                TemplateID: +document.getElementById('fId').value,
+                TemplateCode: document.getElementById('fCode').value,
+                TemplateName: name,
+                Subject: subj,
+                HtmlBody: html,
+                Variables: current?.Variables || '',
+                IsActive: document.getElementById('fActive').checked
+            };
+            this.disabled = true;
+            const r = await fetch('@Url.Action("EmailSave", "Settings")', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(body)
+            });
+            const d = await r.json();
+            this.disabled = false;
+            if (d.success) {
+                Swal.fire({ icon: 'success', title: 'Saved', timer: 1200, showConfirmButton: false });
+                await load();
+                openTemplate(body.TemplateID);
+            } else Swal.fire({ icon: 'error', title: 'Failed', text: d.message || '' });
+        });
+
+        load();
+    })();
+</script>

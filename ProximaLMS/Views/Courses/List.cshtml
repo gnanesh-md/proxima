@@ -1,0 +1,291 @@
+﻿@model IEnumerable<ProximaLMS.Models.CourseSummaryViewModel>
+@{
+    ViewData["Title"] = "Courses List";
+    Layout = "_Layout";
+}
+@inject IHttpContextAccessor HttpContextAccessor
+
+@{
+    var roleId = HttpContextAccessor.HttpContext?.Session.GetInt32("RoleID") ?? 0;
+}
+
+<style>
+    :root {
+        --primary: #4C1864;
+        --secondary: #7B2CBF;
+        --bg: #f4f6fb;
+    }
+
+    .page--course .main-content {
+        padding: 10px 10px;
+        background: var(--bg);
+    }
+
+    .container-fluid 
+    {
+    padding-left: 0px !important;
+        padding-right: 0px !important;
+    }
+    /* HEADER */
+    .course-header {
+        background: #fff;
+        padding: 20px 25px;
+        /* border-radius: 18px; */
+        box-shadow: 0 8px 30px rgba(0,0,0,.05);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+    }
+
+    .course-title-main {
+        font-size: 22px;
+        font-weight: 700;
+        color: var(--primary);
+        margin: 0;
+    }
+
+    .search-box {
+       /*  border-radius: 30px; */
+        padding: 8px 15px;
+        border: 1px solid #ddd;
+        width: 350px;
+        padding-right: 35px;
+    }
+
+    .btn-add-course {
+        background: linear-gradient(90deg,var(--primary),var(--secondary));
+        color: #fff;
+        border: none;
+       /*  border-radius: 30px; */
+        padding: 8px 18px;
+    }
+
+    /* CARD */
+    .course-card {
+        border: none;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        transition: .3s;
+        background: #fff;
+    }
+
+        .course-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 35px rgba(0,0,0,.12);
+        }
+
+        .course-card img {
+            height: 170px;
+            object-fit: fill;
+        }
+
+    .course-body {
+        padding: 15px;
+    }
+
+    .course-name {
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+    .course-level {
+        font-size: 12px;
+        background: linear-gradient(90deg,var(--primary),var(--secondary));
+        color: #fff;
+        padding: 3px 8px;
+        border-radius: 6px;
+    }
+
+    .course-price {
+        font-weight: 700;
+        color: var(--primary);
+    }
+
+    .status-badge {
+        font-size: 12px;
+        padding: 4px 10px;
+        border-radius: 20px;
+    }
+
+    .active-badge {
+        background: #e6f9f0;
+        color: #198754;
+    }
+
+    .inactive-badge {
+        background: #fde8e8;
+        color: #dc3545;
+    }
+
+</style>
+
+<div class="page--course">
+    <div class="main-content">
+
+        <!-- HEADER -->
+        <div class="course-header">
+
+            <h4 class="course-title-main">
+                ALL COURSES
+            </h4>
+
+            <div class="d-flex gap-2 align-items-center" style="gap:25px">
+
+                <input type="text"
+                       id="courseSearch"
+                       class="form-control search-box"
+                       placeholder="Search courses..." />
+
+                @if (roleId == 1)
+                {
+                    <a href="@Url.Action("Create","Courses")"
+                       class="btn btn-add-course">
+                        <i class="fa fa-plus me-1"></i> Add Course
+                    </a>
+                }
+
+            </div>
+        </div>
+
+        <!-- COURSES -->
+        @if (Model != null && Model.Any())
+        {
+            <div class="row g-4" id="courseContainer" style="padding-bottom:10px">
+
+                @foreach (var item in Model)
+                {
+                    <div class="col-md-4 course-item" style="padding-bottom:25px;"
+                         data-title="@item.CourseTitle.ToLower()"
+                         data-tutor="@item.TutorName.ToLower()">
+
+                        <div class="card course-card">
+
+                            <img src="@(string.IsNullOrEmpty(item.CoverImage)
+                            ? "/assets/images/noimage.png"
+                            : Url.Content("~/uploads/" + item.CoverImage))" />
+
+                            <div class="course-body">
+
+                                <div class="course-name">@item.CourseTitle</div>
+                                <div class="text-muted small mb-1">
+                                    <i class="fa fa-user me-1"></i>@item.TutorName
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="course-level">@item.CourseLevelName</span>
+                                    <span class="course-price">₹@item.Price</span>
+                                </div>
+
+                                <!-- STATUS -->
+                                <span class="status-badge @(item.IsActive ? "active-badge" : "inactive-badge")"
+                                      id="status-@item.CourseID">
+                                    @(item.IsActive ? "Active" : "Inactive")
+                                </span>
+
+                                <!-- ACTIONS -->
+                                <div class="d-flex gap-2 mt-3" style="gap:5px">
+
+                                    <a href="@Url.Action("Details","Courses",new { id=item.CourseID })"
+                                       class="btn btn-outline-primary w-100">
+                                        View
+                                    </a>
+                                    @if (roleId == 1)
+                                    {
+                                        <a href="@Url.Action("Edit","Courses",new { id=item.CourseID })"
+                                           class="btn btn-outline-warning w-100" style="padding-left:5px;padding-right:5px">
+                                            Edit
+                                        </a>
+
+                                        <button class="btn btn-outline-danger toggle-course w-100"
+                                                data-id="@item.CourseID"
+                                                data-status="@item.IsActive">
+                                            @(item.IsActive ? "InActivate" : "Activate")
+                                        </button>
+                                    }                                   
+
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                }
+
+            </div>
+        }
+        else
+        {
+            <div class="text-center mt-5">
+                <h5>No Courses Available</h5>
+            </div>
+        }
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<script>
+
+    /* SEARCH */
+    $("#courseSearch").on("keyup", function () {
+        let value = $(this).val().toLowerCase();
+        $(".course-item").filter(function () {
+            $(this).toggle(
+                $(this).text().toLowerCase().indexOf(value) > -1
+            );
+        });
+    });
+
+    /* TOGGLE ACTIVE / INACTIVE */
+    $(document).on("click", ".toggle-course", function () {
+
+        let button = $(this);
+        let id = button.data("id");
+        let currentStatus = button.data("status");
+        let newStatus = !currentStatus;
+
+        Swal.fire({
+            title: newStatus ? "Activate Course?" : "InActivate Course?",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonColor: "#4C1864"
+        }).then((result) => {
+            if (result.isConfirmed) {
+
+                $.ajax({
+                    url: '/Master/UpdateCourseStatus',
+                    type: 'POST',
+                    data: {
+                        id: id,
+                        isActive: newStatus
+                    },
+                    success: function (res) {
+
+                        if (res.success) {
+
+                            button.data("status", newStatus);
+                            button.text(newStatus ? "InActivate" : "Activate");
+
+                            let badge = $("#status-" + id);
+                            badge.removeClass("active-badge inactive-badge");
+
+                            if (newStatus) {
+                                badge.addClass("active-badge").text("Active");
+                            } else {
+                                badge.addClass("inactive-badge").text("Inactive");
+                            }
+
+                            Swal.fire("Updated!", "", "success");
+                        }
+                    }
+                });
+
+            }
+        });
+
+    });
+
+</script>

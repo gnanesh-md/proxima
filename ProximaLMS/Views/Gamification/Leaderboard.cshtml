@@ -1,0 +1,189 @@
+@{
+    ViewData["Title"] = "Leaderboard";
+    Layout = "_Layout";
+    var top      = ViewBag.Top as Newtonsoft.Json.Linq.JArray  ?? new Newtonsoft.Json.Linq.JArray();
+    var me       = ViewBag.Me  as Newtonsoft.Json.Linq.JObject ?? new Newtonsoft.Json.Linq.JObject();
+    var myId     = me["StudentID"]?.ToString() ?? me["studentId"]?.ToString() ?? "";
+    var myRankVal= (int?)me["MyRank"]      ?? 0;
+    var myPts    = (int?)me["TotalPoints"] ?? 0;
+    var podList  = top.Take(3).ToList();
+    var podOrder = podList.Count >= 3 ? new int[] { 1, 0, 2 } : new int[] { 1, 0 };
+}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--g1:#4C1864;--g2:#7B2CBF;--g3:#9D4EDD;--ink:#1a1523;--sub:#4b5563;--muted:#94a3b8;--border:#ede9fe;--bg:#f8f5ff;--card:#fff;--sh:0 2px 12px rgba(76,24,100,.07);--sh-md:0 8px 28px rgba(76,24,100,.13);}
+*{box-sizing:border-box;}
+.lb-pg{display:flex;flex-direction:column;gap:22px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;padding-bottom:40px;}
+
+/* HERO */
+.lb-hero{background:linear-gradient(135deg,#0f0528 0%,#4C1864 30%,#7B2CBF 65%,#0EA5E9 130%);border-radius:24px;padding:32px 36px;color:#fff;position:relative;overflow:hidden;box-shadow:0 14px 50px rgba(76,24,100,.28);}
+.lb-hero::before{content:'🏆';position:absolute;right:36px;bottom:-10px;font-size:120px;opacity:.1;line-height:1;pointer-events:none;}
+.lb-hero::after{content:'';position:absolute;width:280px;height:280px;border-radius:50%;background:rgba(14,165,233,.12);top:-100px;right:-60px;pointer-events:none;}
+.lb-hero-inner{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;}
+.lb-hero-left h1{margin:0 0 6px;font-size:1.9rem;font-weight:900;}
+.lb-hero-left p{margin:0;font-size:.9rem;opacity:.82;}
+.lb-hero-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:16px;padding:14px 22px;text-align:center;}
+.lb-hero-pill-val{font-size:1.7rem;font-weight:900;line-height:1;}
+.lb-hero-pill-lbl{font-size:.72rem;font-weight:600;opacity:.8;margin-top:3px;}
+
+/* PODIUM */
+.lb-podium{display:flex;align-items:flex-end;justify-content:center;gap:10px;padding:10px 0 0;}
+.lb-pod{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;max-width:160px;}
+.lb-pod-av{width:60px;height:60px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:900;color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.18);position:relative;}
+.lb-pod-av.rank1{width:72px;height:72px;font-size:26px;background:linear-gradient(135deg,#f59e0b,#fbbf24);}
+.lb-pod-av.rank2{background:linear-gradient(135deg,#6b7280,#9ca3af);}
+.lb-pod-av.rank3{background:linear-gradient(135deg,#b45309,#d97706);}
+.lb-pod-crown{position:absolute;top:-18px;font-size:22px;line-height:1;}
+.lb-pod-name{font-size:.78rem;font-weight:700;color:var(--ink);text-align:center;max-width:130px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lb-pod-pts{font-size:.75rem;font-weight:800;color:var(--g2);}
+.lb-pod-base{border-radius:12px 12px 0 0;width:100%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:900;color:#fff;padding:10px 0;}
+.lb-pod-base.h1{height:72px;background:linear-gradient(180deg,#f59e0b,#d97706);}
+.lb-pod-base.h2{height:52px;background:linear-gradient(180deg,#9ca3af,#6b7280);}
+.lb-pod-base.h3{height:40px;background:linear-gradient(180deg,#d97706,#b45309);}
+
+/* TABLE CARD */
+.lb-card{background:var(--card);border:1px solid var(--border);border-radius:20px;box-shadow:var(--sh);overflow:hidden;}
+.lb-card-head{padding:16px 22px;border-bottom:1px solid #f5f3ff;display:flex;align-items:center;justify-content:space-between;}
+.lb-card-title{font-size:.92rem;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px;}
+.lb-card-title i{color:var(--g2);}
+
+.lb-row{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid #faf7ff;transition:background .15s;}
+.lb-row:last-child{border-bottom:none;}
+.lb-row:hover{background:#faf5ff;}
+.lb-row.lb-me{background:linear-gradient(90deg,#f3e8ff,#faf5ff);border-left:3px solid var(--g2);}
+
+.lb-num{width:38px;font-size:.9rem;font-weight:900;text-align:center;flex-shrink:0;color:var(--sub);}
+.lb-num.gold{color:#d97706;}
+.lb-num.silver{color:#6b7280;}
+.lb-num.bronze{color:#b45309;}
+
+.lb-av{width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0;}
+.lb-av.me-av{background:linear-gradient(135deg,#0EA5E9,#7B2CBF);}
+
+.lb-info{flex:1;min-width:0;}
+.lb-name{font-size:.9rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.lb-sub{font-size:.72rem;color:var(--muted);margin-top:2px;}
+
+.lb-pts-badge{display:flex;flex-direction:column;align-items:flex-end;gap:2px;}
+.lb-pts-val{font-size:1rem;font-weight:900;color:var(--g2);}
+.lb-pts-lbl{font-size:.68rem;color:var(--muted);font-weight:600;}
+
+.lb-you-tag{font-size:.68rem;font-weight:800;background:var(--g2);color:#fff;padding:2px 9px;border-radius:20px;margin-left:7px;}
+
+/* MY RANK STRIP */
+.lb-myrank{background:linear-gradient(135deg,#f3e8ff,#ede9fe);border:1px solid #c4b5fd;border-radius:16px;padding:16px 22px;display:flex;align-items:center;gap:14px;}
+.lb-myrank-badge{width:50px;height:50px;border-radius:14px;background:linear-gradient(135deg,var(--g1),var(--g2));display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;flex-shrink:0;}
+.lb-myrank-info{flex:1;}
+.lb-myrank-info strong{display:block;font-size:.95rem;font-weight:800;color:var(--ink);}
+.lb-myrank-info span{font-size:.78rem;color:var(--sub);}
+.lb-myrank-pts{font-size:1.4rem;font-weight:900;color:var(--g2);}
+
+.pg-empty{background:var(--card);border:1px dashed #d8b4fe;border-radius:20px;padding:52px 24px;text-align:center;color:var(--muted);}
+.pg-empty-ico{font-size:52px;margin-bottom:12px;}
+.pg-empty h3{font-size:1.1rem;font-weight:800;color:var(--ink);margin:0 0 8px;}
+</style>
+
+<div class="lb-pg">
+
+    <!-- HERO -->
+    <div class="lb-hero">
+        <div class="lb-hero-inner">
+            <div class="lb-hero-left">
+                <h1><i class="fa-solid fa-ranking-star me-2"></i>Leaderboard</h1>
+                <p>Top learners ranked by total points earned</p>
+            </div>
+            @if (myRankVal > 0)
+            {
+                <div class="lb-hero-pill">
+                    <div class="lb-hero-pill-val">#@myRankVal</div>
+                    <div class="lb-hero-pill-lbl">Your Rank</div>
+                </div>
+            }
+        </div>
+    </div>
+
+    @if (!top.Any())
+    {
+        <div class="pg-empty">
+            <div class="pg-empty-ico">📊</div>
+            <h3>No leaderboard data yet</h3>
+            <p style="font-size:.84rem;">Complete courses and earn points to appear here!</p>
+        </div>
+    }
+    else
+    {
+        <!-- MY RANK STRIP -->
+        @if (myRankVal > 0)
+        {
+            <div class="lb-myrank">
+                <div class="lb-myrank-badge"><i class="fa-solid fa-user"></i></div>
+                <div class="lb-myrank-info">
+                    <strong>Your Position</strong>
+                    <span>Rank #@myRankVal on the global leaderboard</span>
+                </div>
+                <div class="lb-myrank-pts">@myPts <span style="font-size:.75rem;font-weight:600;color:var(--muted);">pts</span></div>
+            </div>
+        }
+
+        <!-- PODIUM (top 3) -->
+        @if (podList.Count >= 2)
+        {
+            <div class="lb-podium">
+                @foreach (var pi in podOrder)
+                {
+                    if (pi >= podList.Count) continue;
+                    var pu = podList[pi];
+                    var prank = pi + 1;
+                    var pname = pu["StudentName"]?.ToString() ?? pu["studentName"]?.ToString() ?? pu["name"]?.ToString() ?? "Learner";
+                    var ppts = (int?)(pu["TotalPoints"] ?? pu["totalPoints"]) ?? 0;
+                    var pinit = pname.Length > 0 ? pname.Trim()[0].ToString().ToUpper() : "?";
+                    var phClass = prank == 1 ? "h1" : prank == 2 ? "h2" : "h3";
+                    var pavClass = prank == 1 ? "rank1" : prank == 2 ? "rank2" : "rank3";
+                    var medal = prank == 1 ? "🥇" : prank == 2 ? "🥈" : "🥉";
+                    <div class="lb-pod">
+                        @if (prank == 1) { <div class="lb-pod-crown">👑</div> }
+                        <div class="lb-pod-av @pavClass">@pinit</div>
+                        <div class="lb-pod-name">@pname</div>
+                        <div class="lb-pod-pts">@ppts pts</div>
+                        <div class="lb-pod-base @phClass">@medal</div>
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- FULL LIST -->
+        <div class="lb-card">
+            <div class="lb-card-head">
+                <div class="lb-card-title"><i class="fa-solid fa-list-ol"></i> Full Rankings</div>
+                <span style="font-size:.75rem;color:var(--muted);font-weight:600;">@top.Count learners</span>
+            </div>
+            @{int ri = 0;}
+            @foreach (var u in top)
+            {
+                ri++;
+                var nm = u["StudentName"]?.ToString() ?? u["studentName"]?.ToString() ?? u["name"]?.ToString() ?? "Learner";
+                var pts = (int?)(u["TotalPoints"] ?? u["totalPoints"]) ?? 0;
+                var init = nm.Length > 0 ? nm.Trim()[0].ToString().ToUpper() : "?";
+                var uid = u["StudentID"]?.ToString() ?? u["studentId"]?.ToString() ?? u["StudentId"]?.ToString() ?? "";
+                var isCurrent = uid == myId;
+                var numClass = ri == 1 ? "gold" : ri == 2 ? "silver" : ri == 3 ? "bronze" : "";
+                var medal = ri == 1 ? "🥇" : ri == 2 ? "🥈" : ri == 3 ? "🥉" : ri.ToString();
+                <div class="lb-row @(isCurrent ? "lb-me" : "")">
+                    <div class="lb-num @numClass">@medal</div>
+                    <div class="lb-av @(isCurrent ? "me-av" : "")">@init</div>
+                    <div class="lb-info">
+                        <div class="lb-name">
+                            @nm
+                            @if (isCurrent) { <span class="lb-you-tag">You</span> }
+                        </div>
+                        <div class="lb-sub">Rank #@ri</div>
+                    </div>
+                    <div class="lb-pts-badge">
+                        <div class="lb-pts-val">@pts</div>
+                        <div class="lb-pts-lbl">points</div>
+                    </div>
+                </div>
+            }
+        </div>
+    }
+</div>

@@ -1,0 +1,200 @@
+@*  /Views/Settings/ReferralPolicy.cshtml  *@
+@model ProximaLMS.Models.SettingsPageVM
+@{ Layout = "_Layout"; ViewData["Title"] = Model.Title; }
+
+<div class="as-wrap">
+    <div class="as-head">
+        <h1><span class="ico"><i class="fa-solid fa-share-nodes"></i></span> Referral Policy</h1>
+        <div class="as-crumb">
+            <a asp-action="Index">Settings</a> &rsaquo; Referral Policy
+        </div>
+    </div>
+
+    <div class="as-card">
+        <div class="as-card-head">
+            <div class="as-card-title">Referrer rewards &amp; referee discounts</div>
+            <div class="d-flex gap-2 align-items-center">
+                <label class="as-switch m-0">
+                    <input id="fActive" type="checkbox" checked />
+                    <span></span> Program enabled
+                </label>
+                <button class="as-btn" id="btnSave"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+            </div>
+        </div>
+        <div class="as-card-body" id="loadingMsg">
+            <div class="as-empty">Loading…</div>
+        </div>
+        <div class="as-card-body d-none" id="formBody">
+
+            <div class="row g-4">
+                <!-- ── REFERRER reward ──────────────────── -->
+                <div class="col-md-6">
+                    <div style="background:#f5f3fa;border-radius:14px;padding:20px 22px;height:100%;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                            <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--as-primary),var(--as-primary-2));color:#fff;display:flex;align-items:center;justify-content:center;">
+                                <i class="fa-solid fa-gift"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:700;font-size:15px;">When a friend signs up &amp; buys</div>
+                                <div style="font-size:12px;color:var(--as-ink2);">The referrer earns…</div>
+                            </div>
+                        </div>
+                        <label class="as-label">Referrer points <span class="req">*</span></label>
+                        <input id="fRefPoints" type="number" class="as-input" min="0" value="0" />
+                        <div class="as-hint">Awarded once the referee makes their first purchase.</div>
+                    </div>
+                </div>
+
+                <!-- ── REFEREE discount ──────────────────── -->
+                <div class="col-md-6">
+                    <div style="background:#fef3c7;border-radius:14px;padding:20px 22px;height:100%;">
+                        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
+                            <div style="width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,#f59e0b,#fb923c);color:#fff;display:flex;align-items:center;justify-content:center;">
+                                <i class="fa-solid fa-percent"></i>
+                            </div>
+                            <div>
+                                <div style="font-weight:700;font-size:15px;">When a friend uses your code</div>
+                                <div style="font-size:12px;color:#b45309;">They get a discount on their first purchase</div>
+                            </div>
+                        </div>
+
+                        <label class="as-label">Discount type <span class="req">*</span></label>
+                        <div class="mode-toggle mb-2">
+                            <button type="button" class="mt-btn" data-type="PERCENT" id="typePercent">
+                                <i class="fa-solid fa-percent"></i> Percent
+                            </button>
+                            <button type="button" class="mt-btn" data-type="FLAT" id="typeFlat">
+                                <i class="fa-solid fa-indian-rupee-sign"></i> Flat
+                            </button>
+                        </div>
+
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="as-label" id="fValueLabel">Discount value <span class="req">*</span></label>
+                                <input id="fRefereeValue" type="number" class="as-input" min="0" step="0.01" value="0" />
+                            </div>
+                            <div class="col-12" id="maxWrap">
+                                <label class="as-label">Max discount cap <span style="color:#9aa0ac;font-weight:400;">(optional)</span></label>
+                                <input id="fMaxDiscount" type="number" class="as-input" min="0" step="0.01" placeholder="e.g. 500" />
+                                <div class="as-hint">For percent discounts, the rupee amount is capped at this value.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── VALIDITY ──────────────────── -->
+                <div class="col-md-6">
+                    <label class="as-label">Coupon validity (days) <span class="req">*</span></label>
+                    <input id="fValidity" type="number" class="as-input" min="1" max="365" value="30" />
+                    <div class="as-hint">How long the referee's coupon stays usable after issue.</div>
+                </div>
+            </div>
+
+            <!-- ── LIVE EXAMPLE ──────────────────── -->
+            <div style="background:var(--as-bg);border-radius:14px;padding:20px;margin-top:24px;border:1px dashed var(--as-border);">
+                <div style="font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--as-ink2);margin-bottom:10px;">
+                    <i class="fa-solid fa-eye"></i> Example
+                </div>
+                <div id="example" style="font-size:14px;line-height:1.7;color:var(--as-ink);">…</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+(function () {
+    let discountType = 'FLAT';
+
+    async function load() {
+        try {
+            const r = await fetch('@Url.Action("ReferralPolicyLoad","Settings")');
+            const d = await r.json();
+            populate(d.data || {});
+        } catch {
+            document.getElementById('loadingMsg').innerHTML = '<div class="as-empty">Could not load.</div>';
+        }
+    }
+
+    function populate(p) {
+        document.getElementById('fRefPoints').value    = p.ReferrerPoints ?? 0;
+        document.getElementById('fRefereeValue').value = p.RefereeDiscountValue ?? 0;
+        document.getElementById('fMaxDiscount').value  = p.RefereeMaxDiscount ?? '';
+        document.getElementById('fValidity').value     = p.RefereeCouponValidityDays ?? 30;
+        document.getElementById('fActive').checked     = (p.IsActive ?? true);
+
+        discountType = (p.RefereeDiscountType === 'PERCENT') ? 'PERCENT' : 'FLAT';
+        setDiscountType(discountType);
+
+        document.getElementById('loadingMsg').classList.add('d-none');
+        document.getElementById('formBody').classList.remove('d-none');
+        updateExample();
+    }
+
+    function setDiscountType(t) {
+        discountType = t;
+        document.getElementById('typePercent').classList.toggle('is-active', t === 'PERCENT');
+        document.getElementById('typeFlat').classList.toggle('is-active',    t === 'FLAT');
+        document.getElementById('maxWrap').style.display = t === 'PERCENT' ? '' : 'none';
+        document.getElementById('fValueLabel').innerHTML = t === 'PERCENT'
+            ? 'Discount percent <span class="req">*</span> <span style="color:#9aa0ac;font-weight:400;">(e.g. 10 for 10%)</span>'
+            : 'Discount amount (₹) <span class="req">*</span>';
+        updateExample();
+    }
+
+    document.getElementById('typePercent').addEventListener('click', () => setDiscountType('PERCENT'));
+    document.getElementById('typeFlat').addEventListener('click',    () => setDiscountType('FLAT'));
+    ['fRefPoints','fRefereeValue','fMaxDiscount','fValidity'].forEach(id =>
+        document.getElementById(id).addEventListener('input', updateExample));
+
+    function updateExample() {
+        const pts = +document.getElementById('fRefPoints').value || 0;
+        const val = +document.getElementById('fRefereeValue').value || 0;
+        const max = +document.getElementById('fMaxDiscount').value || 0;
+        const days= +document.getElementById('fValidity').value || 30;
+
+        const refereeDesc = discountType === 'PERCENT'
+            ? `<strong>${val}% off</strong>${max ? ` (up to ₹${max.toLocaleString('en-IN')})` : ''}`
+            : `<strong>₹${val.toLocaleString('en-IN')} off</strong>`;
+
+        document.getElementById('example').innerHTML = `
+            <div>Alex shares their referral code with Priya.</div>
+            <div style="margin-top:6px;">→ Priya gets a coupon for ${refereeDesc} on her first course purchase, valid for <strong>${days} days</strong>.</div>
+            <div style="margin-top:6px;">→ When Priya buys, Alex earns <strong>${pts} points</strong>.</div>`;
+    }
+
+    document.getElementById('btnSave').addEventListener('click', async function () {
+        const refereeVal = +document.getElementById('fRefereeValue').value;
+        if (refereeVal < 0) return Swal.fire({icon:'warning',title:'Discount value cannot be negative'});
+        if (discountType === 'PERCENT' && refereeVal > 100)
+            return Swal.fire({icon:'warning',title:'Percent must be between 0 and 100'});
+
+        const body = {
+            ReferrerPoints:            +document.getElementById('fRefPoints').value || 0,
+            RefereeDiscountType:       discountType,
+            RefereeDiscountValue:      refereeVal,
+            RefereeMaxDiscount:        document.getElementById('fMaxDiscount').value ? +document.getElementById('fMaxDiscount').value : null,
+            RefereeCouponValidityDays: +document.getElementById('fValidity').value || 30,
+            IsActive:                  document.getElementById('fActive').checked,
+            ActionBy:                  'Admin'
+        };
+
+        this.disabled = true;
+        const r = await fetch('@Url.Action("ReferralPolicySave","Settings")', {
+            method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body)
+        });
+        const d = await r.json();
+        this.disabled = false;
+        if (d.success) Swal.fire({icon:'success',title:'Saved',timer:1200,showConfirmButton:false});
+        else Swal.fire({icon:'error',title:'Failed',text:d.message||''});
+    });
+
+    load();
+})();
+</script>
+
+<style>
+    .mode-toggle { display: inline-flex; background: #fff; border: 1.5px solid var(--as-border); border-radius: 10px; padding: 4px; gap: 4px; }
+    .mt-btn { background: transparent; border: none; padding: 7px 16px; border-radius: 7px; font-weight: 700; font-size: 12.5px; color: var(--as-ink2); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all .15s; }
+    .mt-btn.is-active { background: linear-gradient(135deg, var(--as-primary), var(--as-primary-2)); color: #fff; }
+</style>

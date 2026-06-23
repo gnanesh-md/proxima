@@ -1,0 +1,205 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="keywords" content="" />
+    <meta name="author" content="" />
+    <meta name="robots" content="" />
+    <title>ProximaLMS - @ViewData["Title"]</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- Favicons -->
+    <link rel="icon" type="image/x-icon" href="/assets/images/favicon.png" />
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="/assets/css/assets.css" />
+    <link rel="stylesheet" href="/assets/vendors/calendar/fullcalendar.css" />
+    <link rel="stylesheet" href="/assets/css/typography.css" />
+    <link rel="stylesheet" href="/assets/css/shortcodes/shortcodes.css" />
+    <link rel="stylesheet" href="/assets/css/style.css" />
+    <link rel="stylesheet" href="/assets/css/dashboard.css" />
+    <link class="skin" rel="stylesheet" href="/assets/css/color/color-1.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <style>
+        .ttr-sidebar .ttr-material-button i {
+            margin-right: 10px;
+        }
+
+
+        /* constants (global) */
+        /*  :root {
+                    --topbar-h: 64px;
+                    --sidebar-w: 260px; /* change if your sidebar width is different */
+        }
+
+        */
+        /* course page: force content to sit to the right of the sidebar */
+        /*    .page--course .main-content,
+                .page--course main.ttr-wrapper,
+                .page--course .content-wrapper {
+                    margin-left: var(--sidebar-w) !important;
+                    padding-top: calc(var(--topbar-h) + 12px) !important;
+                    position: relative;
+                    z-index: 1;
+                } */
+        /* mobile: sidebar overlays, so remove the push */
+        @@media (max-width: 991.98px) {
+            .page--course .main-content, .page--course main.ttr-wrapper, .page--course .content-wrapper
+
+        {
+            margin-left: 0 !important;
+            padding-top: calc(var(--topbar-h) + 12px) !important;
+        }
+
+        }
+
+        /* ===== FIX SIDEBAR OVERLAP ===== */
+        .ttr-wrapper {
+            margin-left: 260px; /* sidebar width */
+            padding-top: 80px; /* header height */
+        }
+
+        /* Mobile */
+        @@media (max-width: 991px) {
+            .ttr-wrapper {
+                margin-left: 0;
+                padding-top: 80px;
+            }
+        }
+
+        .ttr-wrapper .container-fluid {
+            padding-left: 24px;
+            padding-right: 24px;
+        }
+
+    </style>
+
+
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    @RenderSection("Head", required: false)
+</head>
+@* <body class="ttr-opened-sidebar ttr-pinned-sidebar @ViewBag.BodyClass"> *@
+<body class="ttr-opened-sidebar ttr-pinned-sidebar @ViewBag.BodyClass">
+    <!-- Header -->
+    <header class="ttr-header">
+        <div class="ttr-header-wrapper">
+            <!-- Sidebar toggle -->
+            <div class="ttr-toggle-sidebar ttr-material-button">
+                <i class="ti-close ttr-open-icon"></i>
+                <i class="ti-menu ttr-close-icon"></i>
+            </div>
+
+            <!-- Logo -->
+            <div class="ttr-logo-box">
+                <a asp-controller="Dashboard" asp-action="Index" class="ttr-logo">
+                    <img alt="Logo" class="ttr-logo-desktop" src="/assets/images/NewLogoNew.png" width="130" height="27" />
+                </a>
+            </div>
+
+            <!-- Header navigation -->
+            <div class="ttr-header-menu">
+                <ul class="ttr-header-navigation">
+                    <li>
+                        <a asp-controller="Dashboard" asp-action="Index" class="ttr-material-button ttr-submenu-toggle">HOME</a>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- User profile -->
+            <div class="ttr-header-right ttr-with-seperator">
+                <ul class="ttr-header-navigation">
+                    <li>
+                        <a href="#" class="ttr-material-button ttr-submenu-toggle">
+                            <span class="ttr-user-avatar">
+                                <img alt="" src="/assets/images/PlaceholderImg.png" width="32" height="32" />
+                            </span>
+                        </a>
+                        <div class="ttr-header-submenu">
+                            <ul>
+                                <li><a href="#">My profile</a></li>
+                                <li><a asp-controller="Dashboard" asp-action="Index">Activity</a></li>
+                                <li><a asp-controller="Account" asp-action="Logout">Log Out</a></li>
+                            </ul>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <div class="ttr-sidebar">
+        <div class="ttr-sidebar-wrapper content-scroll">
+            <nav class="ttr-sidebar-navi">
+                <ul>
+                    @*  <li>
+                    <a asp-controller="Dashboard" asp-action="Index" class="ttr-material-button">
+                    <span>
+                    <i class="fa-solid fa-house-chimney"></i>
+                    <span class="ttr-label">Home</span>
+                    </span>
+                    </a>
+                    </li> *@
+
+                    @*  <li>
+                    <a asp-controller="Courses" asp-action="Create" class="ttr-material-button">
+                    <span><i class="fa-solid fa-book"></i><span class="ttr-label">Course Registration</span></span>
+                    </a>
+                    </li> *@
+                    <li>
+                        <a asp-controller="Courses" asp-action="List" class="ttr-material-button">
+                            <span><i class="fa-solid fa-book"></i><span class="ttr-label">Course View</span></span>
+                        </a>
+                    </li>
+
+                    <li>
+                        <a asp-controller="Account" asp-action="ChangePassword" class="ttr-material-button">
+                            <span><i class="fa-solid fa-user"></i><span class="ttr-label">Change Password</span></span>
+                        </a>
+                    </li>
+                    <li>
+                        <a asp-controller="Account" asp-action="Logout">
+                            <i class="fa fa-sign-out-alt"></i> Logout
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Main content -->
+    <main class="ttr-wrapper">
+        <div class="container-fluid">
+            @RenderBody()
+        </div>
+    </main>
+
+
+    <div class="ttr-overlay"></div>
+
+    <!-- Scripts -->
+    <script src="/assets/js/jquery.min.js"></script>
+    <script src="/assets/vendors/bootstrap/js/popper.min.js"></script>
+    <script src="/assets/vendors/bootstrap/js/bootstrap.min.js"></script>
+    <script src="/assets/vendors/bootstrap-select/bootstrap-select.min.js"></script>
+    <script src="/assets/vendors/bootstrap-touchspin/jquery.bootstrap-touchspin.js"></script>
+    <script src="/assets/vendors/magnific-popup/magnific-popup.js"></script>
+    <script src="/assets/vendors/counter/waypoints-min.js"></script>
+    <script src="/assets/vendors/counter/counterup.min.js"></script>
+    <script src="/assets/vendors/imagesloaded/imagesloaded.js"></script>
+    <script src="/assets/vendors/masonry/masonry.js"></script>
+    <script src="/assets/vendors/masonry/filter.js"></script>
+    <script src="/assets/vendors/owl-carousel/owl.carousel.js"></script>
+    <script src='/assets/vendors/scroll/scrollbar.min.js'></script>
+    <script src="/assets/js/admin.js"></script>
+    <script src='/assets/vendors/calendar/moment.min.js'></script>
+    <script src='/assets/vendors/calendar/fullcalendar.js'></script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

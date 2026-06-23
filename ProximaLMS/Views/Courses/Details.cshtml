@@ -1,0 +1,1843 @@
+﻿@*
+    ProximaLMS/Views/Courses/Details.cshtml
+    -------------------------------------------------------------
+    Course "player" — video on the left, lesson playlist on the
+    right, live progress bar. Students can mark lessons complete
+    (auto-marks when a video finishes). Admin/Tutor see a
+    read-only player (no mark buttons, no progress).
+    -------------------------------------------------------------
+*@
+@model ProximaLMS.Models.CourseDetailsViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = Model.CourseTitle;
+
+    var levelMap = new Dictionary<string, string> { { "1", "Beginner" }, { "2", "Intermediate" }, { "3", "Advanced" } };
+    var langMap = new Dictionary<string, string> { { "1", "English" }, { "2", "Telugu" }, { "3", "Hindi" } };
+
+    string Level(string raw) =>
+        !string.IsNullOrEmpty(raw) && raw.Length > 1
+            ? raw : (levelMap.TryGetValue(raw ?? "", out var l) ? l : "Beginner");
+    string Lang(string raw) =>
+        !string.IsNullOrEmpty(raw) && raw.Length > 1
+            ? raw : (langMap.TryGetValue(raw ?? "", out var l) ? l : "English");
+
+    var hasContent = Model.Contents != null && Model.Contents.Any();
+
+    // ── star renderer: full / half / empty ──
+    Func<double, string> Stars = rating =>
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 1; i <= 5; i++)
+        {
+            if (rating >= i) sb.Append("<i class='fas fa-star'></i>");
+            else if (rating >= i - 0.5) sb.Append("<i class='fas fa-star-half-stroke'></i>");
+            else sb.Append("<i class='far fa-star'></i>");
+        }
+        return sb.ToString();
+    };
+
+    // lesson data for the player
+    var lessonData = (Model.Contents ?? new()).Select((c, i) => new
+    {
+        id = c.ContentID,
+        idx = i,
+        title = c.ContentTitle ?? $"Lesson {i + 1}",
+        desc = c.Description ?? "",
+        fileType = string.IsNullOrEmpty(c.FileType) ? "Video" : c.FileType,   // ← NEW
+        video = string.IsNullOrEmpty(c.ContentFile) ? "" : Url.Content($"~/Coursecontent/Course_{Model.CourseID}/{c.ContentFile}"),
+        thumb = string.IsNullOrEmpty(c.VideoThumbnail) ? "" : Url.Content($"~/Coursecontent/Course_{Model.CourseID}/{c.VideoThumbnail}"),
+        completed = c.IsCompleted,
+        position = c.LastPositionSeconds
+    }).ToList();
+}
+
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --cp1: #4C1864;
+        --cp2: #7B2CBF;
+        --cp3: #9D4EDD;
+        --cgold: #FFB300;
+        --cgreen: #16A34A;
+        --cink: #1A0F2E;
+        --cmuted: #6B7280;
+        --ccard: #fff;
+        --cborder: #EFE6F4;
+        --cshadow: 0 6px 20px rgba(76,24,100,0.08);
+        --cshadow-lg: 0 14px 40px rgba(76,24,100,0.16);
+    }
+
+    .cp-shell {
+        font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+        padding: 4px 24px 60px;
+    }
+
+    .cp-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--cp1);
+        font-weight: 600;
+        font-size: 14px;
+        text-decoration: none;
+        margin-bottom: 14px;
+        padding: 8px 12px;
+        border-radius: 10px;
+        background: #F5EBFB;
+        transition: background .15s;
+    }
+
+        .cp-back:hover {
+            background: #EAD4F7;
+            color: var(--cp1);
+        }
+
+    /* ─────── HERO ─────── */
+    .cp-hero {
+        background: linear-gradient(135deg, #4C1864 0%, #7B2CBF 60%, #9D4EDD 100%);
+        border-radius: 20px;
+        padding: 24px 28px;
+        color: #fff;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 22px;
+        box-shadow: 0 12px 40px rgba(76,24,100,0.22);
+    }
+
+        .cp-hero::after {
+            content: "";
+            position: absolute;
+            top: -70px;
+            right: -50px;
+            width: 230px;
+            height: 230px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.06);
+        }
+
+    .cp-hero-top {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        position: relative;
+        z-index: 1;
+    }
+
+    .cp-hero h1 {
+        margin: 0 0 6px;
+        font-size: 23px;
+        font-weight: 800;
+        letter-spacing: -0.3px;
+    }
+
+    .cp-hero-meta {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-top: 8px;
+    }
+
+    .cp-hero-chip {
+        background: rgba(255,255,255,0.15);
+        padding: 5px 11px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    /* progress block in hero */
+    .cp-hero-prog {
+        min-width: 230px;
+    }
+
+    .cp-hero-prog-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        margin-bottom: 7px;
+    }
+
+    .cp-hero-prog-pct {
+        font-size: 26px;
+        font-weight: 800;
+        line-height: 1;
+    }
+
+    .cp-hero-prog-lbl {
+        font-size: 12px;
+        opacity: .85;
+        font-weight: 600;
+    }
+
+    .cp-hero-bar {
+        height: 9px;
+        border-radius: 6px;
+        background: rgba(255,255,255,0.22);
+        overflow: hidden;
+    }
+
+    .cp-hero-bar-fill {
+        height: 100%;
+        border-radius: 6px;
+        background: linear-gradient(90deg, #FFB300, #E040FB);
+        width: 0%;
+        transition: width .5s cubic-bezier(.34,1.4,.64,1);
+    }
+
+    .cp-hero-prog-sub {
+        font-size: 12px;
+        opacity: .85;
+        font-weight: 600;
+        margin-top: 6px;
+    }
+
+    /* ─────── LAYOUT ─────── */
+    .cp-grid {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 22px;
+        align-items: start;
+    }
+
+    @@media (max-width: 1050px) {
+        .cp-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* ─────── PLAYER ─────── */
+    .cp-player-card {
+        background: var(--ccard);
+        border: 1px solid var(--cborder);
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: var(--cshadow);
+    }
+
+    .cp-video-wrap {
+        position: relative;
+        aspect-ratio: 16/9;
+        background: #0d0617;
+    }
+
+        .cp-video-wrap video {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background: #0d0617;
+        }
+
+    .cp-video-empty {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        gap: 10px;
+        text-align: center;
+        padding: 20px;
+    }
+
+        .cp-video-empty i {
+            font-size: 42px;
+            color: #FFD27A;
+        }
+
+        .cp-video-empty p {
+            margin: 0;
+            font-size: 14px;
+            opacity: .8;
+        }
+
+    .cp-lesson-info {
+        padding: 20px 22px 22px;
+    }
+
+    .cp-lesson-counter {
+        font-size: 12px;
+        font-weight: 800;
+        color: var(--cp2);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        flex-wrap: wrap;
+    }
+
+    .cp-resume {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        background: #FFF3D6;
+        color: #B45309;
+        font-size: 10.5px;
+        font-weight: 800;
+        padding: 3px 9px;
+        border-radius: 999px;
+        text-transform: none;
+        letter-spacing: 0;
+    }
+
+        .cp-resume i {
+            font-size: 9px;
+        }
+
+    .cp-lesson-title {
+        font-size: 19px;
+        font-weight: 800;
+        color: var(--cink);
+        margin: 6px 0 10px;
+        line-height: 1.3;
+    }
+
+    .cp-lesson-desc {
+        font-size: 14px;
+        color: #4B3D5A;
+        line-height: 1.6;
+        background: #FAF6FD;
+        border-left: 3px solid var(--cp3);
+        padding: 12px 14px;
+        border-radius: 0 10px 10px 0;
+        margin-bottom: 16px;
+    }
+
+        .cp-lesson-desc.empty {
+            color: var(--cmuted);
+            font-style: italic;
+        }
+
+    /* player controls row */
+    .cp-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .cp-nav-btn {
+        border: 1px solid var(--cborder);
+        background: #fff;
+        color: var(--cp1);
+        font-family: inherit;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 10px 16px;
+        border-radius: 11px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        transition: background .15s, transform .15s, border-color .15s;
+    }
+
+        .cp-nav-btn:hover:not([disabled]) {
+            background: #F5EBFB;
+            border-color: var(--cp3);
+        }
+
+        .cp-nav-btn[disabled] {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+
+    .cp-mark-btn {
+        border: 0;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 13.5px;
+        font-weight: 800;
+        padding: 11px 20px;
+        border-radius: 11px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: auto;
+        transition: transform .15s, box-shadow .15s, background .15s;
+    }
+
+        .cp-mark-btn[disabled] {
+            opacity: .6;
+            cursor: wait;
+        }
+        /* not done */
+        .cp-mark-btn.todo {
+            background: linear-gradient(135deg, var(--cp1), var(--cp2));
+            color: #fff;
+            box-shadow: 0 6px 16px rgba(76,24,100,0.30);
+        }
+
+            .cp-mark-btn.todo:hover:not([disabled]) {
+                transform: translateY(-1px);
+                box-shadow: 0 10px 24px rgba(76,24,100,0.4);
+            }
+        /* done */
+        .cp-mark-btn.done {
+            background: #DCFCE7;
+            color: #15803D;
+            box-shadow: none;
+        }
+
+            .cp-mark-btn.done:hover:not([disabled]) {
+                background: #BBF7D0;
+            }
+
+    /* ─────── PLAYLIST ─────── */
+    .cp-playlist {
+        background: var(--ccard);
+        border: 1px solid var(--cborder);
+        border-radius: 18px;
+        box-shadow: var(--cshadow);
+        overflow: hidden;
+        position: sticky;
+        top: 80px;
+        display: flex;
+        flex-direction: column;
+        max-height: calc(100vh - 110px);
+    }
+
+    .cp-playlist-head {
+        padding: 16px 18px;
+        border-bottom: 1px solid var(--cborder);
+        background: linear-gradient(135deg, #FAF6FD, #fff);
+    }
+
+    .cp-playlist-title {
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--cink);
+        display: flex;
+        align-items: center;
+        gap: 9px;
+    }
+
+        .cp-playlist-title i {
+            color: var(--cp2);
+        }
+
+    .cp-playlist-sub {
+        font-size: 12px;
+        color: var(--cmuted);
+        font-weight: 600;
+        margin-top: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .cp-mini-bar {
+        height: 6px;
+        border-radius: 4px;
+        background: #F0E4F8;
+        overflow: hidden;
+        margin-top: 8px;
+    }
+
+    .cp-mini-fill {
+        height: 100%;
+        border-radius: 4px;
+        background: linear-gradient(90deg, var(--cp1), #E040FB);
+        width: 0%;
+        transition: width .5s cubic-bezier(.34,1.4,.64,1);
+    }
+
+    .cp-playlist-body {
+        overflow-y: auto;
+        padding: 8px;
+    }
+
+    .cp-row {
+        display: flex;
+        gap: 11px;
+        align-items: center;
+        padding: 9px;
+        border-radius: 12px;
+        cursor: pointer;
+        border: 1px solid transparent;
+        transition: background .15s, border-color .15s;
+    }
+
+        .cp-row:hover {
+            background: #F8F2FC;
+        }
+
+        .cp-row.active {
+            background: #F3E4FB;
+            border-color: #E2C9F2;
+        }
+
+    .cp-row-idx {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 800;
+        background: #EFE6F4;
+        color: var(--cp1);
+    }
+
+    .cp-row.active .cp-row-idx {
+        background: var(--cp2);
+        color: #fff;
+    }
+
+    .cp-row.is-done .cp-row-idx {
+        background: var(--cgreen);
+        color: #fff;
+    }
+
+    .cp-row-thumb {
+        width: 78px;
+        height: 46px;
+        flex-shrink: 0;
+        border-radius: 8px;
+        overflow: hidden;
+        background: linear-gradient(135deg, var(--cp1), var(--cp3));
+        position: relative;
+    }
+
+        .cp-row-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .cp-row-thumb .cp-row-play {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 13px;
+            background: rgba(26,15,46,0.32);
+            opacity: 0;
+            transition: opacity .15s;
+        }
+
+    .cp-row:hover .cp-row-play,
+    .cp-row.active .cp-row-play {
+        opacity: 1;
+    }
+
+    .cp-row-info {
+        min-width: 0;
+        flex: 1;
+    }
+
+    .cp-row-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--cink);
+        line-height: 1.3;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+
+    .cp-row-tag {
+        font-size: 11px;
+        font-weight: 700;
+        margin-top: 3px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        color: var(--cmuted);
+    }
+
+    .cp-row.is-done .cp-row-tag {
+        color: var(--cgreen);
+    }
+
+    .cp-row.active:not(.is-done) .cp-row-tag {
+        color: var(--cp2);
+    }
+
+    /* ─────── EMPTY ─────── */
+    .cp-empty {
+        background: var(--ccard);
+        border: 1px dashed #D9C2EC;
+        border-radius: 18px;
+        padding: 50px 32px;
+        text-align: center;
+        color: var(--cmuted);
+    }
+
+    .cp-empty-ico {
+        font-size: 50px;
+        margin-bottom: 14px;
+        color: var(--cp3);
+    }
+
+    .cp-empty h4 {
+        font-size: 18px;
+        color: var(--cink);
+        margin-bottom: 8px;
+        font-weight: 800;
+    }
+
+    .cp-empty p {
+        font-size: 14px;
+        margin: 0;
+    }
+
+    @@media (max-width: 700px) {
+        .cp-shell {
+            padding: 4px 14px 50px;
+        }
+
+        .cp-hero {
+            padding: 20px;
+        }
+
+        .cp-mark-btn {
+            margin-left: 0;
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    /* ═══════════════ REVIEWS ═══════════════ */
+    .rv-section {
+        margin-top: 26px;
+    }
+
+    .rv-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+
+        .rv-head h2 {
+            font-size: 19px;
+            font-weight: 800;
+            color: var(--cink);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+            .rv-head h2 .rv-bar {
+                width: 4px;
+                height: 22px;
+                border-radius: 4px;
+                background: linear-gradient(180deg, var(--cp1), var(--cp3));
+            }
+
+    /* summary card: avg + breakdown */
+    .rv-summary {
+        background: var(--ccard);
+        border: 1px solid var(--cborder);
+        border-radius: 18px;
+        box-shadow: var(--cshadow);
+        padding: 22px 24px;
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        gap: 26px;
+        align-items: center;
+        margin-bottom: 18px;
+    }
+
+    @@media (max-width: 640px) {
+        .rv-summary {
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+    }
+
+    .rv-avg-box {
+        text-align: center;
+        border-right: 1px solid var(--cborder);
+        padding-right: 20px;
+    }
+
+    @@media (max-width: 640px) {
+        .rv-avg-box {
+            border-right: 0;
+            border-bottom: 1px solid var(--cborder);
+            padding: 0 0 16px;
+        }
+    }
+
+    .rv-avg-num {
+        font-size: 48px;
+        font-weight: 800;
+        color: var(--cink);
+        line-height: 1;
+    }
+
+    .rv-avg-stars {
+        color: var(--cgold);
+        font-size: 17px;
+        margin: 8px 0 4px;
+        display: flex;
+        gap: 3px;
+        justify-content: center;
+    }
+
+        .rv-avg-stars .far {
+            color: #E5DAEF;
+        }
+
+    .rv-avg-count {
+        font-size: 13px;
+        color: var(--cmuted);
+        font-weight: 600;
+    }
+
+    .rv-bars {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .rv-bar-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 12px;
+        color: var(--cmuted);
+        font-weight: 700;
+    }
+
+    .rv-bar-lbl {
+        width: 32px;
+        flex-shrink: 0;
+        text-align: right;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+        justify-content: flex-end;
+    }
+
+        .rv-bar-lbl i {
+            color: var(--cgold);
+            font-size: 9px;
+        }
+
+    .rv-bar-track {
+        flex: 1;
+        height: 9px;
+        border-radius: 5px;
+        background: #F0E4F8;
+        overflow: hidden;
+    }
+
+    .rv-bar-fill {
+        height: 100%;
+        border-radius: 5px;
+        background: linear-gradient(90deg, var(--cgold), #FB8C00);
+        width: 0%;
+    }
+
+    .rv-bar-cnt {
+        width: 26px;
+        flex-shrink: 0;
+    }
+
+    /* write-review card */
+    .rv-form-card {
+        background: linear-gradient(135deg, #FAF6FD, #fff);
+        border: 1px solid var(--cborder);
+        border-radius: 18px;
+        box-shadow: var(--cshadow);
+        padding: 20px 22px;
+        margin-bottom: 18px;
+    }
+
+    .rv-form-title {
+        font-size: 15px;
+        font-weight: 800;
+        color: var(--cink);
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 4px;
+    }
+
+    .rv-form-sub {
+        font-size: 12.5px;
+        color: var(--cmuted);
+        margin-bottom: 14px;
+    }
+
+    .rv-picker {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 14px;
+    }
+
+        .rv-picker button {
+            background: none;
+            border: 0;
+            cursor: pointer;
+            font-size: 30px;
+            color: #E5DAEF;
+            padding: 0;
+            transition: transform .12s, color .12s;
+            line-height: 1;
+        }
+
+            .rv-picker button:hover {
+                transform: scale(1.15);
+            }
+
+            .rv-picker button.on {
+                color: var(--cgold);
+            }
+
+    .rv-textarea {
+        width: 100%;
+        border: 1px solid var(--cborder);
+        border-radius: 12px;
+        padding: 12px 14px;
+        font-family: inherit;
+        font-size: 14px;
+        color: var(--cink);
+        resize: vertical;
+        min-height: 84px;
+        outline: none;
+        transition: border-color .15s;
+    }
+
+        .rv-textarea:focus {
+            border-color: var(--cp3);
+        }
+
+    .rv-submit {
+        margin-top: 12px;
+        border: 0;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 13.5px;
+        font-weight: 800;
+        padding: 11px 22px;
+        border-radius: 11px;
+        background: linear-gradient(135deg, var(--cp1), var(--cp2));
+        color: #fff;
+        box-shadow: 0 6px 16px rgba(76,24,100,0.30);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: transform .15s, box-shadow .15s;
+    }
+
+        .rv-submit:hover:not([disabled]) {
+            transform: translateY(-1px);
+            box-shadow: 0 10px 24px rgba(76,24,100,0.4);
+        }
+
+        .rv-submit[disabled] {
+            opacity: .6;
+            cursor: wait;
+        }
+
+    /* reviews list */
+    .rv-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .rv-item {
+        background: var(--ccard);
+        border: 1px solid var(--cborder);
+        border-radius: 16px;
+        box-shadow: var(--cshadow);
+        padding: 16px 18px;
+        display: flex;
+        gap: 14px;
+    }
+
+    .rv-avatar {
+        width: 42px;
+        height: 42px;
+        flex-shrink: 0;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--cp1), var(--cp3));
+        color: #fff;
+        font-weight: 800;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .rv-item-body {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .rv-item-top {
+        display: flex;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .rv-item-name {
+        font-size: 14px;
+        font-weight: 800;
+        color: var(--cink);
+    }
+
+    .rv-item-mine {
+        font-size: 10px;
+        font-weight: 800;
+        color: var(--cp1);
+        background: #F3E4FB;
+        padding: 2px 8px;
+        border-radius: 999px;
+        margin-left: 6px;
+    }
+
+    .rv-item-date {
+        font-size: 12px;
+        color: var(--cmuted);
+        font-weight: 600;
+    }
+
+    .rv-item-stars {
+        color: var(--cgold);
+        font-size: 12px;
+        margin: 5px 0 6px;
+        display: flex;
+        gap: 2px;
+    }
+
+        .rv-item-stars .far {
+            color: #E5DAEF;
+        }
+
+    .rv-item-text {
+        font-size: 13.5px;
+        color: #4B3D5A;
+        line-height: 1.55;
+        margin: 0;
+    }
+
+    .rv-empty {
+        background: var(--ccard);
+        border: 1px dashed #D9C2EC;
+        border-radius: 16px;
+        padding: 32px;
+        text-align: center;
+        color: var(--cmuted);
+    }
+
+    .rv-empty-ico {
+        font-size: 38px;
+        margin-bottom: 8px;
+        color: var(--cgold);
+    }
+
+    .rv-empty p {
+        margin: 0;
+        font-size: 14px;
+    }
+
+    @@keyframes rvPulse {
+        0%, 100% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.06);
+        }
+    }
+
+    .rv-picker-pulse {
+        animation: rvPulse 0.6s ease-in-out 2;
+    }
+</style>
+
+
+<div class="cp-shell">
+
+    <a href="@Url.Action("List", "Courses")" class="cp-back">
+        <i class="fas fa-arrow-left"></i> Back to My Courses
+    </a>
+
+    @if (TempData["Error"] != null)
+    {
+        <div style="background:#fee2e2;color:#dc2626;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;margin-bottom:18px;">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["Error"]
+        </div>
+    }
+
+    <!-- ╔══════════ HERO ══════════╗ -->
+    <div class="cp-hero">
+        <div class="cp-hero-top">
+            <div>
+                <h1>@Model.CourseTitle</h1>
+                <div style="font-size:13px;opacity:.9;">
+                    <i class="fas fa-user-tie" style="margin-right:6px;"></i>@Model.TutorName
+                </div>
+                <div class="cp-hero-meta">
+                    <span class="cp-hero-chip"><i class="fas fa-layer-group" style="font-size:10px;"></i>@Level(Model.CourseLevelName)</span>
+                    <span class="cp-hero-chip"><i class="fas fa-globe" style="font-size:10px;"></i>@Lang(Model.Language)</span>
+                    @if (Model.DurationHrs > 0)
+                    {
+                        <span class="cp-hero-chip"><i class="far fa-clock" style="font-size:10px;"></i>@Model.DurationHrs.ToString("0.##") hrs</span>
+                    }
+                    <span class="cp-hero-chip"><i class="fas fa-photo-film" style="font-size:10px;"></i>@(Model.Contents?.Count ?? 0) lessons</span>
+                </div>
+            </div>
+
+            @if (Model.IsStudent && hasContent)
+            {
+                <div class="cp-hero-prog">
+                    <div class="cp-hero-prog-top">
+                        <span class="cp-hero-prog-pct" id="cpHeroPct">@Model.ProgressPercent%</span>
+                        <span class="cp-hero-prog-lbl">complete</span>
+                    </div>
+                    <div class="cp-hero-bar">
+                        <div class="cp-hero-bar-fill" id="cpHeroFill" style="width:@Model.ProgressPercent%;"></div>
+                    </div>
+                    <div class="cp-hero-prog-sub" id="cpHeroSub">
+                        @Model.CompletedContents of @Model.TotalContents lessons done
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+
+
+    @if (!hasContent)
+    {
+        <div class="cp-empty">
+            <div class="cp-empty-ico">🎬</div>
+            <h4>No lessons yet</h4>
+            <p>This course doesn't have any content uploaded. Please check back later.</p>
+        </div>
+    }
+    else
+    {
+        <!-- ╔══════════ PLAYER + PLAYLIST ══════════╗ -->
+        <div class="cp-grid">
+
+            <!-- ── LEFT: PLAYER ── -->
+            <div class="cp-video-wrap">
+                <!-- VIDEO renderer (existing, unchanged behavior) -->
+                <video id="cpVideo"
+                       controls
+                       controlsList="nodownload"
+                       disablePictureInPicture
+                       oncontextmenu="return false;"
+                       playsinline
+                       style="display:none;"></video>
+
+                <!-- PDF renderer -->
+                <iframe id="cpPdf"
+                        style="display:none; width:100%; height:100%; border:0; background:#1a1830; border-radius:inherit;"
+                        sandbox="allow-scripts allow-same-origin"
+                        referrerpolicy="no-referrer"></iframe>
+
+                <!-- TEXT renderer -->
+                <div id="cpText"
+                     style="display:none; width:100%; height:100%; overflow-y:auto; padding:36px 44px;
+                background:#fff; color:#1f1d2b; font-size:1rem; line-height:1.7;
+                border-radius:inherit; box-sizing:border-box;"></div>
+
+                <!-- EMPTY state (kept from existing markup if present in your file) -->
+                <div class="cp-video-empty" id="cpEmpty" style="display:flex;">
+                    <i class="fas fa-circle-play"></i>
+                    <p>Select a lesson to begin</p>
+                </div>
+            </div>
+
+            <!-- ── RIGHT: PLAYLIST ── -->
+            <div class="cp-playlist">
+                <div class="cp-playlist-head">
+                    <div class="cp-playlist-title">
+                        <i class="fas fa-list-ul"></i> Course Content
+                    </div>
+                    <div class="cp-playlist-sub">
+                        <span>@(Model.Contents?.Count ?? 0) lessons</span>
+                        @if (Model.IsStudent)
+                        {
+                            <span id="cpPlSub">@Model.CompletedContents / @Model.TotalContents done</span>
+                        }
+                    </div>
+                    @if (Model.IsStudent)
+                    {
+                        <div class="cp-mini-bar">
+                            <div class="cp-mini-fill" id="cpMiniFill" style="width:@Model.ProgressPercent%;"></div>
+                        </div>
+                    }
+                </div>
+
+                <div class="cp-playlist-body" id="cpPlaylist">
+                    @{
+                        var rowNum = 0;
+                    }
+                    @foreach (var c in Model.Contents)
+                    {
+                        var thumb = string.IsNullOrEmpty(c.VideoThumbnail)
+                        ? ""
+                        : Url.Content($"~/Coursecontent/Course_{Model.CourseID}/{c.VideoThumbnail}");
+                        <div class="cp-row @(c.IsCompleted ? "is-done" : "")" data-idx="@rowNum">
+                            <div class="cp-row-idx">
+                                @if (c.IsCompleted)
+                                {
+                                    <i class="fas fa-check"></i>
+                                }
+                                else
+                                {
+                                    @(rowNum + 1)
+                                }
+                            </div>
+                            <div class="cp-row-thumb">
+                                @if (!string.IsNullOrEmpty(thumb))
+                                {
+                                    <img src="@thumb" alt="@c.ContentTitle"
+                                         onerror="this.style.display='none';" />
+                                }
+                                <div class="cp-row-play"><i class="fas fa-play"></i></div>
+                            </div>
+                            <div class="cp-row-info">
+                                <div class="cp-row-title">@c.ContentTitle</div>
+                                <div class="cp-row-tag">
+                                    @if (Model.IsStudent && c.IsCompleted)
+                                    {
+                                        <i class="fas fa-check-circle"></i> <span>Completed</span>
+                                    }
+                                    else
+                                    {
+                                        <i class="fas fa-play-circle"></i> <span>Lesson @(rowNum + 1)</span>
+                                    }
+                                </div>
+                            </div>
+                        </div>
+                        rowNum++;
+                    }
+                </div>
+            </div>
+
+        </div>
+    }
+
+    @* ══════════════════════ COURSE EXAMS ══════════════════════ *@
+    @if (Model.IsStudent)
+    {
+        <div class="rv-section" id="examSection" style="display:none;">
+            <div class="rv-head">
+                <h2><span class="rv-bar"></span> Course Exams</h2>
+            </div>
+            <div id="examList" style="display:flex;flex-direction:column;gap:12px;"></div>
+        </div>
+    }
+
+    @* ══════════════════════ RATINGS & REVIEWS ══════════════════════ *@
+    <div class="rv-section" id="reviewSection">
+        <div class="rv-head">
+            <h2><span class="rv-bar"></span> Ratings &amp; Reviews</h2>
+        </div>
+
+        @{
+            var reviewCount = Model.ReviewCount;
+            var avg = Model.AvgRating;
+        }
+
+        <!-- ── summary: average + breakdown ── -->
+        <div class="rv-summary">
+            <div class="rv-avg-box">
+                <div class="rv-avg-num">@(reviewCount > 0 ? avg.ToString("0.0") : "—")</div>
+                <div class="rv-avg-stars">@Html.Raw(Stars(avg))</div>
+                <div class="rv-avg-count">
+                    @reviewCount review@(reviewCount == 1 ? "" : "s")
+                </div>
+            </div>
+
+            <div class="rv-bars">
+                @for (int star = 5; star >= 1; star--)
+                {
+                    var cnt = Model.RatingBreakdown != null && Model.RatingBreakdown.Length == 5
+                    ? Model.RatingBreakdown[5 - star]
+                    : 0;
+                    var pct = reviewCount > 0 ? (int)System.Math.Round(cnt * 100.0 / reviewCount) : 0;
+                    <div class="rv-bar-row">
+                        <span class="rv-bar-lbl">@star <i class="fas fa-star"></i></span>
+                        <div class="rv-bar-track">
+                            <div class="rv-bar-fill" style="width:@pct%;"></div>
+                        </div>
+                        <span class="rv-bar-cnt">@cnt</span>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- ── write / edit your review (students only) ── -->
+        @if (Model.IsStudent)
+        {
+            var mine = Model.MyReview;
+            var myRating = mine?.Rating ?? 0;
+            var myText = mine?.ReviewText ?? "";
+            <div class="rv-form-card">
+                <div class="rv-form-title">
+                    <i class="fas fa-pen-to-square" style="color:#7B2CBF;"></i>
+                    @(mine != null ? "Your review" : "Write a review")
+                </div>
+                <div class="rv-form-sub">
+                    @(mine != null
+                        ? "Update your rating or thoughts any time."
+                        : "Share how this course went — it helps other learners.")
+                </div>
+
+                <div class="rv-picker" id="rvPicker" data-rating="@myRating">
+                    @for (int i = 1; i <= 5; i++)
+                    {
+                        <button type="button" data-val="@i" title="@i star@(i == 1 ? "" : "s")">
+                            <i class="@(i <= myRating ? "fas" : "far") fa-star"></i>
+                        </button>
+                    }
+                </div>
+
+                <textarea id="rvText" class="rv-textarea" maxlength="1000"
+                          placeholder="What did you like? What could be better?">@myText</textarea>
+
+                <button type="button" class="rv-submit" id="rvSubmit">
+                    <i class="fas fa-paper-plane"></i>
+                    <span id="rvSubmitLbl">@(mine != null ? "Update Review" : "Submit Review")</span>
+                </button>
+            </div>
+        }
+
+        <!-- ── all reviews ── -->
+        <div class="rv-list">
+            @if (Model.Reviews != null && Model.Reviews.Any())
+            {
+                foreach (var rev in Model.Reviews)
+                {
+                    var initial = !string.IsNullOrWhiteSpace(rev.StudentName)
+                    ? rev.StudentName.Trim()[0].ToString().ToUpper()
+                    : "S";
+                    var when = (rev.UpdatedDate ?? rev.CreatedDate);
+                    var isMine = Model.IsStudent && Model.MyReview != null
+                    && rev.ReviewID == Model.MyReview.ReviewID;
+                    <div class="rv-item">
+                        <div class="rv-avatar">@initial</div>
+                        <div class="rv-item-body">
+                            <div class="rv-item-top">
+                                <span class="rv-item-name">
+                                    @rev.StudentName
+                                    @if (isMine)
+                                    {
+                                        <span class="rv-item-mine">You</span>
+                                    }
+                                </span>
+                                <span class="rv-item-date">@when.ToString("dd MMM yyyy")</span>
+                            </div>
+                            <div class="rv-item-stars">@Html.Raw(Stars(rev.Rating))</div>
+                            @if (!string.IsNullOrWhiteSpace(rev.ReviewText))
+                            {
+                                <p class="rv-item-text">@rev.ReviewText</p>
+                            }
+                        </div>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="rv-empty">
+                    <div class="rv-empty-ico">⭐</div>
+                    <p>No reviews yet — @(Model.IsStudent ? "be the first to review this course!" : "this course hasn't been reviewed yet.")</p>
+                </div>
+            }
+        </div>
+    </div>
+
+</div>
+
+
+@if (hasContent)
+{
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function () {
+            const LESSONS = @Html.Raw(Json.Serialize(lessonData));
+            const IS_STUDENT = @(Model.IsStudent ? "true" : "false");
+            const COURSE_ID = @Model.CourseID;
+            const MARK_URL = '@Url.Action("MarkContentComplete", "Courses")';
+            const POS_URL = '@Url.Action("SaveVideoPosition", "Courses")';
+
+            const AUTO_DONE = 0.90;   // watched fraction that auto-completes a lesson
+            const SAVE_EVERY = 15000;  // ms between routine position saves (spec: every 15s)
+
+            const video = document.getElementById('cpVideo');
+            const counter = document.getElementById('cpCounter');
+            const titleEl = document.getElementById('cpTitle');
+            const descEl = document.getElementById('cpDesc');
+            const prevBtn = document.getElementById('cpPrev');
+            const nextBtn = document.getElementById('cpNext');
+            const markBtn = document.getElementById('cpMark');
+            const markLbl = document.getElementById('cpMarkLbl');
+            const rows = Array.from(document.querySelectorAll('.cp-row'));
+            const resumeEl = document.getElementById('cpResume');
+            const resumeTx = document.getElementById('cpResumeTxt');
+
+            const heroPct = document.getElementById('cpHeroPct');
+            const heroFill = document.getElementById('cpHeroFill');
+            const heroSub = document.getElementById('cpHeroSub');
+            const miniFill = document.getElementById('cpMiniFill');
+            const plSub = document.getElementById('cpPlSub');
+
+            let current = 0;
+            let lastSaveAt = 0;
+            let saving = false;
+            let completeShown = false;
+            let reviewPromptShown = false;
+            // a student who already reviewed shouldn't be nudged again
+            const HAS_REVIEWED = @(Model.MyReview != null ? "true" : "false");
+
+            // start on the first not-completed lesson, else lesson 1
+            if (IS_STUDENT) {
+                const firstTodo = LESSONS.findIndex(l => !l.completed);
+                current = firstTodo >= 0 ? firstTodo : 0;
+            }
+
+            // ── mm:ss formatter ──
+            function fmt(s) {
+                s = Math.max(0, Math.floor(s));
+                const m = Math.floor(s / 60), ss = s % 60;
+                return m + ':' + (ss < 10 ? '0' : '') + ss;
+            }
+
+            // ── load a lesson into the player ──
+            function loadLesson(idx, autoplay) {
+                if (idx < 0 || idx >= LESSONS.length) return;
+
+                // save where we were before switching away
+                savePosition(true);
+
+                current = idx;
+                const L = LESSONS[idx];
+
+                if (resumeEl) resumeEl.style.display = 'none';
+
+                // ── reset all renderers ──────────────────────────────────────────
+                const videoEl = document.getElementById('cpVideo');
+                const pdfEl = document.getElementById('cpPdf');
+                const textEl = document.getElementById('cpText');
+                const empty = document.getElementById('cpEmpty');
+
+                try { videoEl.pause(); } catch (e) { }
+                videoEl.removeAttribute('src'); videoEl.load();
+                pdfEl.src = 'about:blank';
+                textEl.innerHTML = '';
+                if (clearLessonTimer) clearLessonTimer();   // see helper below
+
+                videoEl.style.display = 'none';
+                pdfEl.style.display = 'none';
+                textEl.style.display = 'none';
+                if (empty) empty.style.display = 'none';
+
+                const ft = (L.fileType || 'Video');
+
+                if (ft === 'Video') {
+                    // ── VIDEO ────────────────────────────────────────────────────
+                    if (L.video) {
+                        videoEl.style.display = '';
+                        videoEl.src = L.video;
+                        videoEl.load();
+
+                        videoEl.onloadedmetadata = function () {
+                            const pos = L.position || 0;
+                            const dur = videoEl.duration || 0;
+                            if (pos > 5 && dur > 0 && pos < dur - 15) {
+                                try { videoEl.currentTime = pos; } catch (e) { }
+                                if (resumeEl && resumeTx) {
+                                    resumeTx.textContent = ' Resumed from ' + fmt(pos);
+                                    resumeEl.style.display = 'inline-flex';
+                                }
+                            }
+                            if (autoplay) videoEl.play().catch(() => { });
+                        };
+                    } else if (empty) {
+                        empty.style.display = 'flex';
+                    }
+                }
+                else if (ft === 'PDF') {
+                    // ── PDF ──────────────────────────────────────────────────────
+                    if (L.video) {
+                        // L.video is the file URL — ContentFile.pdf served from /Coursecontent/...
+                        pdfEl.style.display = '';
+                        // #toolbar=1&view=FitH gives PDF.js a sensible default; ignored by other viewers
+                        pdfEl.src = L.video + '#toolbar=1&view=FitH';
+                        startViewTimer(L);   // mark complete after N seconds of viewing
+                    } else if (empty) {
+                        empty.style.display = 'flex';
+                    }
+                }
+                else if (ft === 'Text') {
+                    // ── TEXT ─────────────────────────────────────────────────────
+                    // Module 2B stores the lesson body in Description; render it.
+                    textEl.style.display = '';
+                    textEl.innerHTML = renderTextLesson(L.desc || L.title || '');
+                    startViewTimer(L);
+                }
+                else if (empty) {
+                    empty.style.display = 'flex';
+                }
+
+                counter.textContent = 'Lesson ' + (idx + 1) + ' of ' + LESSONS.length;
+                titleEl.textContent = L.title;
+                if (L.desc && L.desc.trim() && ft !== 'Text') {
+                    // For Text lessons, the body IS the description — don't repeat it under the title.
+                    descEl.textContent = L.desc;
+                    descEl.classList.remove('empty');
+                } else {
+                    descEl.textContent = '';
+                    descEl.classList.add('empty');
+                }
+
+                // active state in the playlist
+                document.querySelectorAll('.cp-lesson-row').forEach(r =>
+                    r.classList.toggle('cp-active', parseInt(r.dataset.idx, 10) === idx));
+            }
+            let lessonViewTimer = null;
+            const PDFTEXT_AUTOCOMPLETE_SECONDS = 8;
+
+            function startViewTimer(L) {
+                clearLessonTimer();
+                // only mark for students who can mark (the existing IS_STUDENT flag in this view)
+                if (typeof IS_STUDENT === 'undefined' || !IS_STUDENT) return;
+                if (L.completed) return;     // already done; nothing to do
+
+                lessonViewTimer = setTimeout(function () {
+                    // call the existing toggle/mark endpoint — same one the
+                    // "Mark as completed" button already wires to. We just trigger
+                    // it programmatically after the minimum view time.
+                    if (typeof markLessonComplete === 'function') {
+                        markLessonComplete(L.id, true /* completed */);
+                    } else if (typeof toggleComplete === 'function') {
+                        toggleComplete(L.id, true);
+                    }
+                }, PDFTEXT_AUTOCOMPLETE_SECONDS * 1000);
+            }
+
+            function clearLessonTimer() {
+                if (lessonViewTimer) { clearTimeout(lessonViewTimer); lessonViewTimer = null; }
+            }
+
+            // Escape HTML, preserve paragraph breaks for plain-text lessons.
+            function renderTextLesson(raw) {
+                const esc = (raw || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;');
+                // double newline → paragraph break, single newline → <br>
+                return '<p>' + esc.split(/\n\s*\n/).map(p => p.replace(/\n/g, '<br>')).join('</p><p>') + '</p>';
+            }
+
+
+            // ── mark button reflects current lesson state ──
+            function refreshMarkBtn() {
+                if (!markBtn) return;
+                const done = LESSONS[current].completed;
+                markBtn.classList.toggle('done', done);
+                markBtn.classList.toggle('todo', !done);
+                markBtn.querySelector('i').className = done ? 'fas fa-circle-check' : 'far fa-circle';
+                markLbl.textContent = done ? 'Completed' : 'Mark as Complete';
+            }
+
+            // ── update every progress indicator ──
+            // ── update every progress indicator ──
+            function applyProgress(percent, doneCount) {
+                if (heroPct) heroPct.textContent = percent + '%';
+                if (heroFill) heroFill.style.width = percent + '%';
+                if (miniFill) miniFill.style.width = percent + '%';
+                if (heroSub) heroSub.textContent = doneCount + ' of ' + LESSONS.length + ' lessons done';
+                if (plSub) plSub.textContent = doneCount + ' / ' + LESSONS.length + ' done';
+
+                if (percent >= 100 && !completeShown) {
+                    completeShown = true;
+                    Swal.fire({
+                        icon: 'success',
+                        title: '🎓 Course complete!',
+                        text: 'You have finished every lesson. Great work!',
+                        confirmButtonColor: '#4C1864'
+                    });
+                }
+
+                // ── post-course review prompt — fires once at 50%+ ──
+                if (IS_STUDENT && !HAS_REVIEWED && !reviewPromptShown && percent >= 50) {
+                    reviewPromptShown = true;
+                    Swal.fire({
+                        icon: 'question',
+                        title: 'Enjoying the course?',
+                        text: 'You\u2019re halfway through \u2014 share a quick rating to help other learners.',
+                        showCancelButton: true,
+                        confirmButtonText: 'Write a review',
+                        cancelButtonText: 'Maybe later',
+                        confirmButtonColor: '#4C1864'
+                    }).then(function (res) {
+                        if (res.isConfirmed) {
+                            var sec = document.getElementById('reviewSection');
+                            if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                            var picker = document.getElementById('rvPicker');
+                            if (picker) picker.classList.add('rv-picker-pulse');
+                        }
+                    });
+                }
+            }
+            // ── reflect a lesson's done-state in its playlist row ──
+            function paintRow(idx) {
+                const L = LESSONS[idx], row = rows[idx];
+                if (!row) return;
+                row.classList.toggle('is-done', L.completed);
+                const idxEl = row.querySelector('.cp-row-idx');
+                idxEl.innerHTML = L.completed ? '<i class="fas fa-check"></i>' : (idx + 1);
+                const tag = row.querySelector('.cp-row-tag');
+                tag.innerHTML = L.completed
+                    ? '<i class="fas fa-check-circle"></i> <span>Completed</span>'
+                    : '<i class="fas fa-play-circle"></i> <span>Lesson ' + (idx + 1) + '</span>';
+            }
+
+            // ════════════════════════════════════════════════════
+            //  POSITION TRACKING — saves where the student is and
+            //  auto-completes the lesson once ~90% is watched.
+            //  No "Mark Complete" click required.
+            // ════════════════════════════════════════════════════
+            async function savePosition(force) {
+                if (!IS_STUDENT) return;
+                const L = LESSONS[current];
+                if (!L || !L.video) return;
+
+                const pos = Math.floor(video.currentTime || 0);
+                const dur = Math.floor(video.duration || 0);
+                if (dur <= 0) return;
+
+                const now = Date.now();
+                if (!force && now - lastSaveAt < SAVE_EVERY) return;
+                if (saving) return;
+
+                saving = true;
+                lastSaveAt = now;
+
+                try {
+                    const r = await fetch(POS_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            CourseID: COURSE_ID,
+                            ContentID: L.id,
+                            Position: pos,
+                            Duration: dur
+                        })
+                    });
+                    const d = await r.json();
+
+                    if (d.success) {
+                        L.position = pos;
+                        if (d.completed && !L.completed) {
+                            L.completed = true;
+                            paintRow(current);
+                            refreshMarkBtn();
+                        }
+                        if (typeof d.percent === 'number')
+                            applyProgress(d.percent, d.completedContents);
+                    }
+                } catch (e) {
+                    /* silent — position saving must never interrupt playback */
+                } finally {
+                    saving = false;
+                }
+            }
+
+            // routine + auto-complete saves while watching
+            if (IS_STUDENT) {
+                video.addEventListener('timeupdate', () => {
+                    const dur = video.duration || 0;
+                    if (dur <= 0) return;
+                    const frac = video.currentTime / dur;
+                    // the instant we cross the auto-complete line, save right away
+                    if (frac >= AUTO_DONE && !LESSONS[current].completed) {
+                        savePosition(true);
+                    } else {
+                        savePosition(false);   // otherwise throttled
+                    }
+                });
+
+                video.addEventListener('pause', () => savePosition(true));
+                video.addEventListener('ended', () => savePosition(true));
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'hidden') savePosition(true);
+                });
+
+                // best-effort save when the tab/page is closed
+                window.addEventListener('beforeunload', () => {
+                    const L = LESSONS[current];
+                    const dur = Math.floor(video.duration || 0);
+                    if (!L || !L.video || dur <= 0) return;
+                    const body = JSON.stringify({
+                        CourseID: COURSE_ID,
+                        ContentID: L.id,
+                        Position: Math.floor(video.currentTime || 0),
+                        Duration: dur
+                    });
+                    navigator.sendBeacon(POS_URL, new Blob([body], { type: 'application/json' }));
+                });
+            }
+
+            // ── manual "Mark Complete" button (optional override) ──
+            async function setComplete(idx, completed) {
+                const L = LESSONS[idx];
+                if (markBtn) markBtn.disabled = true;
+                try {
+                    const r = await fetch(MARK_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            CourseID: COURSE_ID,
+                            ContentID: L.id,
+                            Completed: completed
+                        })
+                    });
+                    const d = await r.json();
+                    if (d.success) {
+                        L.completed = completed;
+                        paintRow(idx);
+                        if (idx === current) refreshMarkBtn();
+                        applyProgress(d.percent, d.completedContents);
+                    } else {
+                        Swal.fire({ icon: 'error', title: 'Could not update', text: d.message || 'Please try again.', confirmButtonColor: '#4C1864' });
+                    }
+                } catch (err) {
+                    Swal.fire({ icon: 'error', title: 'Network error', text: err.message, confirmButtonColor: '#4C1864' });
+                } finally {
+                    if (markBtn) markBtn.disabled = false;
+                }
+            }
+
+            // ── events ──
+            rows.forEach(row => {
+                row.addEventListener('click', () => loadLesson(parseInt(row.dataset.idx, 10), true));
+            });
+
+            prevBtn.addEventListener('click', () => loadLesson(current - 1, true));
+            nextBtn.addEventListener('click', () => loadLesson(current + 1, true));
+
+            if (markBtn) {
+                markBtn.addEventListener('click', () => {
+                    setComplete(current, !LESSONS[current].completed);
+                });
+            }
+
+            // boot
+            loadLesson(current, false);
+
+            // check the 50% review prompt against load-time progress
+            if (IS_STUDENT) {
+                applyProgress(@Model.ProgressPercent, @Model.CompletedContents);
+            }
+        })();
+    </script>
+}
+
+
+@* ══════════════════════ REVIEW STAR-PICKER + SUBMIT ══════════════════════ *@
+@if (Model.IsStudent)
+{
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        (function () {
+            const picker = document.getElementById('rvPicker');
+            const textEl = document.getElementById('rvText');
+            const submitBtn = document.getElementById('rvSubmit');
+            const submitLbl = document.getElementById('rvSubmitLbl');
+            if (!picker || !submitBtn) return;
+
+            const stars = Array.from(picker.querySelectorAll('button'));
+            let rating = parseInt(picker.dataset.rating, 10) || 0;
+            const COURSE_ID = @Model.CourseID;
+            const SUBMIT_URL = '@Url.Action("SubmitReview", "Courses")';
+
+            // paint stars up to `n` (filled), rest empty
+            function paint(n) {
+                stars.forEach((b, i) => {
+                    const ic = b.querySelector('i');
+                    const on = i < n;
+                    b.classList.toggle('on', on);
+                    ic.className = (on ? 'fas' : 'far') + ' fa-star';
+                });
+            }
+            paint(rating);
+
+            stars.forEach((b, i) => {
+                b.addEventListener('mouseenter', () => paint(i + 1));
+                b.addEventListener('mouseleave', () => paint(rating));
+                b.addEventListener('click', () => { rating = i + 1; paint(rating); });
+            });
+
+            submitBtn.addEventListener('click', async function () {
+                if (rating < 1) {
+                    Swal.fire({
+                        icon: 'info', title: 'Pick a rating',
+                        text: 'Tap the stars to rate this course first.',
+                        confirmButtonColor: '#4C1864'
+                    });
+                    return;
+                }
+
+                submitBtn.disabled = true;
+                const oldLbl = submitLbl.textContent;
+                submitLbl.textContent = 'Saving…';
+
+                try {
+                    const r = await fetch(SUBMIT_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            CourseID: COURSE_ID,
+                            Rating: rating,
+                            ReviewText: (textEl.value || '').trim()
+                        })
+                    });
+                    const d = await r.json();
+
+                    if (d.success) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '⭐ Thanks for your review!',
+                            text: d.message || 'Your review has been saved.',
+                            confirmButtonColor: '#4C1864'
+                        }).then(() => window.location.reload());
+                    } else {
+                        Swal.fire({
+                            icon: 'error', title: 'Could not save',
+                            text: d.message || 'Please try again.',
+                            confirmButtonColor: '#4C1864'
+                        });
+                        submitBtn.disabled = false;
+                        submitLbl.textContent = oldLbl;
+                    }
+                } catch (err) {
+                    Swal.fire({
+                        icon: 'error', title: 'Network error',
+                        text: err.message, confirmButtonColor: '#4C1864'
+                    });
+                    submitBtn.disabled = false;
+                    submitLbl.textContent = oldLbl;
+                }
+            });
+        })();
+    </script>
+
+    @if (Model.IsStudent)
+    {
+        <text>
+            <script>
+                // ── Course Exams: list this course's published exams and link to Take ──
+                (function () {
+                    const EXAM_LIST_URL = '@Url.Action("List", "Exam")';   // proxy → api/exam/by-course/#
+                    const TAKE_URL = '@Url.Action("Take", "Exam")';
+                    const COURSE_ID = @Model.CourseID;
+
+                    const section = document.getElementById('examSection');
+                    const list = document.getElementById('examList');
+                    if (!section || !list) return;
+
+                    fetch(EXAM_LIST_URL + '?courseId=' + COURSE_ID)
+                        .then(r => r.ok ? r.json() : [])
+                        .then(rows => {
+                            if (!Array.isArray(rows)) rows = [];
+                            // show published exams that actually have questions.
+                            // hide only when explicitly inactive, so a serializer
+                            // casing quirk can never blank the whole section.
+                            const exams = rows.filter(e => {
+                                const active = e.IsActive ?? e.isActive ?? e.is_active;
+                                const qCount = e.QuestionCount ?? e.questionCount ?? null;
+                                const notInactive = active !== false && active !== 0;
+                                const hasQuestions = (qCount === null) || (qCount > 0);
+                                return notInactive && hasQuestions;
+                            });
+                            // Always reveal the section for students; show a hint
+                            // when there is nothing to take yet.
+                            section.style.display = '';
+
+                            if (exams.length === 0) {
+                                list.innerHTML = emptyState(
+                                    'No exams published for this course yet.',
+                                    'Once your instructor publishes an exam, it will appear here.');
+                                return;
+                            }
+
+                            list.innerHTML = exams.map(e => {
+                                const id = e.ExamID ?? e.examID ?? e.examId ?? e.id;
+                                const title = e.Title ?? e.title ?? 'Exam';
+                                const dur = e.DurationMinutes ?? e.durationMinutes ?? 0;
+                                const pass = e.PassPercentage ?? e.passPercentage ?? 0;
+                                const att = e.MaxAttempts ?? e.maxAttempts ?? 0;
+                                const meta = [
+                                    dur ? ('<i class="far fa-clock"></i> ' + dur + ' min') : '',
+                                    pass ? ('<i class="fas fa-check-circle"></i> Pass ' + pass + '%') : '',
+                                    att ? ('<i class="fas fa-rotate"></i> ' + att + ' attempt(s)') : ''
+                                ].filter(Boolean).join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+
+                                return ''
+                                    + '<div style="display:flex;align-items:center;gap:14px;background:#fff;'
+                                    + 'border:1px solid #e7e5ee;border-radius:14px;padding:14px 18px;'
+                                    + 'box-shadow:0 6px 18px rgba(10,20,40,.04);">'
+                                    + '<div style="width:42px;height:42px;border-radius:10px;flex-shrink:0;'
+                                    + 'background:#f4f1fa;color:#4C1864;display:flex;align-items:center;'
+                                    + 'justify-content:center;font-size:18px;"><i class="fas fa-file-pen"></i></div>'
+                                    + '<div style="flex:1;min-width:0;">'
+                                    + '<div style="font-weight:800;color:#1f1d2b;">' + escapeHtml(title) + '</div>'
+                                    + '<div style="color:#6b7280;font-size:.82rem;margin-top:3px;">' + meta + '</div>'
+                                    + '</div>'
+                                    + '<a href="' + TAKE_URL + '?examId=' + id + '" '
+                                    + 'style="background:linear-gradient(120deg,#4C1864,#7B2CBF);color:#fff;'
+                                    + 'text-decoration:none;font-weight:700;font-size:.85rem;padding:10px 18px;'
+                                    + 'border-radius:10px;white-space:nowrap;">Take Exam <i class="fas fa-arrow-right"></i></a>'
+                                    + '</div>';
+                            }).join('');
+                        })
+                        .catch(() => {
+                            // On load error, keep the section visible with a hint
+                            // rather than silently hiding it.
+                            section.style.display = '';
+                            list.innerHTML = emptyState(
+                                'Couldn\'t load exams right now.',
+                                'Please refresh the page in a moment.');
+                        });
+
+                    function emptyState(title, sub) {
+                        return ''
+                            + '<div style="text-align:center;background:#fff;border:1px dashed #e7e5ee;'
+                            + 'border-radius:14px;padding:30px 20px;color:#6b7280;">'
+                            + '<i class="fas fa-file-circle-question" style="font-size:30px;color:#d6cfe6;'
+                            + 'display:block;margin-bottom:10px;"></i>'
+                            + '<div style="font-weight:700;color:#1f1d2b;">' + title + '</div>'
+                            + '<div style="font-size:.85rem;margin-top:4px;">' + sub + '</div>'
+                            + '</div>';
+                    }
+
+                    function escapeHtml(s) {
+                        return String(s).replace(/[&<>"']/g, c => (
+                            { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]
+                        ));
+                    }
+                })();
+            </script>
+        </text>
+    }
+}

@@ -1,0 +1,1545 @@
+@using Microsoft.AspNetCore.Http
+@using ProximaLMS.Services
+@inject IHttpContextAccessor HttpContextAccessor
+@inject IPermissionService Perms
+@inject Microsoft.Extensions.Configuration.IConfiguration Configuration
+
+@{
+    // Exposed for the notification bell partial (its JS calls the API directly).
+    ViewBag.ApiBaseUrl = Configuration["ApiBaseUrl"];
+
+    var roleId = HttpContextAccessor.HttpContext?.Session.GetInt32("RoleID") ?? 0;
+    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+    var userEmail = HttpContextAccessor.HttpContext?.Session.GetString("Email") ?? "User";
+
+    bool isAdmin = roleId == 1;
+    bool isTutor = roleId == 2;
+    bool isStudent = roleId == 3;
+    bool isEmployee = roleId == 4;
+
+    var actLower = (currentAction ?? "").ToLower();
+
+    var displayName = userEmail.Contains("@")
+        ? userEmail.Split('@')[0].Split('.')[0]
+        : userEmail;
+    displayName = displayName.Length > 0
+        ? char.ToUpper(displayName[0]) + displayName.Substring(1)
+        : "User";
+
+    var avatarInitial = displayName.Length > 0 ? displayName[0].ToString().ToUpper() : "U";
+
+    // ── Staff (non-admin) permission flags ──
+    bool showDashboard = Perms.CanView("DASHBOARD");
+    bool showCourseCreate = Perms.CanView("COURSE_CREATE");
+    bool showTutorCreate = Perms.CanView("TUTOR_CREATE");
+    bool showEmpCreate = Perms.CanView("EMPLOYEE_CREATE");
+    bool showTutorList = Perms.CanView("TUTOR_LIST");
+    bool showCourseList = Perms.CanView("COURSE_LIST");
+    bool showStudentList = Perms.CanView("STUDENT_LIST");
+    bool showEmpList = Perms.CanView("EMPLOYEE_LIST");
+    bool showCourseDetails = Perms.CanView("COURSE_DETAILS");
+
+    bool showCategory = !isAdmin && Perms.CanView("CATEGORY_LIST");
+    bool showTag = !isAdmin && Perms.CanView("TAG_LIST");
+    bool showSkillLevel = !isAdmin && Perms.CanView("SKILL_LEVEL_LIST");
+    bool showMaster = showCategory || showTag || showSkillLevel;
+
+    bool showAnyMgmt = showCourseCreate || showTutorCreate || showEmpCreate
+                    || showTutorList || showCourseList
+                    || showStudentList || showEmpList
+                    || isAdmin;
+
+    // Does the permission-gated "staff" branch have anything to show?
+    bool hasStaffNav = showDashboard || showAnyMgmt || showMaster || showCourseDetails;
+
+    // Learner nav is the SAFE DEFAULT: students, employees, and any logged-in
+    // user who isn't clearly an admin / tutor / privileged-staff member all get
+    // it. This prevents an empty sidebar when a page (e.g. the exam screens)
+    // is served by a controller that doesn't surface RoleID the same way.
+    bool showLearnerNav = isStudent || isEmployee || !(isAdmin || isTutor || hasStaffNav);
+
+    // ── Determine which accordion group is active based on current route ──
+    string activeGroup = "dashboard";
+
+    if (currentController == "Role") activeGroup = "roles";
+    else if (currentController == "Coupon") activeGroup = "coupon";
+    else if (currentController == "Referral") activeGroup = (isStudent || isEmployee) ? "rewards" : "coupon";
+    else if (currentController == "ReviewModeration") activeGroup = "reviews";
+    else if (currentController == "Category" || currentController == "Tag" || currentController == "SkillLevel") activeGroup = "masterdata";
+    else if (currentController == "AuditLog") activeGroup = "system";
+    else if (currentController == "CourseAssignment") activeGroup = "assign";
+    else if (currentController == "Courses" || currentController == "Tutor" || currentController == "Employee" || currentController == "Master") activeGroup = "mgmt";
+    else if (currentController == "Instructor" || currentController == "Exam" || currentController == "Announcement") activeGroup = "instructor";
+    else if (currentController == "Settings")
+    {
+        if (actLower == "languages") activeGroup = "masterdata";
+        else if (actLower == "points" || actLower == "badges") activeGroup = "gamification";
+        else activeGroup = "config";
+    }
+
+    // Small helper so each group can be marked open + highlighted when it holds the active page
+    Func<string, string> grp = g => activeGroup == g ? "open has-active" : "";
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ProximaLMS — @ViewData["Title"]</title>
+
+    <link rel="icon" type="image/x-icon" href="/assets/images/favicon.png" />
+    <link rel="stylesheet" href="/assets/css/assets.css" />
+    <link rel="stylesheet" href="/assets/vendors/calendar/fullcalendar.css" />
+    <link rel="stylesheet" href="/assets/css/typography.css" />
+    <link rel="stylesheet" href="/assets/css/shortcodes/shortcodes.css" />
+    <link rel="stylesheet" href="/assets/css/style.css" />
+    <link rel="stylesheet" href="/assets/css/dashboard.css" />
+    <link class="skin" rel="stylesheet" href="/assets/css/color/color-1.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="/css/admin-settings.css" />
+    <link rel="stylesheet" href="/css/proxima-design-system.css" />
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+
+    <style>
+        /* ══════════════════════════════════════════
+                                           PROXIMALMS — REDESIGNED LAYOUT
+                                           Accordion sidebar · Compact · Scroll-free
+                                        ══════════════════════════════════════════ */
+
+        :root {
+            --brand: #66209c;
+            --brand-mid: #6b21a8;
+            --brand-light: #9333ea;
+            --brand-pale: #f3e8ff;
+            --brand-xpale: #faf5ff;
+            --accent: #e879f9;
+            --sidebar-w: 256px;
+            --topbar-h: 60px;
+            --radius: 10px;
+            --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: var(--font);
+            background: #f8f5ff;
+            margin: 0;
+        }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #ddd6fe;
+            border-radius: 4px;
+        }
+
+        /* ══ TOPBAR ══ */
+        .ttr-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--topbar-h);
+            background: linear-gradient(90deg, #ffff 0%, #66209c 55%, #6b21a8 100%);
+            z-index: 1100;
+            display: flex;
+            align-items: center;
+            padding: 0 20px 0 0;
+            box-shadow: 0 1px 0 rgba(255,255,255,0.08);
+        }
+
+        .ttr-logo-box {
+            width: var(--sidebar-w);
+            display: flex;
+            align-items: center;
+            padding: 0 18px;
+            flex-shrink: 0;
+        }
+
+        .ttr-logo img {
+            height: 38px;
+            width: auto;
+        }
+
+        .topbar-spacer {
+            flex: 1;
+        }
+
+        /* Notification bell slot in the topbar */
+        .hdr-bell-slot {
+            display: flex;
+            align-items: center;
+            margin-right: 6px;
+        }
+
+            .hdr-bell-slot .notif-bell {
+                color: #fff;
+                opacity: 0.92;
+                font-size: 19px;
+            }
+
+                .hdr-bell-slot .notif-bell:hover {
+                    opacity: 1;
+                }
+
+        /* Hamburger */
+        .sb-toggle {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            margin-right: 8px;
+            opacity: 0.85;
+            transition: opacity .15s, background .15s;
+        }
+
+            .sb-toggle:hover {
+                opacity: 1;
+                background: rgba(255,255,255,0.1);
+            }
+
+        /* User pill */
+        .hdr-user-pill {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+            padding: 5px 12px 5px 5px;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 40px;
+            cursor: pointer;
+            text-decoration: none !important;
+            position: relative;
+            transition: background .2s;
+        }
+
+            .hdr-user-pill:hover {
+                background: rgba(255,255,255,0.18);
+            }
+
+        .hdr-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #c084fc, #e879f9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .hdr-name {
+            font-size: 13px;
+            font-weight: 600;
+            color: #fff;
+            white-space: nowrap;
+            max-width: 130px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .hdr-role-badge {
+            font-size: 10px;
+            font-weight: 700;
+            background: rgba(255,255,255,0.18);
+            color: #f0abfc;
+            padding: 2px 8px;
+            border-radius: 20px;
+            letter-spacing: .04em;
+        }
+
+        /* Topbar dropdown */
+        .hdr-dropdown {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            background: #fff;
+            border-radius: 14px;
+            border: 0.5px solid #ede9fe;
+            box-shadow: 0 12px 32px rgba(76,24,100,0.16);
+            min-width: 210px;
+            overflow: hidden;
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(-6px);
+            transition: opacity .18s, transform .18s;
+            z-index: 999;
+        }
+
+        .hdr-user-pill:focus-within .hdr-dropdown,
+        .hdr-user-pill.open .hdr-dropdown {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+
+        .hdr-dropdown-email {
+            padding: 10px 16px;
+            background: #faf8ff;
+            border-bottom: 0.5px solid #ede9fe;
+            font-size: 11px;
+            color: #9333ea;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .hdr-dropdown a {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #374151 !important;
+            text-decoration: none !important;
+            transition: background .15s;
+        }
+
+            .hdr-dropdown a:hover {
+                background: var(--brand-pale);
+                color: var(--brand-mid) !important;
+            }
+
+            .hdr-dropdown a i {
+                width: 16px;
+                text-align: center;
+                color: var(--brand-mid);
+            }
+
+            .hdr-dropdown a.logout-link {
+                color: #dc2626 !important;
+                border-top: 0.5px solid #ede9fe;
+            }
+
+                .hdr-dropdown a.logout-link i {
+                    color: #dc2626;
+                }
+
+                .hdr-dropdown a.logout-link:hover {
+                    background: #fee2e2;
+                }
+
+        /* ══ SIDEBAR ══ */
+        .ttr-sidebar {
+            position: fixed;
+            top: var(--topbar-h);
+            left: 0;
+            bottom: 0;
+            width: var(--sidebar-w);
+            background: #fff;
+            border-right: 0.5px solid #ede9fe;
+            display: flex;
+            flex-direction: column;
+            z-index: 1000;
+            transition: transform .28s cubic-bezier(.4,0,.2,1);
+        }
+
+        body.sb-collapsed .ttr-sidebar {
+            transform: translateX(-100%);
+        }
+
+        .sb-user-card {
+            padding: 14px 16px;
+            border-bottom: 0.5px solid #f3e8ff;
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            background: linear-gradient(135deg, #4C1864 0%, #6b21a8 100%);
+        }
+
+        .sb-avatar-lg {
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #c084fc, #e879f9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .sb-uname {
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .sb-uemail {
+            font-size: 11px;
+            color: rgba(255,255,255,0.6);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 150px;
+        }
+
+        /* Accordion nav body */
+        .sb-nav {
+            flex: 1;
+            overflow-y: auto;
+            padding: 8px 0 8px;
+        }
+
+            .sb-nav::-webkit-scrollbar {
+                width: 3px;
+            }
+
+            .sb-nav::-webkit-scrollbar-thumb {
+                background: #e9d5ff;
+            }
+
+        /* Group header button */
+        .nav-group {
+            margin: 2px 0;
+        }
+
+        .nav-group-btn {
+            width: 100%;
+            background: none;
+            border: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 16px;
+            cursor: pointer;
+            text-align: left;
+            transition: background .15s;
+            border-radius: 0;
+        }
+
+            .nav-group-btn:hover {
+                background: var(--brand-xpale);
+            }
+
+        /* Group that contains the active page */
+        .nav-group.has-active > .nav-group-btn {
+            background: linear-gradient(90deg, var(--brand-xpale), transparent);
+        }
+
+            .nav-group.has-active > .nav-group-btn .nav-group-label {
+                color: var(--brand-mid);
+            }
+
+        .nav-group-icon {
+            width: 26px;
+            height: 26px;
+            border-radius: 7px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            flex-shrink: 0;
+        }
+
+        .nav-group-label {
+            flex: 1;
+            font-size: 10.5px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            text-transform: uppercase;
+            color: #7c3aed;
+        }
+
+        .nav-group-chevron {
+            font-size: 10px;
+            color: #c4b5fd;
+            transition: transform .2s ease;
+            flex-shrink: 0;
+        }
+
+        .nav-group.open .nav-group-chevron {
+            transform: rotate(90deg);
+        }
+
+        /* Items container */
+        .nav-items {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height .28s cubic-bezier(.4,0,.2,1);
+        }
+
+        .nav-group.open .nav-items {
+            max-height: 800px;
+        }
+
+        /* Individual nav item */
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px 8px 18px;
+            margin: 1px 10px 1px 10px;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 500;
+            color: #4b5563;
+            text-decoration: none !important;
+            cursor: pointer;
+            border-left: 2px solid transparent;
+            transition: all .15s;
+        }
+
+            .nav-item:hover {
+                background: var(--brand-pale);
+                color: var(--brand-mid);
+                border-left-color: #c084fc;
+            }
+
+            .nav-item.active {
+                background: linear-gradient(90deg, var(--brand-pale), #fbf6ff);
+                color: var(--brand-mid);
+                border-left-color: var(--brand-mid);
+                font-weight: 600;
+                box-shadow: inset 0 0 0 0.5px #ede9fe;
+            }
+
+            .nav-item i {
+                width: 17px;
+                text-align: center;
+                font-size: 14px;
+                color: #a78bfa;
+                flex-shrink: 0;
+            }
+
+            .nav-item.active i {
+                color: var(--brand-mid);
+            }
+
+        /* Wishlist badge */
+        .wish-badge {
+            margin-left: auto;
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            border-radius: 20px;
+            background: #e11d6e;
+            color: #fff;
+            font-size: 10px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .nav-item.active .wish-badge {
+            background: rgba(107,33,168,0.3);
+        }
+
+        /* Sidebar footer */
+        .sb-footer {
+            padding: 10px 12px;
+            border-top: 0.5px solid #f3e8ff;
+        }
+
+        .sb-logout {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 9px 12px;
+            border-radius: 9px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #dc2626;
+            cursor: pointer;
+            text-decoration: none !important;
+            transition: background .15s;
+        }
+
+            .sb-logout:hover {
+                background: #fee2e2;
+                color: #dc2626 !important;
+            }
+
+            .sb-logout i {
+                font-size: 14px;
+            }
+
+        /* ══ MAIN WRAPPER ══ */
+        .ttr-wrapper {
+            margin-left: var(--sidebar-w);
+            margin-top: var(--topbar-h);
+            min-height: calc(100vh - var(--topbar-h));
+            transition: margin-left .28s cubic-bezier(.4,0,.2,1);
+            padding: 24px;
+        }
+
+        body.sb-collapsed .ttr-wrapper {
+            margin-left: 0;
+        }
+
+        @@media (max-width: 991px) {
+            .ttr-wrapper {
+                margin-left: 0;
+                padding: 16px;
+            }
+
+            .ttr-logo-box {
+                width: auto;
+            }
+
+            body.sb-open .ttr-sidebar {
+                transform: translateX(0);
+            }
+
+            .ttr-overlay {
+                display: block;
+            }
+        }
+
+        /* Overlay for mobile */
+        .ttr-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            z-index: 999;
+        }
+
+        @@media (max-width: 991px) {
+            .ttr-sidebar {
+                transform: translateX(-100%);
+            }
+        }
+
+        /* ── General component overrides ── */
+        .btn-primary, .btn-main {
+            background: var(--brand-mid);
+            border-color: var(--brand-mid);
+            color: #fff;
+            font-family: var(--font);
+        }
+
+            .btn-primary:hover {
+                background: var(--brand);
+                border-color: var(--brand);
+            }
+
+        .card, .widget-card {
+            border-radius: 14px;
+            box-shadow: 0 2px 16px rgba(76,24,100,0.07);
+            border: 0.5px solid #ede9fe;
+        }
+
+        .table-dark {
+            background: var(--brand);
+        }
+
+        a {
+            color: var(--brand-mid);
+        }
+
+            a:hover {
+                color: var(--brand);
+            }
+    </style>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    @RenderSection("Head", required: false)
+</head>
+
+<body class="@ViewBag.BodyClass" id="pageBody">
+
+    <!-- ══════════════════════════════════════
+         TOPBAR
+    ══════════════════════════════════════ -->
+    <header class="ttr-header">
+
+        <!-- Logo -->
+        <div class="ttr-logo-box">
+            @if (showLearnerNav)
+            {
+                <a asp-controller="StudentDashboard" asp-action="Index" class="ttr-logo">
+                    <img src="/assets/images/logologin.png" alt="ProximaLMS" />
+                </a>
+            }
+            else if (isTutor)
+            {
+                <a asp-controller="Instructor" asp-action="Index" class="ttr-logo">
+                    <img src="/assets/images/logologin.png" alt="ProximaLMS" />
+                </a>
+            }
+            else
+            {
+                <a asp-controller="Dashboard" asp-action="Index" class="ttr-logo">
+                    <img src="/assets/images/logologin.png" alt="ProximaLMS" />
+                </a>
+            }
+        </div>
+
+        <!-- Hamburger -->
+        <button class="sb-toggle" id="sbToggle" aria-label="Toggle sidebar">
+            <i class="fas fa-bars"></i>
+        </button>
+
+        <div class="topbar-spacer"></div>
+
+        <!-- Notification bell -->
+        <div class="hdr-bell-slot">
+            @await Html.PartialAsync("_NotificationBell")
+        </div>
+
+        <!-- User pill -->
+        <div class="hdr-user-pill" id="userPill" tabindex="0">
+            <div class="hdr-avatar">@avatarInitial</div>
+            <span class="hdr-name">@displayName</span>
+            <span class="hdr-role-badge">@(isAdmin ? "Admin" : isStudent ? "Student" : isTutor ? "Tutor" : isEmployee ? "Employee" : "Staff")</span>
+
+            <div class="hdr-dropdown">
+                <div class="hdr-dropdown-email">
+                    <i class="fas fa-envelope"></i>
+                    @userEmail
+                </div>
+                <a asp-controller="Profile" asp-action="Index">
+                    <i class="fas fa-user-circle"></i> My Profile
+                </a>
+                @if (isTutor)
+                {
+                    <a asp-controller="Instructor" asp-action="Index">
+                        <i class="fas fa-chart-line"></i> Instructor Panel
+                    </a>
+                }
+                else if (!showLearnerNav)
+                {
+                    <a asp-controller="Dashboard" asp-action="Index">
+                        <i class="fas fa-chart-line"></i> Dashboard
+                    </a>
+                }
+                <a asp-controller="Account" asp-action="Logout" class="logout-link">
+                    <i class="fas fa-right-from-bracket"></i> Log Out
+                </a>
+            </div>
+        </div>
+
+    </header>
+
+    <!-- ══════════════════════════════════════
+         SIDEBAR
+    ══════════════════════════════════════ -->
+    <div class="ttr-sidebar" id="sidebarEl">
+
+        <!-- User card -->
+        <div class="sb-user-card">
+            <div class="sb-avatar-lg">@avatarInitial</div>
+            <div style="min-width:0">
+                <div class="sb-uname">@displayName</div>
+                <div class="sb-uemail">@userEmail</div>
+            </div>
+        </div>
+
+        <!-- Nav body -->
+        <nav class="sb-nav" aria-label="Sidebar navigation">
+
+            @if (showLearnerNav)
+            {
+                <!-- ══ STUDENT / EMPLOYEE (learner) NAV ══ -->
+                <!-- My Learning -->
+                <div class="nav-group open" data-group="learning">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#ede9fe">
+                            <i class="fa-solid fa-book-open" style="color:#7c3aed;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">My Learning</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="StudentDashboard" asp-action="Index"
+                           class="nav-item @(currentController=="StudentDashboard" ? "active" : "")">
+                            <i class="fa-solid fa-house"></i>
+                            <span>Dashboard</span>
+                        </a>
+                        <a asp-controller="Courses" asp-action="List"
+                           class="nav-item @(currentController=="Courses" && currentAction=="List" && !isAdmin ? "active" : "")">
+                            <i class="fa-solid fa-layer-group"></i>
+                            <span>My Courses</span>
+                        </a>
+                        <a asp-controller="Courses" asp-action="Browse"
+                           class="nav-item @(currentController=="Courses" && currentAction=="Browse" ? "active" : "")">
+                            <i class="fa-solid fa-store"></i>
+                            <span>Browse Courses</span>
+                        </a>
+                        <a asp-controller="Exam" asp-action="MyExams"
+                           class="nav-item @(currentController=="Exam" && (currentAction=="MyExams"||currentAction=="Index"||currentAction=="Take"||currentAction=="Result") ? "active" : "")">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                            <span>My Exams</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Wishlist -->
+                <div class="nav-group open" data-group="wishlist">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#fce7f3">
+                            <i class="fa-solid fa-heart" style="color:#db2777;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Wishlist</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Courses" asp-action="Wishlist"
+                           class="nav-item @(currentController=="Courses" && currentAction=="Wishlist" ? "active" : "")">
+                            <i class="fa-solid fa-heart"></i>
+                            <span>My Wishlist</span>
+                            <span id="wishCountBadge" class="wish-badge" style="display:none">0</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Rewards -->
+                <div class="nav-group open" data-group="rewards">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#fef3c7">
+                            <i class="fa-solid fa-trophy" style="color:#d97706;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Rewards</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Rewards" asp-action="Index"
+                           class="nav-item @(currentController=="Rewards" && currentAction=="Index" ? "active" : "")">
+                            <i class="fa-solid fa-star"></i>
+                            <span>Points &amp; Badges</span>
+                        </a>
+                        <a asp-controller="Referral" asp-action="Index"
+                           class="nav-item @(currentController=="Referral" && currentAction=="Index" ? "active" : "")">
+                            <i class="fa-solid fa-gift"></i>
+                            <span>Refer &amp; Earn</span>
+                        </a>
+                        <a asp-controller="Referral" asp-action="Leaderboard"
+                           class="nav-item @(currentController=="Referral" && currentAction=="Leaderboard" && (isStudent || isEmployee) ? "active" : "")">
+                            <i class="fa-solid fa-ranking-star"></i>
+                            <span>Leaderboard</span>
+                        </a>
+                        <a asp-controller="Gamification" asp-action="Leaderboard"
+                           class="nav-item @(currentController=="Gamification" && currentAction=="Leaderboard" ? "active" : "")">
+                            <i class="fa-solid fa-trophy"></i>
+                            <span>Top Learners</span>
+                        </a>
+                        <a asp-controller="Gamification" asp-action="MyBadges"
+                           class="nav-item @(currentController=="Gamification" && currentAction=="MyBadges" ? "active" : "")">
+                            <i class="fa-solid fa-medal"></i>
+                            <span>My Badges</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Account & Activity -->
+                <div class="nav-group @(currentController=="Certificates" || currentController=="PaymentHistory" || currentController=="Notifications" ? "open has-active" : "")" data-group="account">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#e0f2fe">
+                            <i class="fa-solid fa-user-gear" style="color:#0284c7;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Account &amp; Activity</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Certificates" asp-action="Index"
+                           class="nav-item @(currentController=="Certificates" && currentAction=="Index" ? "active" : "")">
+                            <i class="fa-solid fa-certificate"></i>
+                            <span>My Certificates</span>
+                        </a>
+                        <a asp-controller="PaymentHistory" asp-action="Index"
+                           class="nav-item @(currentController=="PaymentHistory" && currentAction=="Index" ? "active" : "")">
+                            <i class="fa-solid fa-file-invoice"></i>
+                            <span>Payment History</span>
+                        </a>
+                        <a asp-controller="Notifications" asp-action="Index"
+                           class="nav-item @(currentController=="Notifications" && currentAction=="Index" ? "active" : "")">
+                            <i class="fa-solid fa-bell"></i>
+                            <span>Notifications</span>
+                        </a>
+                        <a asp-controller="Notifications" asp-action="Preferences"
+                           class="nav-item @(currentController=="Notifications" && currentAction=="Preferences" ? "active" : "")">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span>Notification Settings</span>
+                        </a>
+                    </div>
+                </div>
+            }
+            else if (isAdmin)
+            {
+                <!-- ══════════════════════════════════════════════
+                     ADMIN NAV — full access to every screen
+                ══════════════════════════════════════════════ -->
+                <!-- Dashboard -->
+                <div class="nav-group @grp("dashboard")" data-group="dashboard">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#ede9fe">
+                            <i class="fa-solid fa-house" style="color:#7c3aed;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Dashboard</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Dashboard" asp-action="Index"
+                           class="nav-item @(currentController=="Dashboard" ? "active" : "")">
+                            <i class="fa-solid fa-chart-pie"></i>
+                            <span>Home</span>
+                        </a>
+                        <a asp-controller="Analytics" asp-action="Index"
+                           class="nav-item @(currentController=="Analytics" ? "active" : "")">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>Analytics</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Management -->
+                <div class="nav-group @grp("mgmt")" data-group="mgmt">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#dbeafe">
+                            <i class="fa-solid fa-briefcase" style="color:#2563eb;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Management</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Courses" asp-action="Create"
+                           class="nav-item @(currentController=="Courses" && currentAction=="Create" ? "active" : "")">
+                            <i class="fa-solid fa-book-medical"></i>
+                            <span>Course Registration</span>
+                        </a>
+                        <a asp-controller="Master" asp-action="CourseList"
+                           class="nav-item @(currentController=="Master" && currentAction=="CourseList" ? "active" : "")">
+                            <i class="fa-solid fa-layer-group"></i>
+                            <span>Courses List</span>
+                        </a>
+                        <a asp-controller="Tutor" asp-action="Create"
+                           class="nav-item @(currentController=="Tutor" && currentAction=="Create" ? "active" : "")">
+                            <i class="fa-solid fa-chalkboard-user"></i>
+                            <span>Tutor Registration</span>
+                        </a>
+                        <a asp-controller="Tutor" asp-action="List"
+                           class="nav-item @(currentController=="Tutor" && currentAction=="List" ? "active" : "")">
+                            <i class="fa-solid fa-users"></i>
+                            <span>Tutor List</span>
+                        </a>
+                        <a asp-controller="Employee" asp-action="Register"
+                           class="nav-item @(currentController=="Employee" && currentAction=="Register" ? "active" : "")">
+                            <i class="fa-solid fa-id-card"></i>
+                            <span>Employee Registration</span>
+                        </a>
+                        <a asp-controller="Employee" asp-action="List"
+                           class="nav-item @(currentController=="Employee" && currentAction=="List" ? "active" : "")">
+                            <i class="fa-solid fa-address-card"></i>
+                            <span>Employee List</span>
+                        </a>
+                        <a asp-controller="Master" asp-action="StudentList"
+                           class="nav-item @(currentController=="Master" && currentAction=="StudentList" ? "active" : "")">
+                            <i class="fa-solid fa-user-graduate"></i>
+                            <span>Student List</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Course Assignment -->
+                <div class="nav-group @grp("assign")" data-group="assign">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#dcfce7">
+                            <i class="fa-solid fa-user-check" style="color:#16a34a;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Course Assignment</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="CourseAssignment" asp-action="Index"
+                           class="nav-item @(currentController=="CourseAssignment" && currentAction=="Index" ? "active" : "")">
+                            <i class="fa-solid fa-user-check"></i>
+                            <span>Assign Courses</span>
+                        </a>
+                        <a asp-controller="CourseAssignment" asp-action="Bulk"
+                           class="nav-item @(currentController=="CourseAssignment" && currentAction=="Bulk" ? "active" : "")">
+                            <i class="fa-solid fa-users-rectangle"></i>
+                            <span>Bulk Assign</span>
+                        </a>
+                        <a asp-controller="CourseAssignment" asp-action="Report"
+                           class="nav-item @(currentController=="CourseAssignment" && currentAction=="Report" ? "active" : "")">
+                            <i class="fa-solid fa-chart-column"></i>
+                            <span>Completion Report</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Coupons & Referral -->
+                <div class="nav-group @grp("coupon")" data-group="coupon">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#fce7f3">
+                            <i class="fa-solid fa-ticket" style="color:#be185d;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Coupons &amp; Referral</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Coupon" asp-action="List"
+                           class="nav-item @(currentController=="Coupon" && currentAction=="List" ? "active" : "")">
+                            <i class="fa-solid fa-ticket"></i>
+                            <span>Coupon List</span>
+                        </a>
+                        <a asp-controller="Coupon" asp-action="Create"
+                           class="nav-item @(currentController=="Coupon" && currentAction=="Create" ? "active" : "")">
+                            <i class="fa-solid fa-circle-plus"></i>
+                            <span>Create Coupon</span>
+                        </a>
+                        <a asp-controller="Coupon" asp-action="UsageReport"
+                           class="nav-item @(currentController=="Coupon" && currentAction=="UsageReport" ? "active" : "")">
+                            <i class="fa-solid fa-chart-line"></i>
+                            <span>Coupon Analytics</span>
+                        </a>
+                        <a asp-controller="Referral" asp-action="Policy"
+                           class="nav-item @(currentController=="Referral" && currentAction=="Policy" ? "active" : "")">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span>Referral Settings</span>
+                        </a>
+                        <a asp-controller="Referral" asp-action="Leaderboard"
+                           class="nav-item @(currentController=="Referral" && currentAction=="Leaderboard" ? "active" : "")">
+                            <i class="fa-solid fa-trophy"></i>
+                            <span>Referral Leaderboard</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Roles & Access -->
+                <div class="nav-group @grp("roles")" data-group="roles">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#e0e7ff">
+                            <i class="fa-solid fa-shield-halved" style="color:#4f46e5;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Roles &amp; Access</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Role" asp-action="List"
+                           class="nav-item @(currentController=="Role" && currentAction=="List" ? "active" : "")">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <span>Role List</span>
+                        </a>
+                        <a asp-controller="Role" asp-action="Create"
+                           class="nav-item @(currentController=="Role" && currentAction=="Create" ? "active" : "")">
+                            <i class="fa-solid fa-circle-plus"></i>
+                            <span>Create Role</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Reviews -->
+                <div class="nav-group @grp("reviews")" data-group="reviews">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#fef3c7">
+                            <i class="fa-solid fa-star" style="color:#d97706;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Reviews</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="ReviewModeration" asp-action="Index"
+                           class="nav-item @(currentController=="ReviewModeration" ? "active" : "")">
+                            <i class="fa-solid fa-gavel"></i>
+                            <span>Review Moderation</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Instructor / Teaching -->
+                // <div class="nav-group @grp("instructor")" data-group="instructor">
+                //     <button class="nav-group-btn" onclick="toggleGroup(this)">
+                //         <div class="nav-group-icon" style="background:#cffafe">
+                //             <i class="fa-solid fa-chalkboard-user" style="color:#0891b2;font-size:12px"></i>
+                //         </div>
+                //         <span class="nav-group-label">Instructor</span>
+                //         <span class="nav-group-chevron">▶</span>
+                //     </button>
+                //     <div class="nav-items">
+                //         <a asp-controller="Instructor" asp-action="Index"
+                //            class="nav-item @(currentController=="Instructor" && (currentAction=="Index" || currentAction=="Students") ? "active" : "")">
+                //             <i class="fa-solid fa-gauge-high"></i>
+                //             <span>Instructor Panel</span>
+                //         </a>
+                //         @* Question Bank / Exam Builder are course-scoped (need a CourseID),
+                //     so they're reached per-course from the Instructor Panel cards,
+                //     not from a context-free sidebar link. The Exam group stays
+                //     highlighted while on any Exam/* page via activeGroup. *@
+                //         <a asp-controller="Instructor" asp-action="Revenue"
+                //            class="nav-item @(currentController=="Instructor" && currentAction=="Revenue" ? "active" : "")">
+                //             <i class="fa-solid fa-indian-rupee-sign"></i>
+                //             <span>Revenue</span>
+                //         </a>
+                //     </div>
+                // </div>
+
+                <!-- Master Data -->
+                <div class="nav-group @grp("masterdata")" data-group="masterdata">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#f1f5f9">
+                            <i class="fa-solid fa-database" style="color:#475569;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Master Data</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Category" asp-action="Index"
+                           class="nav-item @(currentController=="Category" ? "active" : "")">
+                            <i class="fa-solid fa-folder-tree"></i>
+                            <span>Categories</span>
+                        </a>
+                        <a asp-controller="Tag" asp-action="Index"
+                           class="nav-item @(currentController=="Tag" ? "active" : "")">
+                            <i class="fa-solid fa-tags"></i>
+                            <span>Tags</span>
+                        </a>
+                        <a asp-controller="SkillLevel" asp-action="Index"
+                           class="nav-item @(currentController=="SkillLevel" ? "active" : "")">
+                            <i class="fa-solid fa-signal"></i>
+                            <span>Skill Levels</span>
+                        </a>
+                        <a asp-controller="Settings" asp-action="Languages"
+                           class="nav-item @(currentController=="Settings" && currentAction=="Languages" ? "active" : "")">
+                            <i class="fa-solid fa-language"></i>
+                            <span>Languages</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Gamification -->
+                <div class="nav-group @grp("gamification")" data-group="gamification">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#fef9c3">
+                            <i class="fa-solid fa-medal" style="color:#ca8a04;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Gamification</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Settings" asp-action="Points"
+                           class="nav-item @(currentController=="Settings" && currentAction=="Points" ? "active" : "")">
+                            <i class="fa-solid fa-coins"></i>
+                            <span>Points Rules</span>
+                        </a>
+                        <a asp-controller="Settings" asp-action="Badges"
+                           class="nav-item @(currentController=="Settings" && currentAction=="Badges" ? "active" : "")">
+                            <i class="fa-solid fa-award"></i>
+                            <span>Badges</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Configuration -->
+                <div class="nav-group @grp("config")" data-group="config">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#e2e8f0">
+                            <i class="fa-solid fa-sliders" style="color:#334155;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Configuration</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Settings" asp-action="Index"
+                           class="nav-item @(currentController=="Settings" && currentAction=="Index" ? "active" : "")">
+                            <i class="fa-solid fa-gear"></i>
+                            <span>System Settings</span>
+                        </a>
+                        <a asp-controller="Settings" asp-action="Payment"
+                           class="nav-item @(currentController=="Settings" && currentAction=="Payment" ? "active" : "")">
+                            <i class="fa-solid fa-credit-card"></i>
+                            <span>Payment Gateway</span>
+                        </a>
+                        <a asp-controller="Settings" asp-action="Storage"
+                           class="nav-item @(currentController=="Settings" && currentAction=="Storage" ? "active" : "")">
+                            <i class="fa-solid fa-hard-drive"></i>
+                            <span>Storage</span>
+                        </a>
+                        <a asp-controller="Settings" asp-action="Emails"
+                           class="nav-item @(currentController=="Settings" && currentAction=="Emails" ? "active" : "")">
+                            <i class="fa-solid fa-envelope-open-text"></i>
+                            <span>Email Templates</span>
+                        </a>
+                        <a asp-controller="Settings" asp-action="Certificates"
+                           class="nav-item @(currentController=="Settings" && currentAction=="Certificates" ? "active" : "")">
+                            <i class="fa-solid fa-certificate"></i>
+                            <span>Certificates</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Communications -->
+                <div class="nav-group @(currentController=="Notifications" ? "open has-active" : "")" data-group="comms">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#e0f2fe">
+                            <i class="fa-solid fa-bullhorn" style="color:#0284c7;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Communications</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Notifications" asp-action="Broadcast"
+                           class="nav-item @(currentController=="Notifications" && currentAction=="Broadcast" ? "active" : "")">
+                            <i class="fa-solid fa-bullhorn"></i>
+                            <span>Broadcast</span>
+                        </a>
+                        <a asp-controller="Notifications" asp-action="Index"
+                           class="nav-item @(currentController=="Notifications" && currentAction=="Index" ? "active" : "")">
+                            <i class="fa-solid fa-bell"></i>
+                            <span>Notifications</span>
+                        </a>
+                        <a asp-controller="Notifications" asp-action="Preferences"
+                           class="nav-item @(currentController=="Notifications" && currentAction=="Preferences" ? "active" : "")">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span>Notification Settings</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- System -->
+                <div class="nav-group @grp("system")" data-group="system">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#fee2e2">
+                            <i class="fa-solid fa-server" style="color:#dc2626;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">System</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="AuditLog" asp-action="Index"
+                           class="nav-item @(currentController=="AuditLog" ? "active" : "")">
+                            <i class="fa-solid fa-clipboard-list"></i>
+                            <span>Audit Log</span>
+                        </a>
+                    </div>
+                </div>
+            }
+            else if (isTutor)
+            {
+                <!-- ══════════════════════════════════════════════
+                     TUTOR NAV — instructor panel (module 16)
+                ══════════════════════════════════════════════ -->
+                <div class="nav-group open" data-group="instructor">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#cffafe">
+                            <i class="fa-solid fa-chalkboard-user" style="color:#0891b2;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Instructor</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Instructor" asp-action="Index"
+                           class="nav-item @(currentController=="Instructor" && (currentAction=="Index" || currentAction=="Students") ? "active" : "")">
+                            <i class="fa-solid fa-gauge-high"></i>
+                            <span>My Courses</span>
+                        </a>
+                        <a asp-controller="Courses" asp-action="Create"
+                           class="nav-item @(currentController=="Courses" && currentAction=="Create" ? "active" : "")">
+                            <i class="fa-solid fa-circle-plus"></i>
+                            <span>New Course</span>
+                        </a>
+                        @* Course List, Exam Builder, Question Bank and Student List
+                    open per-course from the My Courses cards (they need a CourseID). *@
+                        <a asp-controller="Instructor" asp-action="Revenue"
+                           class="nav-item @(currentController=="Instructor" && currentAction=="Revenue" ? "active" : "")">
+                            <i class="fa-solid fa-indian-rupee-sign"></i>
+                            <span>Revenue</span>
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Account & Activity -->
+                <div class="nav-group @(currentController=="Notifications" ? "open has-active" : "")" data-group="account">
+                    <button class="nav-group-btn" onclick="toggleGroup(this)">
+                        <div class="nav-group-icon" style="background:#e0f2fe">
+                            <i class="fa-solid fa-user-gear" style="color:#0284c7;font-size:12px"></i>
+                        </div>
+                        <span class="nav-group-label">Account &amp; Activity</span>
+                        <span class="nav-group-chevron">▶</span>
+                    </button>
+                    <div class="nav-items">
+                        <a asp-controller="Notifications" asp-action="Index"
+                           class="nav-item @(currentController=="Notifications" && currentAction=="Index" ? "active" : "")">
+                            <i class="fa-solid fa-bell"></i>
+                            <span>Notifications</span>
+                        </a>
+                        <a asp-controller="Notifications" asp-action="Preferences"
+                           class="nav-item @(currentController=="Notifications" && currentAction=="Preferences" ? "active" : "")">
+                            <i class="fa-solid fa-sliders"></i>
+                            <span>Notification Settings</span>
+                        </a>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <!-- ══ STAFF (non-admin) NAV — permission gated ══ -->
+                @if (showDashboard)
+                {
+                    <div class="nav-group @grp("dashboard")" data-group="dashboard">
+                        <button class="nav-group-btn" onclick="toggleGroup(this)">
+                            <div class="nav-group-icon" style="background:#ede9fe">
+                                <i class="fa-solid fa-house" style="color:#7c3aed;font-size:12px"></i>
+                            </div>
+                            <span class="nav-group-label">Dashboard</span>
+                            <span class="nav-group-chevron">▶</span>
+                        </button>
+                        <div class="nav-items">
+                            <a asp-controller="Dashboard" asp-action="Index"
+                               class="nav-item @(currentController=="Dashboard" ? "active" : "")">
+                                <i class="fa-solid fa-chart-pie"></i>
+                                <span>Home</span>
+                            </a>
+                        </div>
+                    </div>
+                }
+
+                @if (showAnyMgmt)
+                {
+                    <div class="nav-group @grp("mgmt")" data-group="mgmt">
+                        <button class="nav-group-btn" onclick="toggleGroup(this)">
+                            <div class="nav-group-icon" style="background:#dbeafe">
+                                <i class="fa-solid fa-briefcase" style="color:#2563eb;font-size:12px"></i>
+                            </div>
+                            <span class="nav-group-label">Management</span>
+                            <span class="nav-group-chevron">▶</span>
+                        </button>
+                        <div class="nav-items">
+                            @if (showCourseCreate)
+                            {
+                                <a asp-controller="Courses" asp-action="Create"
+                                   class="nav-item @(currentController=="Courses" && currentAction=="Create" ? "active" : "")">
+                                    <i class="fa-solid fa-book-medical"></i>
+                                    <span>Course Registration</span>
+                                </a>
+                            }
+                            @if (showTutorCreate)
+                            {
+                                <a asp-controller="Tutor" asp-action="Create"
+                                   class="nav-item @(currentController=="Tutor" && currentAction=="Create" ? "active" : "")">
+                                    <i class="fa-solid fa-chalkboard-user"></i>
+                                    <span>Tutor Registration</span>
+                                </a>
+                            }
+                            @if (showEmpCreate)
+                            {
+                                <a asp-controller="Employee" asp-action="Register"
+                                   class="nav-item @(currentController=="Employee" && currentAction=="Register" ? "active" : "")">
+                                    <i class="fa-solid fa-id-card"></i>
+                                    <span>Employee Registration</span>
+                                </a>
+                            }
+                            @if (showTutorList)
+                            {
+                                <a asp-controller="Tutor" asp-action="List"
+                                   class="nav-item @(currentController=="Tutor" && currentAction=="List" ? "active" : "")">
+                                    <i class="fa-solid fa-users"></i>
+                                    <span>Tutor List</span>
+                                </a>
+                            }
+                            @if (showCourseList)
+                            {
+                                <a asp-controller="Master" asp-action="CourseList"
+                                   class="nav-item @(currentController=="Master" && currentAction=="CourseList" ? "active" : "")">
+                                    <i class="fa-solid fa-layer-group"></i>
+                                    <span>Courses List</span>
+                                </a>
+                            }
+                            @if (showStudentList)
+                            {
+                                <a asp-controller="Master" asp-action="StudentList"
+                                   class="nav-item @(currentController=="Master" && currentAction=="StudentList" ? "active" : "")">
+                                    <i class="fa-solid fa-user-graduate"></i>
+                                    <span>Student List</span>
+                                </a>
+                            }
+                            @if (showEmpList)
+                            {
+                                <a asp-controller="Employee" asp-action="List"
+                                   class="nav-item @(currentController=="Employee" && currentAction=="List" ? "active" : "")">
+                                    <i class="fa-solid fa-address-card"></i>
+                                    <span>Employee List</span>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (showMaster)
+                {
+                    <div class="nav-group @grp("masterdata")" data-group="masterdata">
+                        <button class="nav-group-btn" onclick="toggleGroup(this)">
+                            <div class="nav-group-icon" style="background:#f1f5f9">
+                                <i class="fa-solid fa-database" style="color:#475569;font-size:12px"></i>
+                            </div>
+                            <span class="nav-group-label">Master Data</span>
+                            <span class="nav-group-chevron">▶</span>
+                        </button>
+                        <div class="nav-items">
+                            @if (showCategory)
+                            {
+                                <a asp-controller="Category" asp-action="Index"
+                                   class="nav-item @(currentController=="Category" ? "active" : "")">
+                                    <i class="fa-solid fa-folder-tree"></i>
+                                    <span>Categories</span>
+                                </a>
+                            }
+                            @if (showTag)
+                            {
+                                <a asp-controller="Tag" asp-action="Index"
+                                   class="nav-item @(currentController=="Tag" ? "active" : "")">
+                                    <i class="fa-solid fa-tags"></i>
+                                    <span>Tags</span>
+                                </a>
+                            }
+                            @if (showSkillLevel)
+                            {
+                                <a asp-controller="SkillLevel" asp-action="Index"
+                                   class="nav-item @(currentController=="SkillLevel" ? "active" : "")">
+                                    <i class="fa-solid fa-signal"></i>
+                                    <span>Skill Levels</span>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (showCourseDetails)
+                {
+                    <div class="nav-group open" data-group="learning">
+                        <button class="nav-group-btn" onclick="toggleGroup(this)">
+                            <div class="nav-group-icon" style="background:#ede9fe">
+                                <i class="fa-solid fa-play-circle" style="color:#7c3aed;font-size:12px"></i>
+                            </div>
+                            <span class="nav-group-label">Learning</span>
+                            <span class="nav-group-chevron">▶</span>
+                        </button>
+                        <div class="nav-items">
+                            <a asp-controller="Courses" asp-action="List"
+                               class="nav-item @(currentController=="Courses" && currentAction=="List" ? "active" : "")">
+                                <i class="fa-solid fa-play-circle"></i>
+                                <span>Course View</span>
+                            </a>
+                        </div>
+                    </div>
+                }
+            }
+
+        </nav>
+
+        <!-- Logout -->
+        <div class="sb-footer">
+            <a asp-controller="Account" asp-action="Logout" class="sb-logout">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                <span>Log Out</span>
+            </a>
+        </div>
+
+    </div>
+
+    <!-- Mobile overlay -->
+    <div class="ttr-overlay" id="sidebarOverlay"></div>
+
+    <!-- ══════════════════════════════════════
+         MAIN CONTENT
+    ══════════════════════════════════════ -->
+    <main class="ttr-wrapper">
+        <div class="container-fluid">
+            @RenderBody()
+        </div>
+    </main>
+
+    <!-- Scripts -->
+    <script src="/assets/js/jquery.min.js"></script>
+    <script src="/assets/vendors/bootstrap/js/popper.min.js"></script>
+    <script src="/assets/vendors/bootstrap/js/bootstrap.min.js"></script>
+    <script src="/assets/vendors/bootstrap-select/bootstrap-select.min.js"></script>
+    <script src="/assets/vendors/bootstrap-touchspin/jquery.bootstrap-touchspin.js"></script>
+    <script src="/assets/vendors/magnific-popup/magnific-popup.js"></script>
+    <script src="/assets/vendors/counter/waypoints-min.js"></script>
+    <script src="/assets/vendors/counter/counterup.min.js"></script>
+    <script src="/assets/vendors/imagesloaded/imagesloaded.js"></script>
+    <script src="/assets/vendors/masonry/masonry.js"></script>
+    <script src="/assets/vendors/masonry/filter.js"></script>
+    <script src="/assets/vendors/owl-carousel/owl.carousel.js"></script>
+    <script src='/assets/vendors/scroll/scrollbar.min.js'></script>
+    <script src="/assets/js/admin.js"></script>
+    <script src='/assets/vendors/calendar/moment.min.js'></script>
+    <script src='/assets/vendors/calendar/fullcalendar.js'></script>
+
+    <script>
+        /* ── Accordion toggle ── */
+        function toggleGroup(btn) {
+            var grp = btn.closest('.nav-group');
+            grp.classList.toggle('open');
+        }
+
+        /* ── Sidebar toggle (desktop collapse + mobile open) ── */
+        var sbToggle = document.getElementById('sbToggle');
+        var body = document.getElementById('pageBody');
+        var overlay = document.getElementById('sidebarOverlay');
+        var isMobile = window.innerWidth <= 991;
+
+        sbToggle.addEventListener('click', function () {
+            if (isMobile) {
+                body.classList.toggle('sb-open');
+                overlay.style.display = body.classList.contains('sb-open') ? 'block' : 'none';
+            } else {
+                body.classList.toggle('sb-collapsed');
+            }
+        });
+
+        overlay.addEventListener('click', function () {
+            body.classList.remove('sb-open');
+            overlay.style.display = 'none';
+        });
+
+        window.addEventListener('resize', function () {
+            isMobile = window.innerWidth <= 991;
+        });
+
+        /* ── Topbar user pill dropdown toggle ── */
+        var userPill = document.getElementById('userPill');
+        userPill.addEventListener('click', function (e) {
+            e.stopPropagation();
+            userPill.classList.toggle('open');
+        });
+        document.addEventListener('click', function () {
+            userPill.classList.remove('open');
+        });
+
+        /* ── Wishlist badge (learner: student / employee) ── */
+        @if (showLearnerNav)
+        {
+            <text>
+                (function () {
+                    fetch('@Url.Action("WishlistCount", "Courses")')
+                        .then(function (r) { return r.json(); })
+                        .then(function (d) {
+                            if (d && d.success && d.count > 0) {
+                                var b = document.getElementById('wishCountBadge');
+                                if (b) { b.textContent = d.count; b.style.display = 'flex'; }
+                            }
+                        })
+                        .catch(function () { });
+                })();
+            </text>
+        }
+    </script>
+
+    @RenderSection("Scripts", required: false)
+</body>
+</html>

@@ -1,0 +1,557 @@
+@model ProximaLMS.Models.SettingsPageVM
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = Model?.Title ?? "Certificate Templates";
+}
+
+<div class="as-wrap">
+
+    <div class="as-head">
+        <h1><span class="ico"><i class="fa-solid fa-award"></i></span> Certificate Templates</h1>
+        <div class="as-crumb">
+            <a asp-action="Index">Settings</a> &rsaquo; Certificate Templates
+        </div>
+    </div>
+
+    <div class="as-split">
+
+        <div class="as-card">
+            <div class="as-card-head">
+                <div class="as-card-title">Templates</div>
+                <button type="button" class="as-btn" id="btnNew">
+                    <i class="fa-solid fa-plus"></i> New
+                </button>
+            </div>
+            <div class="as-card-body" id="listBody">
+                <div class="as-empty">Loading&hellip;</div>
+            </div>
+        </div>
+
+        <div class="as-card" id="editorCard" style="display:none;">
+
+            <div class="as-card-head">
+                <div class="as-card-title" id="editorTitle">Edit template</div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="as-btn-ghost" id="btnRefreshPreview">
+                        <i class="fa-solid fa-rotate"></i> Refresh
+                    </button>
+                    <button type="button" class="as-btn" id="btnSave">
+                        <i class="fa-solid fa-floppy-disk"></i> Save
+                    </button>
+                </div>
+            </div>
+
+            <div class="as-card-body">
+
+                <input type="hidden" id="fId" value="0" />
+
+                @* ─── ROW 1: name + orientation ─── *@
+                <div class="row g-3 mb-3">
+                    <div class="col-md-8">
+                        <label class="as-label">Template name <span class="req">*</span></label>
+                        <input id="fName" type="text" class="as-input" maxlength="120" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="as-label">Orientation</label>
+                        <select id="fOrient" class="as-select">
+                            <option value="landscape">Landscape</option>
+                            <option value="portrait">Portrait</option>
+                        </select>
+                    </div>
+                </div>
+
+                @* ─── ROW 2: background image (full width) ─── *@
+                <div class="row g-3 mb-3">
+                    <div class="col-12">
+                        <label class="as-label">
+                            Background image URL
+                            <span style="color:#9aa0ac;font-weight:400">(optional)</span>
+                        </label>
+                        <input id="fBg" type="text" class="as-input" placeholder="/uploads/cert-bg.jpg" />
+                    </div>
+                </div>
+
+                @* ─── ROW 3: both toggles on their own line, properly spaced ─── *@
+                <div class="row g-3 mb-3">
+                    <div class="col-12">
+                        <div class="d-flex flex-wrap align-items-center"
+                             style="gap:28px;padding:14px 18px;background:var(--as-bg);border-radius:10px;">
+
+                            <div class="d-flex align-items-center" style="gap:10px;">
+                                <label class="as-switch m-0">
+                                    <input id="fActive" type="checkbox" checked />
+                                    <span class="slider"></span>
+                                </label>
+                                <span style="font-size:13px;color:var(--as-ink);font-weight:600;">Active</span>
+                                <span style="font-size:11px;color:var(--as-ink2);">
+                                    (available for issuing)
+                                </span>
+                            </div>
+
+                            <div class="d-flex align-items-center" style="gap:10px;">
+                                <label class="as-switch m-0">
+                                    <input id="fDefault" type="checkbox" />
+                                    <span class="slider"></span>
+                                </label>
+                                <span style="font-size:13px;color:var(--as-ink);font-weight:600;">Set as default</span>
+                                <span style="font-size:11px;color:var(--as-ink2);">
+                                    (used when no template is chosen)
+                                </span>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="as-edit-stack">
+
+                    <div class="stack-section">
+                        <div class="stack-section-head">
+                            <label class="as-label">HTML body <span class="req">*</span></label>
+                            <span class="stack-hint">Preview updates as you type</span>
+                        </div>
+                        <div class="as-hint" style="margin-bottom:8px;">
+                            Click any variable to copy:
+                            <span class="as-chip" data-var="{{StudentName}}">{{StudentName}}</span>
+                            <span class="as-chip" data-var="{{CourseName}}">{{CourseName}}</span>
+                            <span class="as-chip" data-var="{{InstructorName}}">{{InstructorName}}</span>
+                            <span class="as-chip" data-var="{{CompletionDate}}">{{CompletionDate}}</span>
+                            <span class="as-chip" data-var="{{CertificateID}}">{{CertificateID}}</span>
+                            <span class="as-chip" data-var="{{Grade}}">{{Grade}}</span>
+                            <span class="as-chip" data-var="{{CourseDuration}}">{{CourseDuration}}</span>
+                        </div>
+                        <textarea id="fHtml" class="as-code-editor" rows="14" spellcheck="false"></textarea>
+                    </div>
+
+                    <div class="stack-section">
+                        <div class="stack-section-head">
+                            <label class="as-label">Live preview</label>
+                            <span class="stack-hint">Variables filled with sample data</span>
+                        </div>
+                        <div class="as-preview-wrap">
+                            <iframe id="prev" title="Certificate preview" sandbox="allow-same-origin"></iframe>
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+@*
+    The default HTML template lives in a hidden <textarea> below.
+    HTML inside a textarea is content, not markup — the browser
+    will not parse closing tags inside it, AND Browser Link will
+    not inject into it (it only injects right before the real </body>).
+    This is the only reliable way to embed an HTML template that
+    contains </body></html> in an ASP.NET Core dev environment.
+*@
+<textarea id="defaultTemplateSource" style="display:none;">
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Certificate</title>
+<style>
+    body {
+        font-family: Georgia, serif;
+        margin: 0;
+        padding: 60px;
+        text-align: center;
+        color: #2a1a52;
+    }
+
+    .border {
+        border: 6px double #7B2CBF;
+        padding: 60px 50px;
+    }
+
+    h1 {
+        font-size: 42px;
+        margin: 0 0 6px;
+        letter-spacing: .04em;
+        color: #4C1864;
+    }
+
+    h2 {
+        font-size: 16px;
+        margin: 0 0 30px;
+        letter-spacing: .4em;
+        color: #6b7280;
+        text-transform: uppercase;
+        font-weight: 400;
+    }
+
+    .name {
+        font-size: 36px;
+        font-weight: 700;
+        color: #4C1864;
+        margin: 20px 0;
+        border-bottom: 2px solid #ddd;
+        padding-bottom: 8px;
+        display: inline-block;
+    }
+
+    p {
+        font-size: 16px;
+        line-height: 1.6;
+        color: #4b5563;
+    }
+
+    .meta {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 50px;
+        font-size: 13px;
+        color: #6b7280;
+    }
+</style></head>
+<body>
+<div class="border">
+<h1>Certificate of Completion</h1>
+<h2>ProximaLMS</h2>
+<p>This is to certify that</p>
+<div class="name">{{StudentName}}</div>
+<p>has successfully completed the course</p>
+<h3 style="font-size:20px;color:#7B2CBF;">{{CourseName}}</h3>
+<p>under the guidance of <strong>{{InstructorName}}</strong>,<br />
+       on <strong>{{CompletionDate}}</strong>, with grade <strong>{{Grade}}</strong>.</p>
+<div class="meta">
+<div>Certificate ID: {{CertificateID}}</div>
+<div>Duration: {{CourseDuration}}</div>
+    </div>
+  </div>
+</body></html>
+</textarea>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@@11"></script>
+    <script>
+        (function () {
+            'use strict';
+
+            var URL_LIST = '@Url.Action("CertificateList", "Settings")';
+            var URL_GET = '@Url.Action("CertificateGet", "Settings")';
+            var URL_SAVE = '@Url.Action("CertificateSave", "Settings")';
+            var URL_DELETE = '@Url.Action("CertificateDelete", "Settings")';
+
+            var rows = [];
+            var current = null;
+
+            // Default HTML pulled from hidden textarea — no string literals
+            // with closing tags anywhere in this script.
+            var defaultHtml = document.getElementById('defaultTemplateSource').value;
+
+            var sample = {
+                '{{StudentName}}': 'Alex Kumar',
+                '{{CourseName}}': 'Mastering JavaScript Fundamentals',
+                '{{InstructorName}}': 'Priya Sharma',
+                '{{CompletionDate}}': new Date().toLocaleDateString('en-IN', {
+                    day: 'numeric', month: 'long', year: 'numeric'
+                }),
+                '{{CertificateID}}': 'PLMS-' + Math.floor(Math.random() * 900000 + 100000),
+                '{{Grade}}': 'A+',
+                '{{CourseDuration}}': '12 hours'
+            };
+
+            function $(id) { return document.getElementById(id); }
+
+            function esc(s) {
+                if (s === null || s === undefined) return '';
+                return String(s).replace(/[<>&"]/g, function (c) {
+                    return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c];
+                });
+            }
+
+            function load() {
+                var lb = $('listBody');
+                lb.innerHTML = '<div class="as-empty">Loading&hellip;</div>';
+
+                fetch(URL_LIST)
+                    .then(function (r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return r.json();
+                    })
+                    .then(function (d) {
+                        rows = (d && d.data) ? d.data : [];
+                        renderList();
+                    })
+                    .catch(function (err) {
+                        lb.innerHTML = '<div class="as-empty">Could not load: ' + esc(err.message) + '</div>';
+                    });
+            }
+
+            function renderList() {
+                var lb = $('listBody');
+                if (!rows.length) {
+                    lb.innerHTML = '<div class="as-empty">' +
+                        '<i class="fa-solid fa-file-circle-plus"></i><br>' +
+                        'No templates yet.<br>' +
+                        '<span style="font-size:12px;">Click <strong>New</strong> above to create one.</span>' +
+                        '</div>';
+                    return;
+                }
+
+                var html = '<div class="as-list">';
+                for (var i = 0; i < rows.length; i++) {
+                    var r = rows[i];
+                    var isActive = (current && current.TemplateID === r.TemplateID);
+                    var statusBadge = r.IsActive
+                        ? '<span style="color:#15803d;font-weight:600;">active</span>'
+                        : '<span style="color:#b91c1c;font-weight:600;">inactive</span>';
+                    var defaultBadge = r.IsDefault
+                        ? ' &middot; <span class="as-pill info" style="font-size:10px;padding:1px 7px;">Default</span>'
+                        : '';
+                    var safeName = esc(r.TemplateName).replace(/'/g, "\\'");
+
+                    html += '' +
+                        '<div class="as-list-item' + (isActive ? ' active' : '') + '" ' +
+                        '     data-id="' + r.TemplateID + '">' +
+                        '  <div class="as-list-main">' +
+                        '    <strong>' + esc(r.TemplateName) + '</strong>' +
+                        '    <div style="font-size:12px;color:var(--as-ink2);margin-top:2px;">' +
+                        esc(r.Orientation || 'landscape') + ' &middot; ' + statusBadge + defaultBadge +
+                        '    </div>' +
+                        '  </div>' +
+                        '  <button type="button" class="as-icon-btn danger" title="Delete" ' +
+                        '          data-del="' + r.TemplateID + '" ' +
+                        '          data-name="' + safeName + '" ' +
+                        '          data-default="' + (r.IsDefault ? 1 : 0) + '">' +
+                        '    <i class="fa-solid fa-trash"></i>' +
+                        '  </button>' +
+                        '</div>';
+                }
+                html += '</div>';
+                lb.innerHTML = html;
+
+                var items = lb.querySelectorAll('.as-list-item');
+                for (var k = 0; k < items.length; k++) {
+                    items[k].addEventListener('click', function (e) {
+                        if (e.target.closest('[data-del]')) return;
+                        var id = parseInt(this.getAttribute('data-id'), 10);
+                        openTemplate(id);
+                    });
+                }
+                var dels = lb.querySelectorAll('[data-del]');
+                for (var j = 0; j < dels.length; j++) {
+                    dels[j].addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var id = parseInt(this.getAttribute('data-del'), 10);
+                        var name = this.getAttribute('data-name');
+                        var isDef = this.getAttribute('data-default') === '1';
+                        deleteTemplate(id, name, isDef);
+                    });
+                }
+            }
+
+            function openTemplate(id) {
+                if (id === 0) {
+                    current = {
+                        TemplateID: 0,
+                        TemplateName: 'New template',
+                        HtmlBody: defaultHtml,
+                        Orientation: 'landscape',
+                        IsActive: true,
+                        IsDefault: false,
+                        BackgroundImageUrl: ''
+                    };
+                    showEditor();
+                    renderList();
+                    return;
+                }
+
+                fetch(URL_GET + '?id=' + id)
+                    .then(function (r) {
+                        if (!r.ok) throw new Error('HTTP ' + r.status);
+                        return r.json();
+                    })
+                    .then(function (d) {
+                        current = (d && d.data) ? d.data : rows.find(function (x) {
+                            return x.TemplateID === id;
+                        });
+                        if (!current) {
+                            Swal.fire({ icon: 'error', title: 'Template not found' });
+                            return;
+                        }
+                        showEditor();
+                        renderList();
+                    })
+                    .catch(function (err) {
+                        Swal.fire({ icon: 'error', title: 'Load failed', text: err.message });
+                    });
+            }
+
+            function showEditor() {
+                $('editorCard').style.display = '';
+                $('editorTitle').textContent = current.TemplateID
+                    ? 'Edit "' + current.TemplateName + '"'
+                    : 'New template';
+
+                $('fId').value = current.TemplateID || 0;
+                $('fName').value = current.TemplateName || '';
+                $('fOrient').value = current.Orientation || 'landscape';
+                $('fActive').checked = !!current.IsActive;
+                $('fDefault').checked = !!current.IsDefault;
+                $('fBg').value = current.BackgroundImageUrl || '';
+                $('fHtml').value = current.HtmlBody || defaultHtml;
+
+                refreshPreview();
+            }
+
+            function refreshPreview() {
+                var html = $('fHtml').value || '';
+                var merged = html;
+                Object.keys(sample).forEach(function (k) {
+                    merged = merged.split(k).join(sample[k]);
+                });
+
+                var iframe = $('prev');
+                var doc = iframe.contentDocument || iframe.contentWindow.document;
+                doc.open();
+                doc.write(merged);
+                doc.close();
+            }
+
+            function saveTemplate() {
+                var name = $('fName').value.trim();
+                var html = $('fHtml').value;
+
+                if (!name) {
+                    Swal.fire({ icon: 'warning', title: 'Template name required' });
+                    return;
+                }
+                if (!html.trim()) {
+                    Swal.fire({ icon: 'warning', title: 'HTML body required' });
+                    return;
+                }
+
+                var body = {
+                    TemplateID: parseInt($('fId').value, 10) || 0,
+                    TemplateName: name,
+                    HtmlBody: html,
+                    BackgroundImageUrl: $('fBg').value.trim(),
+                    Orientation: $('fOrient').value,
+                    IsActive: $('fActive').checked,
+                    IsDefault: $('fDefault').checked
+                };
+
+                var btn = $('btnSave');
+                btn.disabled = true;
+
+                fetch(URL_SAVE, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) {
+                        btn.disabled = false;
+                        if (d && d.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Saved',
+                                timer: 1200,
+                                showConfirmButton: false
+                            });
+                            var savedId = d.id || d.templateId || body.TemplateID;
+                            load();
+                            setTimeout(function () {
+                                if (savedId) openTemplate(savedId);
+                            }, 300);
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Failed',
+                                text: (d && d.message) ? d.message : 'Could not save.'
+                            });
+                        }
+                    })
+                    .catch(function (err) {
+                        btn.disabled = false;
+                        Swal.fire({ icon: 'error', title: 'Network error', text: err.message });
+                    });
+            }
+
+            function deleteTemplate(id, name, isDefault) {
+                if (isDefault) {
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Cannot delete default',
+                        text: 'Mark another template as default first.'
+                    });
+                    return;
+                }
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Delete template?',
+                    text: '"' + name + '" will be permanently removed.',
+                    showCancelButton: true,
+                    confirmButtonText: 'Delete',
+                    confirmButtonColor: '#dc2626'
+                }).then(function (res) {
+                    if (!res.isConfirmed) return;
+
+                    fetch(URL_DELETE, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ TemplateID: id })
+                    })
+                        .then(function (r) { return r.json(); })
+                        .then(function (d) {
+                            if (d && d.success) {
+                                Swal.fire({
+                                    icon: 'success',
+                                    title: 'Deleted',
+                                    timer: 1200,
+                                    showConfirmButton: false
+                                });
+                                if (current && current.TemplateID === id) {
+                                    current = null;
+                                    $('editorCard').style.display = 'none';
+                                }
+                                load();
+                            } else {
+                                Swal.fire({
+                                    icon: 'error',
+                                    title: 'Failed',
+                                    text: (d && d.message) ? d.message : 'Could not delete.'
+                                });
+                            }
+                        })
+                        .catch(function (err) {
+                            Swal.fire({ icon: 'error', title: 'Network error', text: err.message });
+                        });
+                });
+            }
+
+            function wireChips() {
+                var chips = document.querySelectorAll('.as-chip[data-var]');
+                for (var i = 0; i < chips.length; i++) {
+                    chips[i].style.cursor = 'pointer';
+                    chips[i].addEventListener('click', function () {
+                        var v = this.getAttribute('data-var');
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(v);
+                        }
+                        var orig = this.textContent;
+                        var chip = this;
+                        chip.textContent = 'Copied!';
+                        setTimeout(function () { chip.textContent = orig; }, 700);
+                    });
+                }
+            }
+
+            $('btnNew').addEventListener('click', function () { openTemplate(0); });
+            $('btnRefreshPreview').addEventListener('click', refreshPreview);
+            $('btnSave').addEventListener('click', saveTemplate);
+
+            var debounceTimer = null;
+            $('fHtml').addEventListener('input', function () {
+                if (debounceTimer) clearTimeout(debounceTimer);
+                debounceTimer = setTimeout(refreshPreview, 400);
+            });
+
+            wireChips();
+            load();
+        })();
+    </script>
+}

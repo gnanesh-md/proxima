@@ -1,0 +1,506 @@
+@model ProximaLMS.Controllers.ReviewQueueViewModel
+@{
+    Layout = "_Layout";
+    ViewData["Title"] = "Review Moderation";
+
+    string filter = Model.ActiveFilter ?? "PENDING";
+
+    Func<int, string> Stars = rating =>
+    {
+        var sb = new System.Text.StringBuilder();
+        for (int i = 1; i <= 5; i++)
+            sb.Append(i <= rating ? "<i class='fas fa-star'></i>" : "<i class='far fa-star'></i>");
+        return sb.ToString();
+    };
+}
+
+<style>
+    :root {
+        --rm-p1: #4C1864;
+        --rm-p2: #7B2CBF;
+        --rm-bg: #f4f6fb;
+        --rm-ink: #1A0F2E;
+        --rm-muted: #6B7280;
+    }
+
+    .rm-wrap { padding: 10px; background: var(--rm-bg); }
+
+    .rm-header {
+        background: #fff;
+        padding: 20px 25px;
+        box-shadow: 0 8px 30px rgba(0,0,0,.05);
+        border-radius: 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+    .rm-title { font-size: 22px; font-weight: 700; color: var(--rm-p1); margin: 0; }
+    .rm-sub   { font-size: 13px; color: var(--rm-muted); margin-top: 3px; }
+
+    /* ── stat tiles / filter tabs ── */
+    .rm-tabs {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 14px;
+        margin-bottom: 20px;
+    }
+    @@media (max-width: 720px) { .rm-tabs { grid-template-columns: repeat(2,1fr); } }
+
+    .rm-tab {
+        background: #fff;
+        border-radius: 14px;
+        padding: 16px 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        cursor: pointer;
+        border: 2px solid transparent;
+        transition: border-color .15s, transform .15s;
+        text-align: left;
+    }
+    .rm-tab:hover { transform: translateY(-2px); }
+    .rm-tab.active { border-color: var(--rm-p2); }
+
+    .rm-tab .num { font-size: 26px; font-weight: 800; color: var(--rm-ink); }
+    .rm-tab .lbl {
+        font-size: 12px; font-weight: 700; text-transform: uppercase;
+        letter-spacing: .04em; color: var(--rm-muted); margin-top: 2px;
+    }
+    .rm-tab.pending  .num { color: #B45309; }
+    .rm-tab.approved .num { color: #137A3E; }
+    .rm-tab.rejected .num { color: #B91C1C; }
+
+    /* ── toolbar ── */
+    .rm-toolbar {
+        background: #fff;
+        border-radius: 14px 14px 0 0;
+        padding: 14px 18px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+        border-bottom: 1px solid #eef0f5;
+    }
+    .rm-search {
+        flex: 1; min-width: 200px;
+        padding: 9px 13px;
+        border: 1px solid #dde1ea;
+        border-radius: 9px;
+        font-size: 14px;
+    }
+    .rm-bulkbar {
+        display: none;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+        color: var(--rm-muted);
+    }
+    .rm-bulkbar.show { display: flex; }
+
+    .rm-btn {
+        border: 0;
+        border-radius: 8px;
+        padding: 9px 16px;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .rm-btn:disabled { opacity: .5; cursor: not-allowed; }
+    .rm-btn-approve { background: #137A3E; color: #fff; }
+    .rm-btn-reject  { background: #B91C1C; color: #fff; }
+    .rm-btn-ghost   { background: #f1eaf6; color: var(--rm-p1); }
+
+    /* ── list ── */
+    .rm-list {
+        background: #fff;
+        border-radius: 0 0 14px 14px;
+        box-shadow: 0 8px 25px rgba(0,0,0,.06);
+        overflow: hidden;
+    }
+
+    .rm-row {
+        display: flex;
+        gap: 14px;
+        padding: 16px 18px;
+        border-bottom: 1px solid #f1f2f6;
+        align-items: flex-start;
+    }
+    .rm-row:last-child { border-bottom: none; }
+    .rm-row:hover { background: #faf9fc; }
+
+    .rm-check { margin-top: 4px; width: 16px; height: 16px; cursor: pointer; flex-shrink: 0; }
+
+    .rm-avatar {
+        width: 42px; height: 42px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--rm-p1), var(--rm-p2));
+        color: #fff; font-weight: 700; font-size: 15px;
+        display: flex; align-items: center; justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .rm-body { flex: 1; min-width: 0; }
+    .rm-line1 {
+        display: flex; align-items: center; gap: 10px;
+        flex-wrap: wrap; margin-bottom: 3px;
+    }
+    .rm-name  { font-weight: 700; color: var(--rm-ink); font-size: 14px; }
+    .rm-email { font-size: 12px; color: var(--rm-muted); }
+    .rm-stars { color: #FFB300; font-size: 13px; }
+    .rm-stars .far { color: #E0D4EC; }
+
+    .rm-course {
+        font-size: 12px; font-weight: 600;
+        color: var(--rm-p1); background: #f5ebfb;
+        padding: 2px 9px; border-radius: 20px;
+    }
+    .rm-date { font-size: 12px; color: #9aa0ac; }
+
+    .rm-text {
+        font-size: 13.5px; color: #3b3f4a;
+        line-height: 1.55; margin: 7px 0;
+        white-space: pre-wrap; word-break: break-word;
+    }
+    .rm-text.empty { font-style: italic; color: #b7aec4; }
+
+    .rm-status-pill {
+        font-size: 11px; font-weight: 700;
+        padding: 3px 10px; border-radius: 20px;
+        text-transform: uppercase; letter-spacing: .03em;
+    }
+    .rm-status-pending  { background: #faeeda; color: #854f0b; }
+    .rm-status-approved { background: #e1f5ee; color: #0f6e56; }
+    .rm-status-rejected { background: #fceaea; color: #a32d2d; }
+
+    .rm-modnote {
+        font-size: 12px; color: var(--rm-muted);
+        background: #faf7fc; border-radius: 8px;
+        padding: 6px 10px; margin-top: 6px;
+    }
+
+    .rm-actions { display: flex; gap: 8px; flex-shrink: 0; }
+    .rm-icon-btn {
+        width: 36px; height: 36px;
+        border-radius: 9px; border: 0;
+        cursor: pointer; font-size: 14px;
+        display: flex; align-items: center; justify-content: center;
+        transition: transform .12s;
+    }
+    .rm-icon-btn:hover { transform: scale(1.08); }
+    .rm-icon-approve { background: #e1f5ee; color: #137A3E; }
+    .rm-icon-reject  { background: #fceaea; color: #B91C1C; }
+
+    .rm-empty {
+        padding: 50px 20px; text-align: center; color: #9aa0ac;
+    }
+    .rm-empty i { font-size: 42px; color: #d8dbe3; margin-bottom: 12px; }
+</style>
+
+<div class="rm-wrap">
+
+    <div class="rm-header">
+        <div>
+            <h2 class="rm-title"><i class="fas fa-gavel"></i> Review Moderation</h2>
+            <div class="rm-sub">Approve or reject student reviews before they go public</div>
+        </div>
+    </div>
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger">@TempData["Error"]</div>
+    }
+
+    <!-- ── filter tabs / counts ── -->
+    <div class="rm-tabs">
+        <div class="rm-tab pending @(filter == "PENDING" ? "active" : "")" data-status="PENDING">
+            <div class="num" id="cntPending">@Model.Counts.PendingCount</div>
+            <div class="lbl">Pending</div>
+        </div>
+        <div class="rm-tab approved @(filter == "APPROVED" ? "active" : "")" data-status="APPROVED">
+            <div class="num" id="cntApproved">@Model.Counts.ApprovedCount</div>
+            <div class="lbl">Approved</div>
+        </div>
+        <div class="rm-tab rejected @(filter == "REJECTED" ? "active" : "")" data-status="REJECTED">
+            <div class="num" id="cntRejected">@Model.Counts.RejectedCount</div>
+            <div class="lbl">Rejected</div>
+        </div>
+        <div class="rm-tab @(filter == "ALL" ? "active" : "")" data-status="ALL">
+            <div class="num" id="cntTotal">@Model.Counts.TotalCount</div>
+            <div class="lbl">All Reviews</div>
+        </div>
+    </div>
+
+    <!-- ── toolbar ── -->
+    <div class="rm-toolbar">
+        <input type="text" id="rmSearch" class="rm-search"
+               placeholder="Search by student, course or text…" />
+        <div class="rm-bulkbar" id="rmBulkbar">
+            <span id="rmSelCount">0 selected</span>
+            <button class="rm-btn rm-btn-approve" id="rmBulkApprove">
+                <i class="fas fa-check"></i> Approve selected
+            </button>
+            <button class="rm-btn rm-btn-reject" id="rmBulkReject">
+                <i class="fas fa-times"></i> Reject selected
+            </button>
+        </div>
+    </div>
+
+    <!-- ── list ── -->
+    <div class="rm-list" id="rmList">
+        <!-- rows injected by JS -->
+    </div>
+
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script>
+        var QUEUE_URL    = '@Url.Action("Queue",        "ReviewModeration")';
+        var MODERATE_URL = '@Url.Action("Moderate",     "ReviewModeration")';
+        var BULK_URL     = '@Url.Action("BulkModerate", "ReviewModeration")';
+
+        var currentFilter = '@filter';
+        var allRows = [];
+
+        // ── seed from server-rendered model ──
+        allRows = @Html.Raw(Newtonsoft.Json.JsonConvert.SerializeObject(Model.Reviews));
+
+        function escHtml(s) {
+            var d = document.createElement('div');
+            d.textContent = s || '';
+            return d.innerHTML;
+        }
+
+        function initials(name) {
+            if (!name) return '?';
+            var p = name.trim().split(/\s+/);
+            return (p.length === 1 ? p[0][0] : p[0][0] + p[p.length - 1][0]).toUpperCase();
+        }
+
+        function stars(n) {
+            var s = '';
+            for (var i = 1; i <= 5; i++)
+                s += (i <= n) ? '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
+            return s;
+        }
+
+        function fmtDate(iso) {
+            if (!iso) return '';
+            var d = new Date(iso);
+            return d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        }
+
+        function statusPill(st) {
+            var cls = st === 'APPROVED' ? 'rm-status-approved'
+                    : st === 'REJECTED' ? 'rm-status-rejected'
+                                        : 'rm-status-pending';
+            return '<span class="rm-status-pill ' + cls + '">' + st + '</span>';
+        }
+
+        // ── render the list ──
+        function renderList() {
+            var q = (document.getElementById('rmSearch').value || '').toLowerCase().trim();
+            var list = document.getElementById('rmList');
+
+            var rows = allRows.filter(function (r) {
+                if (!q) return true;
+                return (r.StudentName + ' ' + r.StudentEmail + ' ' +
+                        r.CourseTitle + ' ' + r.ReviewText).toLowerCase().includes(q);
+            });
+
+            if (rows.length === 0) {
+                list.innerHTML =
+                    '<div class="rm-empty"><i class="fas fa-inbox"></i>' +
+                    '<div>No ' + currentFilter.toLowerCase() + ' reviews' +
+                    (q ? ' match your search.' : '.') + '</div></div>';
+                updateBulkbar();
+                return;
+            }
+
+            var html = '';
+            rows.forEach(function (r) {
+                var isPending = r.Status === 'PENDING';
+                html +=
+                '<div class="rm-row" data-id="' + r.ReviewID + '">' +
+                    (isPending
+                        ? '<input type="checkbox" class="rm-check" value="' + r.ReviewID + '" />'
+                        : '<span style="width:16px;flex-shrink:0;"></span>') +
+                    '<div class="rm-avatar">' + initials(r.StudentName) + '</div>' +
+                    '<div class="rm-body">' +
+                        '<div class="rm-line1">' +
+                            '<span class="rm-name">' + escHtml(r.StudentName) + '</span>' +
+                            '<span class="rm-email">' + escHtml(r.StudentEmail) + '</span>' +
+                            '<span class="rm-stars">' + stars(r.Rating) + '</span>' +
+                            statusPill(r.Status) +
+                        '</div>' +
+                        '<div class="rm-line1">' +
+                            '<span class="rm-course">' + escHtml(r.CourseTitle) + '</span>' +
+                            '<span class="rm-date">' + fmtDate(r.CreatedDate) + '</span>' +
+                        '</div>' +
+                        (r.ReviewText
+                            ? '<div class="rm-text">' + escHtml(r.ReviewText) + '</div>'
+                            : '<div class="rm-text empty">No written comment — rating only.</div>') +
+                        (r.ModerationNote
+                            ? '<div class="rm-modnote"><i class="fas fa-comment-dots"></i> ' +
+                              escHtml(r.ModerationNote) + '</div>'
+                            : '') +
+                        (r.ModeratedBy
+                            ? '<div class="rm-modnote">Moderated by ' + escHtml(r.ModeratedBy) +
+                              ' on ' + fmtDate(r.ModeratedDate) + '</div>'
+                            : '') +
+                    '</div>' +
+                    '<div class="rm-actions">' +
+                        (r.Status !== 'APPROVED'
+                            ? '<button class="rm-icon-btn rm-icon-approve" title="Approve" ' +
+                              'onclick="moderateOne(' + r.ReviewID + ',\'APPROVED\')">' +
+                              '<i class="fas fa-check"></i></button>'
+                            : '') +
+                        (r.Status !== 'REJECTED'
+                            ? '<button class="rm-icon-btn rm-icon-reject" title="Reject" ' +
+                              'onclick="moderateOne(' + r.ReviewID + ',\'REJECTED\')">' +
+                              '<i class="fas fa-times"></i></button>'
+                            : '') +
+                    '</div>' +
+                '</div>';
+            });
+
+            list.innerHTML = html;
+            wireCheckboxes();
+            updateBulkbar();
+        }
+
+        // ── checkbox / bulk handling ──
+        function wireCheckboxes() {
+            document.querySelectorAll('.rm-check').forEach(function (cb) {
+                cb.addEventListener('change', updateBulkbar);
+            });
+        }
+
+        function selectedIds() {
+            return Array.from(document.querySelectorAll('.rm-check:checked'))
+                        .map(function (cb) { return parseInt(cb.value, 10); });
+        }
+
+        function updateBulkbar() {
+            var ids = selectedIds();
+            var bar = document.getElementById('rmBulkbar');
+            document.getElementById('rmSelCount').textContent = ids.length + ' selected';
+            bar.classList.toggle('show', ids.length > 0);
+        }
+
+        // ── single moderation ──
+        async function moderateOne(reviewId, newStatus) {
+            var note = '';
+            if (newStatus === 'REJECTED') {
+                var res = await Swal.fire({
+                    title: 'Reject this review?',
+                    input: 'text',
+                    inputplaceholder: 'Optional reason (visible to admins only)',
+                    showCancelButton: true,
+                    confirmButtonText: 'Reject',
+                    confirmButtonColor: '#B91C1C'
+                });
+                if (!res.isConfirmed) return;
+                note = res.value || '';
+            }
+
+            try {
+                var r = await fetch(MODERATE_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ReviewID: reviewId, NewStatus: newStatus, Note: note })
+                });
+                var d = await r.json();
+
+                if (d.success) {
+                    Swal.fire({
+                        toast: true, position: 'top-end', icon: 'success',
+                        title: d.message, showConfirmButton: false, timer: 1800
+                    });
+                    reloadQueue();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Failed', text: d.message || 'Try again.', confirmButtonColor: '#4C1864' });
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Network error', text: e.message, confirmButtonColor: '#4C1864' });
+            }
+        }
+
+        // ── bulk moderation ──
+        async function bulkModerate(newStatus) {
+            var ids = selectedIds();
+            if (ids.length === 0) return;
+
+            var verb = newStatus === 'APPROVED' ? 'Approve' : 'Reject';
+            var res = await Swal.fire({
+                title: verb + ' ' + ids.length + ' review(s)?',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: verb,
+                confirmButtonColor: newStatus === 'APPROVED' ? '#137A3E' : '#B91C1C'
+            });
+            if (!res.isConfirmed) return;
+
+            try {
+                var r = await fetch(BULK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ReviewIDs: ids, NewStatus: newStatus })
+                });
+                var d = await r.json();
+
+                if (d.success) {
+                    Swal.fire({
+                        toast: true, position: 'top-end', icon: 'success',
+                        title: d.message, showConfirmButton: false, timer: 2000
+                    });
+                    reloadQueue();
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Failed', text: d.message || 'Try again.', confirmButtonColor: '#4C1864' });
+                }
+            } catch (e) {
+                Swal.fire({ icon: 'error', title: 'Network error', text: e.message, confirmButtonColor: '#4C1864' });
+            }
+        }
+
+        // ── reload current filter from the server ──
+        async function reloadQueue() {
+            try {
+                var r = await fetch(QUEUE_URL + '?status=' + currentFilter);
+                var d = await r.json();
+                if (d.success) {
+                    allRows = d.reviews || [];
+                    if (d.counts) {
+                        document.getElementById('cntPending').textContent  = d.counts.PendingCount;
+                        document.getElementById('cntApproved').textContent = d.counts.ApprovedCount;
+                        document.getElementById('cntRejected').textContent = d.counts.RejectedCount;
+                        document.getElementById('cntTotal').textContent    = d.counts.TotalCount;
+                    }
+                    renderList();
+                }
+            } catch (e) { /* keep current view on error */ }
+        }
+
+        // ── tab switching ──
+        document.querySelectorAll('.rm-tab').forEach(function (tab) {
+            tab.addEventListener('click', function () {
+                document.querySelectorAll('.rm-tab').forEach(function (t) { t.classList.remove('active'); });
+                this.classList.add('active');
+                currentFilter = this.dataset.status;
+                reloadQueue();
+            });
+        });
+
+        document.getElementById('rmSearch').addEventListener('input', renderList);
+        document.getElementById('rmBulkApprove').addEventListener('click', function () { bulkModerate('APPROVED'); });
+        document.getElementById('rmBulkReject').addEventListener('click', function () { bulkModerate('REJECTED'); });
+
+        // first paint
+        renderList();
+    </script>
+}

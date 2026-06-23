@@ -1,0 +1,305 @@
+@using Newtonsoft.Json.Linq
+@{
+    ViewData["Title"] = "My Rewards";
+    Layout = "_Layout";
+    var s      = ViewBag.Summary as JObject ?? new JObject();
+    var badges = ViewBag.Badges as JArray ?? new JArray();
+    var top    = ViewBag.Top as JArray ?? new JArray();
+    var me     = ViewBag.Me as JObject ?? new JObject();
+    var hist   = ViewBag.History as JArray ?? new JArray();
+    var myId   = (string)ViewBag.StudentId;
+
+    int points  = (int?)s["TotalPoints"]    ?? 0;
+    int streak  = (int?)s["CurrentStreak"]  ?? 0;
+    int longest = (int?)s["LongestStreak"]  ?? 0;
+    int rank    = (int?)s["MyRank"]         ?? 0;
+    int bcount  = (int?)s["BadgeCount"]     ?? 0;
+}
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--g1:#4C1864;--g2:#7B2CBF;--g3:#9D4EDD;--ink:#1a1523;--sub:#4b5563;--muted:#94a3b8;--border:#ede9fe;--bg:#f8f5ff;--card:#fff;--sh:0 2px 12px rgba(76,24,100,.07);--sh-md:0 8px 28px rgba(76,24,100,.13);}
+*{box-sizing:border-box;}
+.rw-pg{display:flex;flex-direction:column;gap:22px;font-family:'Plus Jakarta Sans',system-ui,sans-serif;padding-bottom:40px;}
+
+/* HERO */
+.rw-hero{background:linear-gradient(135deg,#1a0533 0%,#4C1864 30%,#7B2CBF 60%,#F59E0B 130%);border-radius:24px;padding:32px 36px;color:#fff;position:relative;overflow:hidden;box-shadow:0 14px 50px rgba(76,24,100,.28);}
+.rw-hero::before{content:'✨';position:absolute;right:40px;bottom:-6px;font-size:130px;opacity:.1;line-height:1;pointer-events:none;}
+.rw-hero::after{content:'';position:absolute;width:260px;height:260px;border-radius:50%;background:rgba(245,158,11,.1);top:-80px;right:-50px;pointer-events:none;}
+.rw-hero-inner{position:relative;z-index:1;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:20px;}
+.rw-hero-left h1{margin:0 0 6px;font-size:1.9rem;font-weight:900;}
+.rw-hero-left p{margin:0;font-size:.9rem;opacity:.82;}
+.rw-hero-pills{display:flex;gap:10px;flex-wrap:wrap;}
+.rw-pill{background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:14px;padding:11px 16px;text-align:center;min-width:82px;}
+.rw-pill-val{font-size:1.4rem;font-weight:900;line-height:1;}
+.rw-pill-lbl{font-size:.68rem;font-weight:600;opacity:.8;margin-top:3px;}
+
+/* STATS ROW */
+.rw-stats{display:grid;grid-template-columns:repeat(5,1fr);gap:14px;}
+@@media(max-width:900px){.rw-stats{grid-template-columns:repeat(3,1fr);}}
+@@media(max-width:560px){.rw-stats{grid-template-columns:repeat(2,1fr);}}
+.rw-stat{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px 16px;text-align:center;box-shadow:var(--sh);transition:transform .18s;}
+.rw-stat:hover{transform:translateY(-2px);}
+.rw-stat-ico{width:44px;height:44px;border-radius:12px;margin:0 auto 10px;display:flex;align-items:center;justify-content:center;font-size:18px;}
+.rw-stat-ico.pts{background:#fef3c7;color:#d97706;}
+.rw-stat-ico.streak{background:#ffedd5;color:#ea580c;}
+.rw-stat-ico.longest{background:#fce7f3;color:#db2777;}
+.rw-stat-ico.rank{background:#ede9fe;color:var(--g2);}
+.rw-stat-ico.bdg{background:#dcfce7;color:#16a34a;}
+.rw-stat-val{font-size:1.6rem;font-weight:900;color:var(--ink);line-height:1;}
+.rw-stat-lbl{font-size:.72rem;color:var(--muted);font-weight:600;margin-top:4px;}
+
+/* 2-COL GRID */
+.rw-grid{display:grid;grid-template-columns:minmax(0,3fr) minmax(0,2fr);gap:18px;}
+@@media(max-width:900px){.rw-grid{grid-template-columns:1fr;}}
+
+/* CARD */
+.rw-card{background:var(--card);border:1px solid var(--border);border-radius:20px;box-shadow:var(--sh);overflow:hidden;display:flex;flex-direction:column;}
+.rw-card-head{padding:14px 20px;border-bottom:1px solid #f5f3ff;display:flex;align-items:center;justify-content:space-between;}
+.rw-card-title{font-size:.9rem;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px;}
+.rw-card-title i{color:var(--g2);}
+.rw-card-body{padding:18px 20px;flex:1;}
+
+/* BADGE GRID */
+.rw-badge-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:10px;}
+.rw-badge-chip{border-radius:14px;border:1px solid var(--border);padding:14px 8px 12px;text-align:center;background:#faf8ff;transition:transform .15s;}
+.rw-badge-chip:hover{transform:translateY(-2px);}
+.rw-badge-chip.locked{opacity:.4;filter:grayscale(.7);}
+.rw-badge-chip .bi{font-size:26px;display:block;margin-bottom:6px;}
+.rw-badge-chip .bn{font-size:.7rem;font-weight:700;color:var(--ink);line-height:1.2;}
+
+/* HISTORY LIST */
+.rw-hist-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #f5f3ff;}
+.rw-hist-row:last-child{border-bottom:none;}
+.rw-hist-ico{width:32px;height:32px;border-radius:9px;background:#dcfce7;color:#16a34a;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;}
+.rw-hist-info{flex:1;min-width:0;}
+.rw-hist-action{font-size:.82rem;font-weight:700;color:var(--ink);}
+.rw-hist-date{font-size:.7rem;color:var(--muted);margin-top:2px;}
+.rw-hist-pts{font-size:.95rem;font-weight:900;color:#16a34a;}
+
+/* LEADERBOARD */
+.rw-lb-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f5f3ff;}
+.rw-lb-row:last-child{border-bottom:none;}
+.rw-lb-row.me-row{background:#f5f3ff;border-radius:10px;padding:10px 10px;margin:0 -10px;}
+.rw-lb-rank{width:28px;height:28px;border-radius:8px;background:#f1f5f9;display:flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:900;color:var(--sub);flex-shrink:0;}
+.rw-lb-rank.gold{background:#fde68a;color:#92400e;}
+.rw-lb-rank.silver{background:#e5e7eb;color:#374151;}
+.rw-lb-rank.bronze{background:#fed7aa;color:#9a3412;}
+.rw-lb-av{width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--g1),var(--g2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;flex-shrink:0;}
+.rw-lb-name{flex:1;font-size:.82rem;font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.rw-lb-pts{font-size:.88rem;font-weight:800;color:var(--g2);}
+
+/* LINK */
+.rw-link{font-size:.75rem;font-weight:700;color:var(--g2);text-decoration:none;display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:8px;border:1px solid var(--border);transition:.15s;}
+.rw-link:hover{background:#f5f3ff;color:var(--g1);}
+
+/* EMPTY */
+.rw-empty-inline{color:var(--muted);font-size:.82rem;text-align:center;padding:24px 0;}
+</style>
+
+<div class="rw-pg">
+
+    <!-- HERO -->
+    <div class="rw-hero">
+        <div class="rw-hero-inner">
+            <div class="rw-hero-left">
+                <h1><i class="fa-solid fa-trophy me-2"></i>My Rewards</h1>
+                <p>Points, streaks, rank and badges — all in one place</p>
+            </div>
+            <div class="rw-hero-pills">
+                <div class="rw-pill">
+                    <div class="rw-pill-val">@points</div>
+                    <div class="rw-pill-lbl">Points</div>
+                </div>
+                @if (rank > 0)
+                {
+                    <div class="rw-pill">
+                        <div class="rw-pill-val">#@rank</div>
+                        <div class="rw-pill-lbl">Rank</div>
+                    </div>
+                }
+                <div class="rw-pill">
+                    <div class="rw-pill-val">@streak</div>
+                    <div class="rw-pill-lbl">Streak 🔥</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STATS -->
+    <div class="rw-stats">
+        <div class="rw-stat">
+            <div class="rw-stat-ico pts"><i class="fa-solid fa-coins"></i></div>
+            <div class="rw-stat-val">@points</div>
+            <div class="rw-stat-lbl">Total Points</div>
+        </div>
+        <div class="rw-stat">
+            <div class="rw-stat-ico streak"><i class="fa-solid fa-fire"></i></div>
+            <div class="rw-stat-val">@streak</div>
+            <div class="rw-stat-lbl">Current Streak</div>
+        </div>
+        <div class="rw-stat">
+            <div class="rw-stat-ico longest"><i class="fa-solid fa-bolt"></i></div>
+            <div class="rw-stat-val">@longest</div>
+            <div class="rw-stat-lbl">Longest Streak</div>
+        </div>
+        <div class="rw-stat">
+            <div class="rw-stat-ico rank"><i class="fa-solid fa-ranking-star"></i></div>
+            <div class="rw-stat-val">@(rank > 0 ? "#" + rank : "—")</div>
+            <div class="rw-stat-lbl">Your Rank</div>
+        </div>
+        <div class="rw-stat">
+            <div class="rw-stat-ico bdg"><i class="fa-solid fa-award"></i></div>
+            <div class="rw-stat-val">@bcount</div>
+            <div class="rw-stat-lbl">Badges Earned</div>
+        </div>
+    </div>
+
+    <!-- MAIN GRID -->
+    <div class="rw-grid">
+
+        <!-- LEFT -->
+        <div style="display:flex;flex-direction:column;gap:18px;">
+
+            <!-- Badges -->
+            <div class="rw-card">
+                <div class="rw-card-head">
+                    <div class="rw-card-title"><i class="fa-solid fa-medal"></i>Badges</div>
+                    <a asp-controller="Gamification" asp-action="MyBadges" class="rw-link">
+                        <i class="fa-solid fa-arrow-right"></i>All badges
+                    </a>
+                </div>
+                <div class="rw-card-body">
+                    @if (!badges.Any())
+                    {
+                        <div class="rw-empty-inline">No badges configured yet.</div>
+                    }
+                    else
+                    {
+                        <div class="rw-badge-grid">
+                            @foreach (var b in badges)
+                            {
+                                bool earnedB = (bool?)b["Earned"] ?? ((int?)b["Earned"] == 1);
+                                var bname    = (string?)b["BadgeName"]  ?? "";
+                                var bicon    = (string?)b["IconClass"]  ?? "fa-solid fa-award";
+                                var bcolor   = (string?)b["BadgeColor"] ?? "#7B2CBF";
+                                var cur      = (int?)b["CurrentValue"]  ?? 0;
+                                var need     = (int?)b["CriteriaValue"] ?? 0;
+                                <div class="rw-badge-chip @(earnedB ? "" : "locked")" title="@b["Description"]">
+                                    <i class="@bicon bi" style="color:@bcolor;font-size:26px;display:block;margin-bottom:6px;"></i>
+                                    <div class="bn">@bname</div>
+                                    @if (!earnedB && need > 0)
+                                    {
+                                        <div style="font-size:.65rem;color:var(--muted);margin-top:3px;">@cur/@need</div>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <!-- Points History -->
+            <div class="rw-card">
+                <div class="rw-card-head">
+                    <div class="rw-card-title"><i class="fa-solid fa-clock-rotate-left"></i>Points History</div>
+                </div>
+                <div class="rw-card-body">
+                    @if (!hist.Any())
+                    {
+                        <div class="rw-empty-inline">No points earned yet. Complete lessons to get started!</div>
+                    }
+                    else
+                    {
+                        @foreach (var h in hist.Take(15))
+                        {
+                            var hwhen = (DateTime?)h["CreatedDate"];
+                            <div class="rw-hist-row">
+                                <div class="rw-hist-ico"><i class="fa-solid fa-plus fa-xs"></i></div>
+                                <div class="rw-hist-info">
+                                    <div class="rw-hist-action">@h["ActionLabel"]</div>
+                                    @if (hwhen.HasValue) { <div class="rw-hist-date">@hwhen.Value.ToString("dd MMM yyyy")</div> }
+                                </div>
+                                <div class="rw-hist-pts">+@h["Points"]</div>
+                            </div>
+                        }
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT -->
+        <div>
+            <div class="rw-card">
+                <div class="rw-card-head">
+                    <div class="rw-card-title"><i class="fa-solid fa-ranking-star"></i>Leaderboard</div>
+                    <a asp-controller="Gamification" asp-action="Leaderboard" class="rw-link">
+                        <i class="fa-solid fa-arrow-right"></i>Full board
+                    </a>
+                </div>
+                <div class="rw-card-body">
+                    @{ int idx = 0; bool meInTop = false; }
+                    @foreach (var r in top)
+                    {
+                        idx++;
+                        var sid    = (string?)r["StudentID"];
+                        var rname  = (string?)r["StudentName"] ?? "Learner";
+                        var rpts   = (int?)r["TotalPoints"] ?? 0;
+                        var rinit  = rname.Length > 0 ? rname.Trim()[0].ToString().ToUpper() : "?";
+                        var rc     = idx == 1 ? "gold" : idx == 2 ? "silver" : idx == 3 ? "bronze" : "";
+                        var isMe   = sid == myId;
+                        if (isMe) meInTop = true;
+                        <div class="rw-lb-row @(isMe ? "me-row" : "")">
+                            <div class="rw-lb-rank @rc">@idx</div>
+                            <div class="rw-lb-av">@rinit</div>
+                            <div class="rw-lb-name">@rname @(isMe ? "(You)" : "")</div>
+                            <div class="rw-lb-pts">@rpts</div>
+                        </div>
+                    }
+                    @{
+                        var meRankV = (int?)me["MyRank"] ?? 0;
+                        var mePtsV  = (int?)me["TotalPoints"] ?? 0;
+                    }
+                    @if (!meInTop && meRankV > 0)
+                    {
+                        <div style="border-top:1px dashed var(--border);margin:8px 0;"></div>
+                        <div class="rw-lb-row me-row">
+                            <div class="rw-lb-rank">@meRankV</div>
+                            <div class="rw-lb-av">Me</div>
+                            <div class="rw-lb-name">You</div>
+                            <div class="rw-lb-pts">@mePtsV</div>
+                        </div>
+                    }
+                    @if (!top.Any())
+                    {
+                        <div class="rw-empty-inline">No leaderboard data yet.</div>
+                    }
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(function(){
+    fetch('/Rewards/Notifications')
+        .then(r=>r.json())
+        .then(d=>{
+            const list=(d&&d.data)||[];
+            if(!list.length) return;
+            list.forEach((b,i)=>setTimeout(()=>toast(b),i*900));
+            fetch('/Rewards/MarkSeen',{method:'POST'});
+        }).catch(()=>{});
+
+    function toast(b){
+        const el=document.createElement('div');
+        el.style.cssText='position:fixed;right:20px;bottom:20px;z-index:9999;background:#fff;border-radius:16px;box-shadow:0 12px 40px rgba(76,24,100,.25);padding:16px 20px;display:flex;gap:12px;align-items:center;border-left:4px solid '+(b.BadgeColor||'#7B2CBF')+';animation:rwin .3s ease;max-width:320px;';
+        el.innerHTML='<i class="'+(b.IconClass||'fa-solid fa-award')+'" style="font-size:28px;color:'+(b.BadgeColor||'#7B2CBF')+'"></i><div><div style="font-weight:800;color:#4C1864;font-size:.9rem;">🎉 Badge unlocked!</div><div style="font-size:.82rem;color:#555;margin-top:3px;">'+(b.BadgeName||'')+'</div></div>';
+        document.body.appendChild(el);
+        setTimeout(()=>{el.style.opacity='0';el.style.transition='opacity .4s';},4500);
+        setTimeout(()=>el.remove(),5000);
+    }
+})();
+</script>
+}
